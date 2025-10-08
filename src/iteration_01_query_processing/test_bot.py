@@ -1,7 +1,7 @@
 import time
 from speakeasypy import Chatroom, EventType, Speakeasy
 from sparql_handler import SPARQLHandler
-import config
+import src.main.config as config
 import logging
 
 DEFAULT_HOST_URL = 'https://speakeasy.ifi.uzh.ch'

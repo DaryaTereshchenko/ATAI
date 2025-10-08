@@ -3,7 +3,7 @@ from rdflib.plugins.sparql import prepareQuery
 from typing import Dict, List, Any, Optional
 from pyparsing import ParseException 
 import re
-from config import GRAPH_FILE_PATH
+from src.main.config import GRAPH_FILE_PATH
 import logging
 
 logging.basicConfig(level=logging.INFO)
