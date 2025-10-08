@@ -1,6 +1,8 @@
 import time
 from speakeasypy import Chatroom, EventType, Speakeasy
-
+from orchestrator import Orchestrator
+import dotenv
+dotenv.load_dotenv()
 DEFAULT_HOST_URL = 'https://speakeasy.ifi.uzh.ch'
 
 class Agent:
@@ -9,6 +11,9 @@ class Agent:
         # Initialize the Speakeasy Python framework and login
         self.speakeasy = Speakeasy(host=DEFAULT_HOST_URL, username=username, password=password)
         self.speakeasy.login()
+
+        # Initialize the orchestrator
+        self.orchestrator = Orchestrator()
 
         # Register callbacks for different events
         self.speakeasy.register_callback(self.on_new_message, EventType.MESSAGE)
@@ -21,8 +26,14 @@ class Agent:
     def on_new_message(self, message: str, room: Chatroom):
         """Callback function to handle new messages."""
         print(f"New message in room {room.room_id}: {message}")
-        # Implement your bot logic here
-        room.post_messages(f"You said: '{message}'. How can I assist further?")
+        
+        # Process the message through the orchestrator
+        try:
+            response = self.orchestrator.process_query(message)
+            room.post_messages(response)
+        except Exception as e:
+            print(f"Error processing message: {e}")
+            room.post_messages("Sorry, I encountered an error processing your request.")
 
     def on_new_reaction(self, reaction: str, message_ordinal: int, room: Chatroom): 
         """Callback function to handle new reactions."""
@@ -31,5 +42,7 @@ class Agent:
 
 if __name__ == '__main__':
     # Use your bot's credentials
-    my_bot = Agent("BeigeCrackingEgg", "Vb2Xv8iY")
+    username = dotenv.get("SPEAKEASY_USERNAME")
+    password = dotenv.get("SPEAKEASY_PASSWORD")
+    my_bot = Agent(username, password)
     my_bot.listen()

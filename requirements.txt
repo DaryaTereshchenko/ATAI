@@ -1,0 +1,7 @@
+langchain
+langchain-ollama
+langchain-core
+pydantic>=2.0.0
+speakeasypy
+SPARQLWrapper
+rdflib
