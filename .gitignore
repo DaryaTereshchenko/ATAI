@@ -3,7 +3,7 @@ config.py
 
 # Data folder
 data/
-
+models/
 # Python cache
 __pycache__/
 *.py[cod]

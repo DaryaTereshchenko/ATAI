@@ -60,12 +60,12 @@ class SPARQLHandler:
         
         # Basic string validation
         if not query or not isinstance(query, str):
-            validation_result['message'] = "Query must be a non-empty string"
+            validation_result['message'] = "Please provide a valid query."
             return validation_result
         
         # Check if it's empty or just whitespace
         if not query.strip():
-            validation_result['message'] = "Query cannot be empty"
+            validation_result['message'] = "Your query appears to be empty. Please try again."
             return validation_result
         
         # Method 1: Use rdflib to parse the query
@@ -76,7 +76,7 @@ class SPARQLHandler:
             validation_result['message'] = f"Valid {parsed_query.algebra.name} query"
             return validation_result
         except Exception as e:
-            validation_result['message'] = f"Query parsing error: {str(e)}"
+            validation_result['message'] = "I couldn't understand your query. Please check that it's properly formatted and try again."
         
         # Method 2: Basic regex pattern matching (fallback)
         sparql_pattern = re.compile(
@@ -85,7 +85,7 @@ class SPARQLHandler:
         )
         
         if not sparql_pattern.search(query):
-            validation_result['message'] = "Query doesn't match basic SPARQL structure"
+            validation_result['message'] = "Your query doesn't seem to be in the correct format. Please verify and try again."
             return validation_result
         
         return validation_result
@@ -113,45 +113,58 @@ class SPARQLHandler:
             validation = self.validate_query(query)
             if not validation['valid']:
                 result['error'] = validation['message']
+                logger.warning(f"Validation failed: {validation['message']}")
                 return result
             result['query_info'] = validation
         
         # Execute query using rdflib
         try:
+            logger.info("Executing query against graph...")
             query_result = self.graph.query(query)
             
-            # Convert to JSON-like format
-            if self.return_format.lower() == "json":
-                bindings = []
-                for row in query_result:
-                    binding = {}
-                    for var in query_result.vars:
-                        value = row[var]
-                        if value is not None:
-                            binding[str(var)] = {
-                                'type': 'uri' if hasattr(value, 'n3') and value.n3().startswith('<') else 'literal',
-                                'value': str(value)
-                            }
-                    bindings.append(binding)
-                
-                result['data'] = {
-                    'results': {
-                        'bindings': bindings
-                    }
-                }
+            # Check if there are any results
+            results_list = list(query_result)
+            logger.info(f"Query returned {len(results_list)} row(s)")
+            
+            if not results_list:
+                result['data'] = "No answer found in the database."
+                result['success'] = True
+                logger.info("No results found")
+                return result
+            
+            # Extract simple string values
+            answers = []
+            for i, row in enumerate(results_list):
+                logger.debug(f"Processing row {i}: {row}")
+                # Get all non-None values from the row
+                values = [str(val) for val in row if val is not None]
+                if values:
+                    # If single value, add it directly; otherwise join with comma
+                    if len(values) == 1:
+                        answers.append(values[0])
+                    else:
+                        answers.append(", ".join(values))
+            
+            # Return concatenated answer or no answer message
+            if answers:
+                result['data'] = "\n".join(answers) if len(answers) > 1 else answers[0]
+                logger.info(f"Formatted answer: {result['data']}")
             else:
-                result['data'] = list(query_result)
+                result['data'] = "No answer found in the database."
+                logger.info("No values extracted from results")
             
             result['success'] = True
             
         except ParseException as e:
             result['error'] = f"Malformed query: {str(e)}"
+            logger.error(f"ParseException: {e}", exc_info=True)
         except Exception as e:
             result['error'] = f"Unexpected error: {str(e)}"
+            logger.error(f"Unexpected error: {e}", exc_info=True)
         
         return result
     
-    def execute_and_format(self, query: str) -> List[Dict[str, Any]]:
+    def execute_and_format(self, query: str) -> str:
         """
         Execute query and return formatted results.
         
@@ -159,90 +172,11 @@ class SPARQLHandler:
             query: The SPARQL query string
             
         Returns:
-            List of result dictionaries
+            String with result or error message
         """
         execution_result = self.execute_query(query)
         
         if not execution_result['success']:
             raise Exception(f"Query execution failed: {execution_result['error']}")
         
-        # Format JSON results
-        if self.return_format.lower() == "json":
-            data = execution_result['data']
-            if 'results' in data and 'bindings' in data['results']:
-                return data['results']['bindings']
-        
         return execution_result['data']
-    
-    def get_query_results_as_list(self, query: str, variable: Optional[str] = None) -> List[str]:
-        """
-        Execute query and extract a specific variable as a list.
-        
-        Args:
-            query: The SPARQL query string
-            variable: The variable name to extract (without '?')
-            
-        Returns:
-            List of values for the specified variable
-        """
-        results = self.execute_and_format(query)
-        
-        if not variable:
-            # Auto-detect first variable
-            if results and len(results) > 0:
-                variable = list(results[0].keys())[0]
-            else:
-                return []
-        
-        return [
-            result[variable]['value'] 
-            for result in results 
-            if variable in result
-        ]
-
-
-# Example usage
-if __name__ == "__main__":
-    # Your example query
-    query = """
-        PREFIX ddis: <http://ddis.ch/atai/>   
-
-        PREFIX wd: <http://www.wikidata.org/entity/>   
-
-        PREFIX wdt: <http://www.wikidata.org/prop/direct/>   
-
-        PREFIX schema: <http://schema.org/>   
-
-        
-
-        SELECT ?director WHERE {  
-
-            ?movie rdfs:label "Apocalypse Now"@en .  
-
-                ?movie wdt:P57 ?directorItem . 
-
-            ?directorItem rdfs:label ?director . 
-
-        }  
-
-        LIMIT 1  
-    """
-    
-    # Initialize handler - use path relative to project root
-    handler = SPARQLHandler(
-        graph_file_path=os.path.join(project_root, "data/graph.nt"),
-        return_format="json"
-    )
-    
-    # Validate query
-    validation = handler.validate_query(query)
-    logging.info(f"Validation Result: {validation}")
-
-    # Execute query
-    result = handler.execute_query(query)
-    if result['success']:
-        logging.info("Query executed successfully!")
-        logging.info(f"Results: {result['data']}")
-    else:
-        logging.info("Query execution failed:")
-        logging.error(f"Error: {result['error']}")
