@@ -1,10 +1,16 @@
 import time
-from speakeasypy import Chatroom, EventType, Speakeasy
 from sparql_handler import SPARQLHandler
-import src.main.config as config
 import logging
+import os
+import sys 
+import json
 
-DEFAULT_HOST_URL = 'https://speakeasy.ifi.uzh.ch'
+# Add project root to path (go up two levels from this file)
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
+sys.path.insert(0, project_root)
+
+from speakeasypy import Chatroom, EventType, Speakeasy
+from config import BOT_USERNAME, BOT_PASSWORD, SPEAKEASY_HOST, GRAPH_FILE_PATH
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -15,11 +21,11 @@ class TestAgent:
     def __init__(self, username, password):
         self.username = username
         # Initialize the Speakeasy Python framework and login
-        self.speakeasy = Speakeasy(host=DEFAULT_HOST_URL, username=username, password=password)
+        self.speakeasy = Speakeasy(host=SPEAKEASY_HOST, username=username, password=password)
         self.speakeasy.login()
 
         # Initialize the SPARQL handler (loads graph from config)
-        self.sparql_handler = SPARQLHandler(graph_file_path="data/graph.nt")
+        self.sparql_handler = SPARQLHandler(graph_file_path=GRAPH_FILE_PATH)
 
         # Register callbacks for different events
         self.speakeasy.register_callback(self.on_new_message, EventType.MESSAGE)
@@ -34,17 +40,32 @@ class TestAgent:
         logger.info(f"New message in room {room.room_id}: {message[:100]}...")
 
         # Check if the message contains a SPARQL query
-        if self.sparql_handler.is_sparql_query(message):
+        validation = self.sparql_handler.validate_query(message)
+        if validation['valid']:
             try:
-                response = self.sparql_handler.process_sparql_input(message)
-                logger.info(f"Response: {response}")
-                room.post_messages(response)
+                response = self.sparql_handler.execute_query(message)
+                if response['success']:
+                    logger.info("Query executed successfully!")
+                    bindings = response['data']['results']['bindings']
+                    logger.info(f"Results: {bindings}")
+                    
+                    # Format results as a readable string
+                    if bindings:
+                        formatted_results = json.dumps(bindings, indent=2)
+                        reply = f"Query executed successfully!\n\nResults:\n{formatted_results}"
+                    else:
+                        reply = "Query executed successfully but returned no results."
+                    
+                    room.post_messages(reply)
+                else:
+                    logger.error(f"Error: {response['error']}")
+                    room.post_messages(f"Query execution failed: {response['error']}")
             except Exception as e:
                 error_msg = f"Error processing SPARQL query: {str(e)}"
                 logger.error(error_msg)
                 room.post_messages(error_msg)
         else:
-            room.post_messages("Please provide a valid SPARQL query. This bot only processes SPARQL queries for the 1st intermediate evaluation.")
+            room.post_messages(f"Invalid SPARQL query: {validation['message']}\n\nPlease provide a valid SPARQL query. This bot only processes SPARQL queries for the 1st intermediate evaluation.")
 
     def on_new_reaction(self, reaction: str, message_ordinal: int, room: Chatroom): 
         """Callback function to handle new reactions."""
@@ -52,11 +73,11 @@ class TestAgent:
 
 if __name__ == '__main__':
     # Use your bot's credentials
-    username = config.SPEAKEASY_USERNAME
-    password = config.SPEAKEASY_PASSWORD
+    username = BOT_USERNAME
+    password = BOT_PASSWORD
     test_bot = TestAgent(
         username=username,
         password=password
     )
     test_bot.listen()
-    
+

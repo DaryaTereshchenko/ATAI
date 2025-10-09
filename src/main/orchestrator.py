@@ -5,7 +5,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import PydanticOutputParser
 from langchain_ollama import ChatOllama
 from sparql_handler import SPARQLHandler
-from src.main.config import LLM_MODEL, LLM_TEMPERATURE
+from src.config import LLM_MODEL, LLM_TEMPERATURE
 
 class QuestionType(str, Enum):
     FACTUAL = "factual"

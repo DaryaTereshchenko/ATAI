@@ -3,8 +3,15 @@ from rdflib.plugins.sparql import prepareQuery
 from typing import Dict, List, Any, Optional
 from pyparsing import ParseException 
 import re
-from src.main.config import GRAPH_FILE_PATH
 import logging
+import sys 
+import os
+
+# Add project root to path (go up two levels from this file)
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
+sys.path.insert(0, project_root)
+
+from config import GRAPH_FILE_PATH
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -221,9 +228,9 @@ if __name__ == "__main__":
         LIMIT 1  
     """
     
-    # Initialize handler
+    # Initialize handler - use path relative to project root
     handler = SPARQLHandler(
-        graph_file_path="data/graph.nt",
+        graph_file_path=os.path.join(project_root, "data/graph.nt"),
         return_format="json"
     )
     
@@ -239,10 +246,3 @@ if __name__ == "__main__":
     else:
         logging.info("Query execution failed:")
         logging.error(f"Error: {result['error']}")
-
-    # Get specific results
-    try:
-        labels = handler.get_query_results_as_list(query, 'lbl')
-        logging.info(f"Extracted labels: {labels}")
-    except Exception as e:
-        logging.error(f"Error getting results: {e}")
