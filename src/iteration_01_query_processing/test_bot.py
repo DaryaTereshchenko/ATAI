@@ -1,6 +1,6 @@
 import time
-from sparql_handler import SPARQLHandler
-from result_formatter import ResultFormatter
+from main.sparql_handler import SPARQLHandler
+from main.result_formatter import ResultFormatter
 import logging
 import os
 import sys 
@@ -13,8 +13,6 @@ sys.path.insert(0, project_root)
 from speakeasypy import Chatroom, EventType, Speakeasy
 from config import BOT_USERNAME, BOT_PASSWORD, SPEAKEASY_HOST, GRAPH_FILE_PATH
 
-# Add model path configuration
-MODEL_PATH = os.path.join(project_root, 'models', 'tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf')
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -31,8 +29,6 @@ class TestAgent:
         # Initialize the SPARQL handler (loads graph from config)
         self.sparql_handler = SPARQLHandler(graph_file_path=GRAPH_FILE_PATH)
         
-        # Initialize the result formatter with llama.cpp
-        self.result_formatter = ResultFormatter(model_path=MODEL_PATH)
 
         # Register callbacks for different events
         self.speakeasy.register_callback(self.on_new_message, EventType.MESSAGE)
@@ -44,7 +40,6 @@ class TestAgent:
 
     def on_new_message(self, message: str, room: Chatroom):
         """Callback function to handle new messages - SPARQL queries only."""
-        print("Message")
         logger.info(f"New message in room {room.room_id}: {message[:100]}...")
 
         # Check if the message contains a SPARQL query
@@ -57,8 +52,8 @@ class TestAgent:
                     answer = response['data']
                     logger.info(f"Query result: {answer}")
                     
-                    formatted_answer = self.result_formatter.format_results(answer)
-                    room.post_messages(formatted_answer)
+                    # Post the answer directly (it's already a formatted string)
+                    room.post_messages(answer)
                 else:
                     logger.error(f"Error: {response['error']}")
                     room.post_messages(f"Query execution failed: {response['error']}")
@@ -67,7 +62,7 @@ class TestAgent:
                 logger.error(error_msg)
                 room.post_messages(error_msg)
         else:
-            room.post_messages(f"Invalid SPARQL query. \n\nPlease provide a valid SPARQL query. This bot only processes SPARQL queries for the 1st intermediate evaluation.")
+            room.post_messages(f"Invalid SPARQL query: {validation['message']}\n\nPlease provide a valid SPARQL query. This bot only processes SPARQL queries for the 1st intermediate evaluation.")
 
     def on_new_reaction(self, reaction: str, message_ordinal: int, room: Chatroom): 
         """Callback function to handle new reactions."""
