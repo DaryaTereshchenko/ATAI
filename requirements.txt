@@ -11,3 +11,17 @@ llama-cpp-python>=0.2.0
 # Bot dependencies
 speakeasypy
 python-dotenv
+
+# NLP dependencies
+spacy>=3.0.0
+# Download model with: python -m spacy download en_core_web_sm
+
+# spaCy with CUDA support (choose one based on your CUDA version)
+spacy[cuda11x]>=3.7.0  # For CUDA 11.x
+# spacy[cuda12x]>=3.7.0  # For CUDA 12.x
+# spacy[cuda-autodetect]>=3.7.0  # Auto-detect CUDA version
+
+# Other dependencies
+llama-cpp-python
+langchain-community
+pydantic

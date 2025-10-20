@@ -60,8 +60,15 @@ class Agent:
         room.post_messages(f"Thanks for your reaction: '{reaction}'")
 
 if __name__ == '__main__':
-    # Use your bot's credentials
-    username = dotenv.get("SPEAKEASY_USERNAME")
-    password = dotenv.get("SPEAKEASY_PASSWORD")
+    # Use your bot's credentials - FIX: dotenv.get doesn't exist, use os.getenv
+    username = os.getenv("SPEAKEASY_USERNAME")
+    password = os.getenv("SPEAKEASY_PASSWORD")
+    
+    # Fallback to config if env vars not found
+    if not username or not password:
+        from src.config import BOT_USERNAME, BOT_PASSWORD
+        username = BOT_USERNAME
+        password = BOT_PASSWORD
+    
     my_bot = Agent(username, password)
     my_bot.listen()

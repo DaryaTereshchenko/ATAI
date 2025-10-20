@@ -4,6 +4,7 @@ Provides human-friendly responses without requiring an LLM.
 """
 
 import random
+import re
 from typing import Optional
 
 
@@ -41,6 +42,34 @@ class AnswerFormatter:
     DB_PREFIX = "🔍 **Database Query Result**\n\n"
     
     @classmethod
+    def _clean_result_line(cls, line: str) -> str:
+        """
+        Clean a single result line by extracting entity IDs from Wikidata URLs.
+        Also removes extra whitespace and normalizes the output.
+        """
+        # Quick check: if line doesn't contain 'http', no cleaning needed
+        if 'http' not in line:
+            return line.strip()
+        
+        # Pattern to match Wikidata entity URLs
+        wikidata_pattern = r'http://www\.wikidata\.org/entity/(Q\d+)'
+        
+        # Find Wikidata URL in the line
+        match = re.search(wikidata_pattern, line)
+        
+        if match:
+            entity_id = match.group(1)  # Extract Q12345
+            # Remove the URL from the line
+            cleaned_line = re.sub(r',?\s*http://[^\s,]+', '', line).strip()
+            # Remove extra spaces
+            cleaned_line = re.sub(r'\s+', ' ', cleaned_line)
+            # Add entity ID in parentheses
+            return f"{cleaned_line} ({entity_id})"
+        
+        # No Wikidata URL found, return as-is (but still strip and normalize whitespace)
+        return re.sub(r'\s+', ' ', line.strip())
+    
+    @classmethod
     def format(cls, raw_result: str, query_explanation: Optional[str] = None) -> str:
         """
         Format a SPARQL query result into a human-friendly response.
@@ -61,8 +90,8 @@ class AnswerFormatter:
             response += "\n\n💡 *Tip: Try rephrasing your question or check the movie title spelling.*"
             return response
         
-        # Parse the results
-        lines = [line.strip() for line in raw_result.strip().split('\n') if line.strip()]
+        # Parse the results and clean each line
+        lines = [cls._clean_result_line(line) for line in raw_result.strip().split('\n') if line.strip()]
         
         if len(lines) == 0:
             # Empty result
@@ -97,7 +126,7 @@ class AnswerFormatter:
     @classmethod
     def format_error(cls, error_message: str) -> str:
         """
-        Format an error message in a friendly way.
+        Format an error message in a friendly way without exposing technical details.
         
         Args:
             error_message: The error message
@@ -105,8 +134,13 @@ class AnswerFormatter:
         Returns:
             Formatted error response
         """
+        # Generic user-friendly error message
         return (
-            "⚠️ **Processing Error**\n\n"
-            f"I encountered an issue: {error_message}\n\n"
-            "Please try rephrasing your question or contact support if the problem persists."
+            "⚠️ **Something went wrong**\n\n"
+            "I'm having trouble processing your request right now.\n\n"
+            "Please try:\n"
+            "• Rephrasing your question\n"
+            "• Being more specific about the movie or person\n"
+            "• Asking a different question\n\n"
+            "If the problem persists, please contact support."
         )

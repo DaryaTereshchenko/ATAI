@@ -198,52 +198,34 @@ class NLToSPARQL:
         return "\n".join(schema_lines)
     
     def _get_ontology_description(self) -> str:
-        """Get ontology description for few-shot prompting."""
-        return f"""{self.schema_description}
-
-Movie Ontology Rules:
-- All movies are of type wd:Q11424 (use: ?movieItem wdt:P31 wd:Q11424)
-- Match movie titles using: ?movieItem rdfs:label "Title"
-- Always return both labels and items: SELECT ?label ?item
-- Common patterns:
-  * Director: ?movie wdt:P57 ?director
-  * Producer: ?movie wdt:P162 ?producer
-  * Genre: ?movie wdt:P136 ?genre
-  * Country: ?movie wdt:P495 ?country
-  * Award: ?movie wdt:P166 ?award
-- Use ORDER BY DESC(?rating) LIMIT 1 for "highest/best"
+        """Get MINIMAL ontology description for small model."""
+        return """Movie Knowledge Graph - Key Facts:
+- Movies: wdt:P31 wd:Q11424
+- Labels: rdfs:label
+- Properties: P57=director, P161=actor, P136=genre, P162=producer, P577=date
 """
     
     def _get_few_shot_examples(self) -> List[Dict[str, str]]:
-        """Get few-shot examples with correct prefixes and real database patterns."""
+        """Get few-shot examples - REDUCED to 2 for small model."""
         return [
-            {
-                "question": "Which movie, originally from the country 'South Korea', received the award 'Academy Award for Best Picture'?",
-                "sparql": """SELECT ?movieLabel ?movieItem WHERE {
-  ?movieItem wdt:P31 wd:Q11424 .
-  ?movieItem wdt:P495 ?countryItem .
-  ?countryItem rdfs:label "South Korea" .
-  ?movieItem wdt:P166 ?awardItem .
-  ?awardItem rdfs:label "Academy Award for Best Picture" .
-  ?movieItem rdfs:label ?movieLabel .
-}"""
-            },
-            {
-                "question": "What is the highest rated movie?",
-                "sparql": """SELECT ?movieLabel ?movieItem WHERE {
-  ?movieItem wdt:P31 wd:Q11424 .
-  ?movieItem ddis:rating ?rating .
-  ?movieItem rdfs:label ?movieLabel .
-}
-ORDER BY DESC(?rating)
-LIMIT 1"""
-            },
             {
                 "question": "Who directed Star Wars?",
                 "sparql": """SELECT ?directorName ?directorItem WHERE {
-  ?movieItem rdfs:label "Star Wars" .
+  ?movieItem wdt:P31 wd:Q11424 .
+  ?movieItem rdfs:label ?movieLabel .
+  FILTER(regex(str(?movieLabel), "^Star Wars$", "i")) .
   ?movieItem wdt:P57 ?directorItem .
   ?directorItem rdfs:label ?directorName .
+}"""
+            },
+            {
+                "question": "What is the genre of The Godfather?",
+                "sparql": """SELECT ?genreName ?genreItem WHERE {
+  ?movieItem wdt:P31 wd:Q11424 .
+  ?movieItem rdfs:label ?movieLabel .
+  FILTER(regex(str(?movieLabel), "^The Godfather$", "i")) .
+  ?movieItem wdt:P136 ?genreItem .
+  ?genreItem rdfs:label ?genreName .
 }"""
             }
         ]
@@ -251,13 +233,13 @@ LIMIT 1"""
     def _setup_patterns(self):
         """Set up rule-based patterns for common question types."""
         self.patterns = [
-            # Director questions - improved to capture movie title after "director of" or before "directed"
+            # Director questions - improved to capture movie title
             {
                 'pattern': r'(?:who (?:directed|is the director of)|director of)\s+(?:the\s+)?(?:movie\s+)?["\']?([^"\'?\.]+?)["\']?\s*[\?\.]*$',
                 'type': 'director',
                 'confidence': 0.9
             },
-            # Producer questions - NEW pattern for producers
+            # Producer questions
             {
                 'pattern': r'(?:who (?:is|was) the producer of|producer of)\s+(?:the\s+)?(?:movie\s+)?["\']?([^"\'?\.]+?)["\']?\s*[\?\.]*$',
                 'type': 'producer',
@@ -295,9 +277,109 @@ LIMIT 1"""
             },
         ]
     
+    @staticmethod
+    def _is_mixed_case(text: str) -> bool:
+        """
+        Check if text has mixed case (some uppercase, some lowercase).
+        This indicates the text is already properly capitalized.
+        
+        Returns:
+            True if text has mixed case (already proper), False if all lower/upper
+        """
+        # Remove spaces and punctuation for checking
+        letters_only = ''.join(c for c in text if c.isalpha())
+        
+        if not letters_only:
+            return False
+        
+        has_upper = any(c.isupper() for c in letters_only)
+        has_lower = any(c.islower() for c in letters_only)
+        
+        # Mixed case = already proper capitalization
+        return has_upper and has_lower
+    
+    @staticmethod
+    def _normalize_proper_name(name: str) -> str:
+        """
+        Normalize any proper name using PROPER English title case rules.
+        - Remove extra quotes
+        - Strip whitespace
+        - Apply smart title casing (lowercase articles, conjunctions, prepositions)
+        
+        Examples:
+            "the bridge on the river kwai" → "The Bridge on the River Kwai"
+            "star wars: episode vi - return of the jedi" → "Star Wars: Episode VI - Return of the Jedi"
+            "lord of the rings" → "Lord of the Rings"
+        """
+        name = name.strip()
+        name = name.strip('"\'')  # Remove surrounding quotes
+        name = re.sub(r'\s+', ' ', name)  # Normalize spaces
+        
+        # Words that should be lowercase in title case (unless first/last word)
+        lowercase_words = {
+            'a', 'an', 'and', 'as', 'at', 'but', 'by', 'for', 'from', 'in', 
+            'into', 'of', 'on', 'or', 'over', 'the', 'to', 'up', 'with', 'via'
+        }
+        
+        # Split into words
+        words = name.split()
+        
+        # Apply title case rules
+        result_words = []
+        for i, word in enumerate(words):
+            word_lower = word.lower()
+            
+            # Always capitalize first and last word
+            if i == 0 or i == len(words) - 1:
+                # Capitalize first letter, keep rest lowercase
+                result_words.append(word_lower[0].upper() + word_lower[1:] if len(word_lower) > 1 else word_lower.upper())
+            # Check if word should be lowercase
+            elif word_lower in lowercase_words:
+                result_words.append(word_lower)
+            # Capitalize other words
+            else:
+                # Capitalize first letter, keep rest lowercase
+                result_words.append(word_lower[0].upper() + word_lower[1:] if len(word_lower) > 1 else word_lower.upper())
+        
+        return ' '.join(result_words)
+    
+    def _normalize_movie_title(self, title: str) -> str:
+        """
+        Normalize movie title - delegates to _normalize_proper_name.
+        Kept for backward compatibility.
+        """
+        return self._normalize_proper_name(title)
+    
+    def _escape_regex_special_chars(self, text: str) -> str:
+        """
+        Escape special regex characters for use in SPARQL FILTER regex.
+        
+        Characters that need escaping in regex: . ^ $ * + ? { } [ ] \ | ( )
+        """
+        # Escape backslashes first
+        text = text.replace('\\', '\\\\')
+        # Escape other special regex characters
+        special_chars = ['.', '^', '$', '*', '+', '?', '{', '}', '[', ']', '|', '(', ')']
+        for char in special_chars:
+            text = text.replace(char, '\\' + char)
+        return text
+    
     def _generate_sparql_from_pattern(self, question_type: str, movie_title: str) -> str:
-        """Generate SPARQL query based on question type and movie title with correct prefixes."""
-        movie_title_escaped = movie_title.strip().replace('"', '\\"')
+        """Generate SPARQL query with case-insensitive FILTER for movie matching."""
+        # Normalize the title AND convert to Title Case for database matching
+        movie_title = self._normalize_proper_name(movie_title)
+        
+        print(f"[SPARQL Generation] Normalized title (Title Case): '{movie_title}'")
+        
+        # Escape regex special characters BEFORE escaping quotes for SPARQL
+        movie_title_regex = self._escape_regex_special_chars(movie_title)
+        
+        print(f"[SPARQL Generation] After regex escaping: '{movie_title_regex}'")
+        
+        # Then escape quotes for SPARQL string literal
+        movie_title_escaped = movie_title_regex.replace('"', '\\"')
+        
+        print(f"[SPARQL Generation] Final escaped for SPARQL: '{movie_title_escaped}'")
         
         # Always include prefixes with correct URIs
         prefix_block = """PREFIX ddis: <http://ddis.ch/atai/>
@@ -308,60 +390,66 @@ PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
 
 """
         
+        # ✅ Now we use properly capitalized title with case-insensitive fallback
+        # This ensures proper names match database format
+        
         templates = {
             'director': f'''{prefix_block}SELECT ?directorName ?directorItem WHERE {{
-  ?movieItem rdfs:label "{movie_title_escaped}" .
+  ?movieItem wdt:P31 wd:Q11424 .
+  ?movieItem rdfs:label ?movieLabel .
+  FILTER(regex(str(?movieLabel), "^{movie_title_escaped}$", "i")) .
   ?movieItem wdt:P57 ?directorItem .
   ?directorItem rdfs:label ?directorName .
 }}''',
             'actor': f'''{prefix_block}SELECT ?actorName ?actorItem WHERE {{
-  ?movieItem rdfs:label "{movie_title_escaped}" .
+  ?movieItem wdt:P31 wd:Q11424 .
+  ?movieItem rdfs:label ?movieLabel .
+  FILTER(regex(str(?movieLabel), "^{movie_title_escaped}$", "i")) .
   ?movieItem wdt:P161 ?actorItem .
   ?actorItem rdfs:label ?actorName .
 }}''',
             'screenwriter': f'''{prefix_block}SELECT ?writerName ?writerItem WHERE {{
-  ?movieItem rdfs:label "{movie_title_escaped}" .
+  ?movieItem wdt:P31 wd:Q11424 .
+  ?movieItem rdfs:label ?movieLabel .
+  FILTER(regex(str(?movieLabel), "^{movie_title_escaped}$", "i")) .
   ?movieItem wdt:P58 ?writerItem .
   ?writerItem rdfs:label ?writerName .
 }}''',
             'producer': f'''{prefix_block}SELECT ?producerName ?producerItem WHERE {{
-  ?movieItem rdfs:label "{movie_title_escaped}" .
+  ?movieItem wdt:P31 wd:Q11424 .
+  ?movieItem rdfs:label ?movieLabel .
+  FILTER(regex(str(?movieLabel), "^{movie_title_escaped}$", "i")) .
   ?movieItem wdt:P162 ?producerItem .
   ?producerItem rdfs:label ?producerName .
 }}''',
             'release_date': f'''{prefix_block}SELECT ?releaseDate WHERE {{
-  ?movieItem rdfs:label "{movie_title_escaped}" .
+  ?movieItem wdt:P31 wd:Q11424 .
+  ?movieItem rdfs:label ?movieLabel .
+  FILTER(regex(str(?movieLabel), "^{movie_title_escaped}$", "i")) .
   ?movieItem wdt:P577 ?releaseDate .
 }}''',
             'genre': f'''{prefix_block}SELECT ?genreName ?genreItem WHERE {{
-  ?movieItem rdfs:label "{movie_title_escaped}" .
+  ?movieItem wdt:P31 wd:Q11424 .
+  ?movieItem rdfs:label ?movieLabel .
+  FILTER(regex(str(?movieLabel), "^{movie_title_escaped}$", "i")) .
   ?movieItem wdt:P136 ?genreItem .
   ?genreItem rdfs:label ?genreName .
 }}''',
             'rating': f'''{prefix_block}SELECT ?rating WHERE {{
-  ?movieItem rdfs:label "{movie_title_escaped}" .
+  ?movieItem wdt:P31 wd:Q11424 .
+  ?movieItem rdfs:label ?movieLabel .
+  FILTER(regex(str(?movieLabel), "^{movie_title_escaped}$", "i")) .
   ?movieItem ddis:rating ?rating .
 }}''',
         }
         
-        return templates.get(question_type, '')
-    
-    def _create_nl2sparql_prompt(self, question: str) -> str:
-        """
-        Create a prompt for T5 model with SPARQL task specification.
-        The prompt explicitly tells T5 to generate SPARQL for our movie ontology.
-        """
-        # T5 works well with task prefixes
-        # We provide schema context and clear instructions
-        prompt = f"""translate natural language to SPARQL query using this schema:
-
-{self.schema_description}
-
-Natural language question: {question}
-
-SPARQL query:"""
+        query = templates.get(question_type, '')
         
-        return prompt
+        if query:
+            print(f"[SPARQL Generation] Generated query for '{movie_title}':")
+            print(query[:300] + "...")  # Print first 300 chars
+        
+        return query
     
     def _rule_based_convert(self, question: str) -> Optional[SPARQLQuery]:
         """Convert question using rule-based pattern matching."""
@@ -380,7 +468,7 @@ SPARQL query:"""
                     return SPARQLQuery(
                         query=query,
                         confidence=pattern_info['confidence'],
-                        explanation=f"Pattern-matched as {pattern_info['type']} question for '{movie_title}'"
+                        explanation=f"Pattern-matched as {pattern_info['type']} question for '{movie_title}' (case-insensitive)"
                     )
         
         return None
@@ -413,12 +501,12 @@ SPARQL query:"""
                 outputs = self.model.generate(
                     **inputs,
                     max_length=512,
-                    num_beams=5,  # Use beam search for better quality
+                    num_beams=5,  
                     num_return_sequences=1,
                     early_stopping=True,
                     temperature=0.7,
-                    do_sample=False,  # Deterministic for consistency
-                    no_repeat_ngram_size=3  # Avoid repetitions
+                    do_sample=False, 
+                    no_repeat_ngram_size=3 
                 )
             
             # Decode the output
@@ -503,39 +591,61 @@ SPARQL query:"""
             
             print(f"[Direct-LLM] Prompt length: {len(prompt)} chars")
             
-            # Generate with llama-cpp-python
+            # Generate with llama-cpp-python with increased tokens
             result = self.llm(
                 prompt,
                 max_tokens=NL2SPARQL_LLM_MAX_TOKENS,
                 temperature=NL2SPARQL_LLM_TEMPERATURE,
-                stop=["</s>", "Question:", "\n\n\n", "Example"],
+                stop=["</s>", "Question:", "\n\n\nQuestion", "Example"],  # Better stop sequences
                 echo=False
             )
             
             generated_text = result['choices'][0]['text'].strip()
             
-            print(f"[Direct-LLM] Raw output: {generated_text[:200]}...")
+            print(f"[Direct-LLM] Generated {len(generated_text)} chars")
+            print(f"[Direct-LLM] Full output:\n{generated_text}")  # Print full output for debugging
             
             # Extract SPARQL query from output
             query = self._extract_sparql_from_output(generated_text)
             
-            print(f"[Direct-LLM] Extracted query: {query[:200]}...")
+            print(f"[Direct-LLM] Extracted query length: {len(query)} chars")
+            print(f"[Direct-LLM] Extracted query:\n{query}")
             
             # Post-process the query
             query = self._postprocess_sparql(query)
             
-            print(f"[Direct-LLM] Post-processed query: {query[:200]}...")
+            print(f"[Direct-LLM] Post-processed query:\n{query}")
             
             # Validate structure first (basic check)
             if not self._is_valid_sparql_structure(query):
                 print(f"[Direct-LLM] ⚠️  Invalid SPARQL structure (basic check)")
+                print(f"[Direct-LLM] Query: {query[:200]}...")
                 return None
+            
+            # Check for complete SELECT clause
+            if query.upper().startswith('SELECT'):
+                # Verify SELECT has variables
+                select_match = re.search(r'SELECT\s+(\?[\w\s]+)', query, re.IGNORECASE)
+                if not select_match:
+                    print(f"[Direct-LLM] ⚠️  SELECT clause has no variables")
+                    return None
+                
+                # Verify WHERE clause exists and is complete
+                if 'WHERE' not in query.upper():
+                    print(f"[Direct-LLM] ⚠️  Missing WHERE clause")
+                    return None
+                
+                # Check balanced braces
+                if query.count('{') != query.count('}'):
+                    print(f"[Direct-LLM] ⚠️  Unbalanced braces: {query.count('{')} open, {query.count('}')} close")
+                    return None
             
             # ✅ Validate with SPARQLHandler (syntax check only, no execution)
             validation_result = self._validate_and_secure_sparql(query)
             # ↑ This only validates syntax, does NOT execute the query
             
             if validation_result['valid']:
+                print(f"[Direct-LLM] ✅ Query validated successfully")
                 return SPARQLQuery(
                     query=validation_result['cleaned_query'],
                     confidence=0.85,
@@ -557,72 +667,110 @@ SPARQL query:"""
             return None
     
     def _create_few_shot_prompt(self, question: str) -> str:
-        """Create a few-shot prompt for SPARQL generation with clear instructions."""
+        """Create MINIMAL few-shot prompt for 1.3B model."""
         examples = self._get_few_shot_examples()
         
-        prompt = f"""You are a SPARQL query generator. Generate valid SPARQL queries for questions about movies.
+        prompt = f"""Generate SPARQL for movie questions.
 
 {self._get_ontology_description()}
 
-Here are example questions and their correct SPARQL queries:
+RULES:
+1. End triple patterns with period (.)
+2. ALWAYS use FILTER for text matching: ?var rdfs:label ?varLabel . FILTER(regex(str(?varLabel), "^Text$", "i"))
+3. Use proper English title case: "The Bridge on the River Kwai"
+4. NEVER use exact match like: ?var rdfs:label "Text" (database is case-sensitive)
 
+EXAMPLES:
+
+Question: {examples[0]['question']}
+SPARQL:
+{examples[0]['sparql']}
+
+Question: {examples[1]['question']}
+SPARQL:
+{examples[1]['sparql']}
+
+Question: {question}
+SPARQL:
 """
-        
-        # Add examples with clear separation
-        for i, example in enumerate(examples[:3], 1):  # Use first 3 examples
-            prompt += f"Question: {example['question']}\n"
-            prompt += f"SPARQL:\n{example['sparql']}\n\n"
-        
-        # Add the actual question with clear instruction
-        prompt += f"Now generate ONLY the SPARQL query for this question (no explanations):\n"
-        prompt += f"Question: {question}\n"
-        prompt += f"SPARQL:\n"
         
         return prompt
     
     def _extract_sparql_from_output(self, output: str) -> str:
         """Extract SPARQL query from model output with multiple strategies."""
-        # Strategy 1: Try to find complete SELECT...WHERE{...} block
+        print(f"[Extract] Full output length: {len(output)} chars")
+        print(f"[Extract] First 500 chars: {output[:500]}")
+        
+        # Strategy 1: Try to find complete SELECT...WHERE{...} block with proper nesting
+        # Look for balanced braces
         select_match = re.search(
-            r'(PREFIX[^\n]*\n)*\s*(SELECT\s+[^{]+WHERE\s*\{[^}]+\})',
+            r'(PREFIX[^\n]*\n)*\s*SELECT\s+[^{]+WHERE\s*\{',
             output,
             re.IGNORECASE | re.DOTALL
         )
+        
         if select_match:
-            return select_match.group(0)
+            # Find the matching closing brace
+            start_idx = select_match.start()
+            brace_count = 0
+            in_where = False
+            end_idx = len(output)
+            
+            for i, char in enumerate(output[select_match.start():], start=select_match.start()):
+                if char == '{':
+                    brace_count += 1
+                    in_where = True
+                elif char == '}':
+                    brace_count -= 1
+                    if in_where and brace_count == 0:
+                        end_idx = i + 1
+                        break
+            
+            complete_query = output[start_idx:end_idx]
+            
+            # Validate that it's complete
+            if complete_query.count('{') == complete_query.count('}'):
+                print(f"[Extract] ✅ Found complete query with balanced braces")
+                return complete_query
+            else:
+                print(f"[Extract] ⚠️  Query has unbalanced braces")
         
-        # Strategy 2: Find SELECT statement with any content up to closing brace
-        select_simple = re.search(
-            r'(SELECT\s+.+?WHERE\s*\{.+?\})',
-            output,
-            re.IGNORECASE | re.DOTALL
-        )
-        if select_simple:
-            return select_simple.group(1)
-        
-        # Strategy 3: Look for query between code markers
+        # Strategy 2: Look for query between code markers
         code_block = re.search(r'```(?:sparql)?\s*([^`]+)```', output, re.IGNORECASE | re.DOTALL)
         if code_block:
+            print(f"[Extract] Found code block")
             return code_block.group(1).strip()
         
-        # Strategy 4: Take everything that looks like SPARQL
-        # Look for lines that start with SELECT, PREFIX, or contain WHERE
+        # Strategy 3: Try to extract line by line with proper brace counting
         sparql_lines = []
         in_query = False
+        brace_count = 0
         
         for line in output.split('\n'):
-            line = line.strip()
-            if re.match(r'^(PREFIX|SELECT|WHERE|FILTER)', line, re.IGNORECASE):
+            line_stripped = line.strip()
+            
+            # Start of query
+            if re.match(r'^(PREFIX|SELECT|ASK|CONSTRUCT|DESCRIBE)', line_stripped, re.IGNORECASE):
                 in_query = True
+            
             if in_query:
                 sparql_lines.append(line)
-                if '}' in line and not line.endswith(','):
-                    break
+                
+                # Count braces
+                brace_count += line.count('{') - line.count('}')
+                
+                # Check if we've closed all braces and have a WHERE clause
+                if brace_count == 0 and any(re.search(r'\bWHERE\b', l, re.IGNORECASE) for l in sparql_lines):
+                    if '}' in line:
+                        break
         
         if sparql_lines:
-            return '\n'.join(sparql_lines)
+            extracted = '\n'.join(sparql_lines)
+            print(f"[Extract] Line-by-line extraction: {len(extracted)} chars")
+            return extracted
         
-        # Fallback: return the whole output (will likely fail validation)
+        # Fallback: return the whole output
+        print(f"[Extract] ⚠️  Using fallback (whole output)")
         return output.strip()
     
     def _validate_and_secure_sparql(self, query: str) -> Dict[str, Any]:
@@ -677,7 +825,8 @@ Here are example questions and their correct SPARQL queries:
     
     def _postprocess_sparql(self, query: str) -> str:
         """
-        Post-process generated SPARQL query to ensure correct prefixes.
+        Post-process generated SPARQL query to ensure correct prefixes and proper name capitalization.
+        Handles all SPARQL query types correctly.
         """
         # Remove any markdown code blocks
         query = re.sub(r'```sparql\s*', '', query)
@@ -686,7 +835,7 @@ Here are example questions and their correct SPARQL queries:
         # Remove any leading/trailing quotes
         query = query.strip('"\'')
         
-        # Replace old movie ontology prefixes with correct Wikidata prefixes
+        # Replace old movie ontology prefixes
         replacements = {
             r'mo:hasDirector': 'wdt:P57',
             r'mo:hasActor': 'wdt:P161',
@@ -703,7 +852,200 @@ Here are example questions and their correct SPARQL queries:
         for old, new in replacements.items():
             query = re.sub(old, new, query, flags=re.IGNORECASE)
         
-        # Ensure proper prefixes are included at the beginning
+        # ✅ CRITICAL: Validate FILTER logic FIRST
+        if 'wdt:P136' in query:  # Genre query
+            if re.search(r'FILTER\(regex\(str\(\?genre[LI]', query, re.IGNORECASE):
+                print("[Postprocess] ⚠️  Detected wrong FILTER - fixing genre query")
+                query = re.sub(
+                    r'FILTER\(regex\(str\(\?(genre[LI]\w*)\)',
+                    r'FILTER(regex(str(?movieLabel)',
+                    query,
+                    flags=re.IGNORECASE
+                )
+        
+        if 'wdt:P57' in query:  # Director query
+            if re.search(r'FILTER\(regex\(str\(\?director[LI]', query, re.IGNORECASE):
+                print("[Postprocess] ⚠️  Detected wrong FILTER - fixing director query")
+                query = re.sub(
+                    r'FILTER\(regex\(str\(\?(director[LI]\w*)\)',
+                    r'FILTER(regex(str(?movieLabel)',
+                    query,
+                    flags=re.IGNORECASE
+                )
+        
+        # ✅ Remove "Movie " prefix if accidentally added
+        query = re.sub(
+            r'FILTER\(regex\(str\(\?movieLabel\),\s*"[\^]?Movie\s+([^"]+)"',
+            r'FILTER(regex(str(?movieLabel), "^\1"',
+            query,
+            flags=re.IGNORECASE
+        )
+        
+        # ✅ NEW: Convert ALL exact rdfs:label matches to case-insensitive FILTER
+        # This handles both user input variations AND database capitalization differences
+        def replace_exact_label_match(match):
+            """Replace exact label match with case-insensitive FILTER for ANY entity."""
+            var_name = match.group(1)
+            label_value = match.group(2)
+            
+            # ✅ CRITICAL: Use _normalize_proper_name for correct English title case
+            label_title = self._normalize_proper_name(label_value)
+            
+            print(f"[Postprocess] Normalizing '{label_value}' → '{label_title}'")
+            
+            # Escape regex special characters
+            label_escaped = self._escape_regex_special_chars(label_title)
+            
+            # Create a label variable name
+            var_base = var_name.strip('?')
+            label_var = f"?{var_base}Label"
+            
+            # ✅ CRITICAL: Ensure regex has ^ and $ anchors for exact match
+            if not label_escaped.startswith('^'):
+                label_escaped = '^' + label_escaped
+            if not label_escaped.endswith('$'):
+                label_escaped = label_escaped + '$'
+            
+            print(f"[Postprocess] FILTER pattern: {label_escaped}")
+            
+            # Generate replacement with case-insensitive FILTER
+            return f'{var_name} rdfs:label {label_var} .\n  FILTER(regex(str({label_var}), "{label_escaped}", "i")) .'
+        
+        # Find and replace ALL exact rdfs:label matches (movies, actors, countries, awards, etc.)
+        query = re.sub(
+            r'(\?\w+)\s+rdfs:label\s+"([^"]+)"\s*\.',
+            replace_exact_label_match,
+            query,
+            flags=re.IGNORECASE
+        )
+        
+        # ✅ ALSO convert simple equality FILTERs to regex FILTERs
+        # Pattern: ?var rdfs:label ?varLabel . FILTER(?varLabel = "Text")
+        # Should be: ?var rdfs:label ?varLabel . FILTER(regex(str(?varLabel), "^Text$", "i"))
+        def replace_equality_filter(match):
+            """Replace FILTER equality with case-insensitive regex."""
+            var_name = match.group(1)
+            label_value = match.group(2)
+            
+            # ✅ CRITICAL: Use _normalize_proper_name for correct English title case
+            label_title = self._normalize_proper_name(label_value)
+            
+            # Escape regex special characters
+            label_escaped = self._escape_regex_special_chars(label_title)
+            
+            # ✅ CRITICAL: Ensure regex has ^ and $ anchors
+            if not label_escaped.startswith('^'):
+                label_escaped = '^' + label_escaped
+            if not label_escaped.endswith('$'):
+                label_escaped = label_escaped + '$'
+            
+            # Return case-insensitive regex FILTER
+            return f'FILTER(regex(str({var_name}), "{label_escaped}", "i"))'
+        
+        # Replace FILTER(?var = "Text") with FILTER(regex(str(?var), "^Text$", "i"))
+        query = re.sub(
+            r'FILTER\s*\(\s*(\?\w+)\s*=\s*"([^"]+)"\s*\)',
+            replace_equality_filter,
+            query,
+            flags=re.IGNORECASE
+        )
+        
+        # ✅ IMPORTANT: Normalize line breaks FIRST before processing
+        query = re.sub(r'\r\n', '\n', query)
+        
+        # ✅ Smart period addition - process line by line
+        SPARQL_KEYWORDS = [
+            'PREFIX', 'SELECT', 'ASK', 'CONSTRUCT', 'DESCRIBE',
+            'WHERE', 'FROM', 'OPTIONAL', 'UNION', 'GRAPH',
+            'ORDER', 'BY', 'GROUP', 'HAVING', 'LIMIT', 'OFFSET',
+            'DISTINCT', 'REDUCED', 'BASE'
+        ]
+        
+        lines = []
+        in_where_clause = False
+        
+        for line in query.split('\n'):
+            stripped = line.rstrip()
+            
+            # Skip empty lines
+            if not stripped:
+                lines.append(stripped)
+                continue
+            
+            # Check if we're entering WHERE clause
+            if re.search(r'\bWHERE\s*\{', stripped, re.IGNORECASE):
+                in_where_clause = True
+                lines.append(stripped)
+                continue
+            
+            # Check if we're exiting WHERE clause
+            if in_where_clause and stripped.strip() == '}':
+                in_where_clause = False
+                lines.append(stripped)
+                continue
+            
+            # Skip if already has period, comma, brace
+            if stripped.endswith(('.', ',', '{', '}')):
+                lines.append(stripped)
+                continue
+            
+            # Check if line is a SPARQL keyword (don't add period)
+            first_word = stripped.strip().split()[0] if stripped.strip() else ""
+            if any(first_word.upper().startswith(kw) for kw in SPARQL_KEYWORDS):
+                lines.append(stripped)
+                continue
+            
+            # ✅ CRITICAL: Handle FILTER statements specially
+            if 'FILTER' in stripped.upper():
+                # FILTER should end with period
+                if not stripped.endswith('.'):
+                    stripped += ' .'
+                lines.append(stripped)
+                continue
+            
+            # If we're in WHERE clause and line contains a triple pattern
+            if in_where_clause:
+                # Check if line looks like a triple pattern (has predicate)
+                if re.search(r'\s+(wdt:|rdfs:|wd:|ddis:|rdf:|schema:|a\s)', stripped):
+                    # Add period if it doesn't have special ending
+                    if not re.search(r'[{},.;]$', stripped):
+                        stripped += ' .'
+            
+            lines.append(stripped)
+        
+        query = '\n'.join(lines)
+        
+        # ✅ CRITICAL FIX: Ensure ALL FILTER(regex(...)) patterns use _normalize_proper_name
+        # AND ensure they have proper anchors
+        def fix_filter_capitalization(match):
+            """Fix capitalization in FILTER regex patterns using proper English title case."""
+            var_name = match.group(1)
+            label_text = match.group(2).strip('^$')  # Remove existing anchors
+            
+            # ✅ Use _normalize_proper_name for correct capitalization
+            normalized_text = self._normalize_proper_name(label_text)
+            
+            print(f"[Postprocess] Final FILTER: '{label_text}' → '{normalized_text}'")
+            
+            # ✅ Always add anchors for exact match
+            return f'FILTER(regex(str(?{var_name}), "^{normalized_text}$", "i")) .'
+        
+        query = re.sub(
+            r'FILTER\(regex\(str\(\?(\w+)\),\s*"([^"]+)",\s*"i"\)\)(\s*\.)?',
+            fix_filter_capitalization,
+            query,
+            flags=re.IGNORECASE
+        )
+        
+        # ✅ Clean up any double periods
+        query = re.sub(r'\.\s*\.', '.', query)
+        
+        # ✅ Remove incorrectly placed periods after SELECT/WHERE/ORDER BY/etc
+        query = re.sub(r'^(\s*(?:SELECT|ASK|CONSTRUCT|DESCRIBE)\s+[^\.{]+?)\s*\.$', r'\1', query, flags=re.MULTILINE | re.IGNORECASE)
+        query = re.sub(r'^(\s*(?:WHERE|FROM|OPTIONAL)\s*)\s*\.$', r'\1', query, flags=re.MULTILINE | re.IGNORECASE)
+        query = re.sub(r'^(\s*(?:ORDER\s+BY|GROUP\s+BY|LIMIT|OFFSET)[^\.]*?)\s*\.$', r'\1', query, flags=re.MULTILINE | re.IGNORECASE)
+        
+        # Ensure proper prefixes
         if 'PREFIX' not in query.upper():
             prefixes = """PREFIX ddis: <http://ddis.ch/atai/>
 PREFIX wd: <http://www.wikidata.org/entity/>
@@ -714,8 +1056,12 @@ PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
 """
             query = prefixes + query
         
-        # Clean up whitespace
+        # Clean up excessive whitespace
+        query = re.sub(r'\n{3,}', '\n\n', query)
         query = query.strip()
+        
+        print(f"[Postprocess] Final query preview:")
+        print(query[:500])
         
         return query
 
