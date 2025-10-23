@@ -1,12 +1,3 @@
-"""
-LangGraph-style workflow for query processing.
-Implements a state machine with validation, routing, and formatting.
-
-This version is streamlined to cooperate with a model-first NL→SPARQL pipeline:
-- Light, lossless NL pre-processing only (no title-casing here).
-- All casing/label matching is handled in NLToSPARQL (case-insensitive, anchored).
-"""
-
 import sys
 import os
 
@@ -197,7 +188,7 @@ class QueryWorkflow:
         self.validator = InputValidator()
         self.formatter = AnswerFormatter()
 
-    # ==================== WORKFLOW NODES ====================
+    # ==================== WORKFLOW EXECUTION ====================
 
     def run(self, query: str) -> str:
         """
@@ -209,73 +200,70 @@ class QueryWorkflow:
         Returns:
             Formatted response string
         """
-        print(f"\n{'='*80}")
-        print(f"🔄 WORKFLOW EXECUTION STARTED")
-        print(f"{'='*80}\n")
+        print(f"\n{'='*60}")
+        print(f"🚀 Starting workflow for query: {query[:50]}...")
+        print(f"{'='*60}")
         
         # Initialize state
         state: WorkflowState = {
-            'raw_query': query,
-            'is_valid': False,
-            'validation_message': None,
-            'detected_threats': [],
-            'query_type': None,
-            'processing_method': None,
-            'routing_reason': None,
-            'generated_sparql': None,
-            'sparql_confidence': 0.0,
-            'sparql_explanation': None,
-            'raw_result': None,
-            'formatted_response': None,
-            'error': None,
-            'current_node': 'start'
+            "raw_query": query,
+            "is_valid": False,
+            "validation_message": None,
+            "detected_threats": [],
+            "query_type": None,
+            "processing_method": None,
+            "routing_reason": None,
+            "generated_sparql": None,
+            "sparql_confidence": 0.0,
+            "sparql_explanation": None,
+            "raw_result": None,
+            "formatted_response": None,
+            "error": None,
+            "current_node": "start"
         }
         
-        # Execute workflow nodes in sequence
-        try:
-            # Node 1: Validate input
-            state = self.validate_input(state)
-            if not state['is_valid']:
-                state = self.format_response(state)
-                return state['formatted_response']
-            
-            # Node 2: Classify query
-            state = self.classify_query(state)
-            if state.get('error'):
-                state = self.format_response(state)
-                return state['formatted_response']
-            
-            # Node 3: Decide processing method
-            state = self.decide_processing_method(state)
-            
-            # Node 4: Process based on method
-            if state['processing_method'] == ProcessingMethod.SPARQL:
-                state = self.process_with_sparql(state)
-            elif state['processing_method'] == ProcessingMethod.EMBEDDING:
-                state = self.process_with_embeddings(state)
-            else:
-                state['error'] = "Unknown processing method"
-            
-            # Node 5: Format response
+        # Node 1: Validate input
+        state = self.validate_input(state)
+        if not state["is_valid"]:
             state = self.format_response(state)
-            
-            print(f"\n{'='*80}")
-            print(f"✅ WORKFLOW EXECUTION COMPLETED")
-            print(f"{'='*80}\n")
-            
-            return state['formatted_response']
-            
-        except Exception as e:
-            print(f"\n{'='*80}")
-            print(f"❌ WORKFLOW EXECUTION FAILED")
-            print(f"{'='*80}\n")
-            print(f"Error: {e}")
-            import traceback
-            traceback.print_exc()
-            
-            state['error'] = f"Workflow error: {str(e)}"
+            return state["formatted_response"]
+        
+        # Node 2: Classify query
+        state = self.classify_query(state)
+        if state.get("error"):
             state = self.format_response(state)
-            return state['formatted_response']
+            return state["formatted_response"]
+        
+        # Node 3: Decide processing method
+        state = self.decide_processing_method(state)
+        
+        # Debug: Print processing method details
+        print(f"\n[DEBUG] Processing method type: {type(state['processing_method'])}")
+        print(f"[DEBUG] Processing method value: {state['processing_method']}")
+        print(f"[DEBUG] ProcessingMethod.SPARQL: {ProcessingMethod.SPARQL}")
+        print(f"[DEBUG] Comparison result: {state['processing_method'] == ProcessingMethod.SPARQL}")
+        
+        # Node 4: Process based on method
+        if state["processing_method"] == ProcessingMethod.SPARQL:
+            print(f"\n[ROUTING] Calling process_with_sparql...")
+            state = self.process_with_sparql(state)
+        elif state["processing_method"] == ProcessingMethod.EMBEDDING:
+            print(f"\n[ROUTING] Calling process_with_embeddings...")
+            state = self.process_with_embeddings(state)
+        else:
+            print(f"\n[ROUTING] No matching method, setting error...")
+            state["error"] = f"Unknown processing method: {state['processing_method']}"
+        
+        # Node 5: Format response
+        state = self.format_response(state)
+        
+        print(f"\n{'='*60}")
+        print(f"✅ Workflow completed")
+        print(f"{'='*60}\n")
+        
+        return state["formatted_response"]
+
+    # ==================== WORKFLOW NODES ====================
 
     def validate_input(self, state: WorkflowState) -> WorkflowState:
         """
@@ -359,25 +347,47 @@ class QueryWorkflow:
         - Uses orchestrator.nl_to_sparql (model-first) to generate SPARQL.
         - Executes via SPARQLHandler with validation + timeout + caching.
         """
+        print("\n[NODE: process_with_sparql] Starting SPARQL processing...")
+        
         try:
-            # Generate SPARQL (NLToSPARQL is model-first per orchestrator)
-            sparql_result = self.orchestrator.nl_to_sparql.convert(state["raw_query"])
+            # Step 1: Generate SPARQL
+            print("[NODE: process_with_sparql] Step 1: Generating SPARQL query...")
+            try:
+                sparql_result = self.orchestrator.nl_to_sparql.convert(state["raw_query"])
+                print(f"[NODE: process_with_sparql] ✅ SPARQL generation successful")
+            except Exception as e:
+                print(f"[NODE: process_with_sparql] ❌ SPARQL generation failed: {e}")
+                import traceback
+                traceback.print_exc()
+                state["error"] = f"SPARQL generation error: {e}"
+                state["current_node"] = "process_with_sparql"
+                return state
 
-            # Store generated query + metadata in state
+            # Step 2: Store generated query + metadata in state
+            print("[NODE: process_with_sparql] Step 2: Storing query metadata...")
             state["generated_sparql"] = sparql_result.query
             state["sparql_confidence"] = float(getattr(sparql_result, "confidence", 0.0))
             state["sparql_explanation"] = getattr(sparql_result, "explanation", None)
+            print(f"[NODE: process_with_sparql] Generated query (confidence: {state['sparql_confidence']}):")
+            print(state["generated_sparql"])
 
-            # Optional: language guard for labels
-            # state["generated_sparql"] = self.orchestrator.sparql_handler.add_lang_filter(
-            #     state["generated_sparql"], ["?movieLabel", "?personLabel"], "en"
-            # )
+            # Step 3: Execute SPARQL query
+            print("[NODE: process_with_sparql] Step 3: Executing SPARQL query...")
+            try:
+                exec_result = self.orchestrator.sparql_handler.execute_query(
+                    state["generated_sparql"], validate=True
+                )
+                print(f"[NODE: process_with_sparql] ✅ Query execution completed")
+            except Exception as e:
+                print(f"[NODE: process_with_sparql] ❌ Query execution failed: {e}")
+                import traceback
+                traceback.print_exc()
+                state["error"] = f"Query execution error: {e}"
+                state["current_node"] = "process_with_sparql"
+                return state
 
-            print("[NODE: process_with_sparql] Executing SPARQL query...")
-            exec_result = self.orchestrator.sparql_handler.execute_query(
-                state["generated_sparql"], validate=True
-            )
-
+            # Step 4: Check execution results
+            print("[NODE: process_with_sparql] Step 4: Processing execution results...")
             if not exec_result.get("success"):
                 state["error"] = exec_result.get("error", "Unknown error")
                 state["current_node"] = "process_with_sparql"
@@ -386,12 +396,15 @@ class QueryWorkflow:
 
             state["raw_result"] = exec_result.get("data") or "No answer found in the database."
             state["current_node"] = "process_with_sparql"
-            print("[NODE: process_with_sparql] ✅ Query executed successfully")
+            print(f"[NODE: process_with_sparql] ✅ Query executed successfully")
+            print(f"[NODE: process_with_sparql] Result preview: {str(state['raw_result'])[:100]}...")
 
         except Exception as e:
+            print(f"[NODE: process_with_sparql] ❌ Unexpected error: {e}")
+            import traceback
+            traceback.print_exc()
             state["error"] = f"SPARQL processing error: {e}"
             state["current_node"] = "process_with_sparql"
-            print(f"[NODE: process_with_sparql] ❌ {state['error']}")
 
         return state
 

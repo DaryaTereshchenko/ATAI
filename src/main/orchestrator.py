@@ -24,8 +24,8 @@ try:
     try:
         from langchain_community.llms import LlamaCpp
         LLAMACPP_AVAILABLE = True
-        print("✅ Imported LlamaCpp from langchain_community.llms")
         LLAMACPP_DIRECT = False
+        print("✅ Imported LlamaCpp from langchain_community.llms")
     except ImportError:
         try:
             from langchain.llms import LlamaCpp
@@ -46,11 +46,11 @@ except ImportError as e:
 
 from src.main.sparql_handler import SPARQLHandler
 from src.main.nl_to_sparql import NLToSPARQL
-from src.main.workflow import QueryWorkflow
+from src.main.workflow import QueryWorkflow, ProcessingMethod
 from src.config import (
     LLM_TYPE, LLM_MODEL, LLM_MODEL_PATH, LLM_TEMPERATURE,
     LLM_MAX_TOKENS, LLM_CONTEXT_LENGTH, USE_LLM_CLASSIFICATION,
-    # Optional: flip this on if you want a language guard on labels by default
+    # Optional flags if you later add them to config:
     # ADD_LABEL_LANG_FILTER, LABEL_LANG
 )
 
@@ -66,7 +66,7 @@ class QueryClassification(BaseModel):
         description="The type of question: factual, embedding, multimedia, or recommendation"
     )
 
-# Global instance for access by workflow
+# Global instance for access by other modules (e.g., validators)
 orchestrator_instance = None
 
 class Orchestrator:
@@ -76,7 +76,7 @@ class Orchestrator:
         """Initialize the orchestrator with a language model."""
         global orchestrator_instance
 
-        # Initialize LLM based on configuration (used only for classification here)
+        # Initialize LLM based on configuration (used for classification only)
         self.llm = llm or self._initialize_llm()
         self.use_llm = self.llm is not None and USE_LLM_CLASSIFICATION
 
@@ -86,11 +86,10 @@ class Orchestrator:
         else:
             print("ℹ️  Using rule-based classification.")
 
-        # Initialize SPARQL handler ONCE
+        # Initialize SPARQL handler ONCE (loads graph + builds label index)
         self.sparql_handler = SPARQLHandler()
 
-        # ✅ Instantiate NL-to-SPARQL in MODEL-FIRST mode and reuse the same handler
-        #    This ensures DeepSeek (llama-cpp) is tried first, with rules as fallback.
+        # Instantiate NL-to-SPARQL in MODEL-FIRST mode and reuse the same handler
         self.nl_to_sparql = NLToSPARQL(
             method="direct-llm",
             sparql_handler=self.sparql_handler
@@ -100,6 +99,8 @@ class Orchestrator:
         self.use_workflow = use_workflow
         if use_workflow:
             self.workflow = QueryWorkflow(self)
+        else:
+            self.workflow = None
 
         orchestrator_instance = self
 
@@ -201,18 +202,26 @@ class Orchestrator:
             ("system", """You are a query classifier for a movie information system.
 
 Classify the user's query into exactly ONE of these types:
-- factual: Questions about specific facts (who, what, when, where)
-- embedding: Semantic search or similarity questions  
-- multimedia: Questions asking to see/show images
-- recommendation: Asking for suggestions or similar items
+- factual
+- embedding
+- multimedia
+- recommendation
+
+Respond with ONLY a JSON object containing the question_type. Nothing else.
+
+Rules:
+1. FACTUAL: Questions about specific facts (who, what, when, where)
+2. EMBEDDING: Semantic search or similarity questions
+3. MULTIMEDIA: Questions asking to see/show images
+4. RECOMMENDATION: Asking for suggestions
 
 Examples:
 - "Who directed Star Wars?" → factual
-- "Find movies similar to Inception" → embedding
 - "Show me a picture of Tom Hanks" → multimedia
-- "Recommend action movies" → recommendation
+- "Recommend movies like Inception" → recommendation
 
-Respond with ONLY the classification type, nothing else."""),
+Output format: {{"question_type": "factual"}}
+Output ONLY the JSON, no other text."""),
             ("user", "{query}")
         ])
         self.classification_chain = classification_prompt | self.llm
@@ -224,32 +233,15 @@ Respond with ONLY the classification type, nothing else."""),
                 raw_output = self.classification_chain.invoke({"query": query})
                 output_text = raw_output if isinstance(raw_output, str) else str(raw_output)
                 print(f"[Classification] Raw LLM output: {output_text[:100]}...")
-                
-                # Clean up the output
-                import re
-                output_text = output_text.strip()
-                output_text = re.sub(r'^(AI:|Assistant:)\s*', '', output_text, flags=re.IGNORECASE)
-                output_text = output_text.strip('"\'')
-                
-                # Extract just the classification type
-                type_match = re.search(r'\b(factual|embedding|multimedia|recommendation)\b', output_text.lower())
-                if type_match:
-                    qt = type_match.group(1)
+                import json, re
+                output_text = re.sub(r'^AI:\s*', '', output_text.strip())
+                json_match = re.search(r'\{[^}]*"question_type"\s*:\s*"(\w+)"[^}]*\}', output_text)
+                if json_match:
+                    data = json.loads(json_match.group(0))
+                    qt = data.get('question_type', 'factual')
                     print(f"[Classification] ✅ Parsed type: {qt}")
                     return QueryClassification(question_type=QuestionType(qt))
-                
-                # Fallback: check for keywords in output
-                output_lower = output_text.lower()
-                if 'factual' in output_lower:
-                    return QueryClassification(question_type=QuestionType.FACTUAL)
-                elif 'embedding' in output_lower:
-                    return QueryClassification(question_type=QuestionType.EMBEDDING)
-                elif 'multimedia' in output_lower:
-                    return QueryClassification(question_type=QuestionType.MULTIMEDIA)
-                elif 'recommendation' in output_lower:
-                    return QueryClassification(question_type=QuestionType.RECOMMENDATION)
-                
-                raise ValueError(f"Could not extract classification from: {output_text}")
+                raise ValueError(f"Could not find JSON in output: {output_text}")
             except Exception as e:
                 print(f"⚠️  LLM classification failed: {str(e)[:200]}")
                 print("ℹ️  Falling back to rule-based classification.")
@@ -270,14 +262,89 @@ Respond with ONLY the classification type, nothing else."""),
             return QueryClassification(question_type=QuestionType.FACTUAL)
         return QueryClassification(question_type=QuestionType.FACTUAL)
 
+    # ------------------ Public entry points ------------------
+
+    def run(self, query: str) -> str:
+        """
+        End-to-end execution using the LangGraph-style workflow.
+        Returns the final formatted response string.
+        """
+        if not hasattr(self, "workflow") or self.workflow is None:
+            # Fallback: legacy path if workflow isn't enabled
+            return self._process_query_legacy(query)
+
+        # Initial workflow state
+        state = {
+            # Input
+            "raw_query": query,
+
+            # Validation
+            "is_valid": False,
+            "validation_message": None,
+            "detected_threats": [],
+
+            # Classification
+            "query_type": None,
+
+            # Routing decision
+            "processing_method": None,
+            "routing_reason": None,
+
+            # SPARQL processing
+            "generated_sparql": None,
+            "sparql_confidence": 0.0,
+            "sparql_explanation": None,
+
+            # Results
+            "raw_result": None,
+            "formatted_response": None,
+
+            # Error handling
+            "error": None,
+            "current_node": "start",
+        }
+
+        # Node 1: validate input
+        state = self.workflow.validate_input(state)
+        if state.get("processing_method") == ProcessingMethod.FAILED or state.get("error"):
+            state = self.workflow.format_response(state)
+            return state.get("formatted_response", "An error occurred.")
+
+        # Node 2: classify
+        state = self.workflow.classify_query(state)
+
+        # Node 3: decide processing method
+        state = self.workflow.decide_processing_method(state)
+
+        # Node 4: process
+        method = state.get("processing_method")
+        if method == ProcessingMethod.SPARQL:
+            state = self.workflow.process_with_sparql(state)
+        elif method == ProcessingMethod.EMBEDDING:
+            state = self.workflow.process_with_embeddings(state)
+        else:
+            # default to SPARQL if undecided
+            state = self.workflow.process_with_sparql(state)
+
+        # Node 5: format response
+        state = self.workflow.format_response(state)
+
+        return state.get("formatted_response", "No response generated.")
+
     def process_query(self, query: str) -> str:
-        """Process a query by routing it through the workflow or directly to handlers."""
+        """
+        Backwards-compatible entry point.
+        Uses the workflow when enabled, otherwise legacy path.
+        """
         if self.use_workflow:
-            return self.workflow.run(query)
+            return self.run(query)
         else:
             return self._process_query_legacy(query)
 
+    # ------------------ Legacy direct processing ------------------
+
     def _process_query_legacy(self, query: str) -> str:
+        """Legacy query processing without workflow (backward compatibility)."""
         classification = self.classify_query(query)
         print(f"Query classified as: {classification.question_type.value}")
         if classification.question_type == QuestionType.FACTUAL:
@@ -306,7 +373,6 @@ Respond with ONLY the classification type, nothing else."""),
             if getattr(sparql_result, 'explanation', None):
                 print(f"Explanation: {sparql_result.explanation}")
 
-            # Confidence hint (optional UX)
             if getattr(sparql_result, 'confidence', 1.0) < 0.5:
                 return (
                     f"I'm not very confident about this query (confidence: {sparql_result.confidence:.2f}).\n\n"
@@ -314,7 +380,7 @@ Respond with ONLY the classification type, nothing else."""),
                     "Would you like to rephrase your question?"
                 )
 
-            # Optionally add a language guard to labels (uncomment if needed)
+            # Optional: language guard to labels (uncomment when you enable these in config)
             # if ADD_LABEL_LANG_FILTER:
             #     sparql_result.query = self.sparql_handler.add_lang_filter(
             #         sparql_result.query, ["?movieLabel", "?personLabel"], LABEL_LANG
@@ -342,10 +408,13 @@ Respond with ONLY the classification type, nothing else."""),
             )
 
     def _handle_embedding(self, query: str) -> str:
+        """Handle embedding-based questions (placeholder)."""
         return f"[EMBEDDING NODE - Not yet implemented] Processing: {query}"
 
     def _handle_multimedia(self, query: str) -> str:
+        """Handle multimedia questions (placeholder)."""
         return f"[MULTIMEDIA NODE - Not yet implemented] Processing: {query}"
 
     def _handle_recommendation(self, query: str) -> str:
+        """Handle recommendation questions (placeholder)."""
         return f"[RECOMMENDATION NODE - Not yet implemented] Processing: {query}"
