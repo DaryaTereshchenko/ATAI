@@ -186,7 +186,8 @@ class SPARQLHandler:
         validation_result = {
             'valid': False,
             'message': '',
-            'query_type': None
+            'query_type': None,
+            'cleaned_query': None  # Add this field
         }
 
         if not query or not isinstance(query, str):
@@ -210,6 +211,7 @@ class SPARQLHandler:
             validation_result['valid'] = True
             validation_result['query_type'] = getattr(pq.algebra, "name", "SELECT")
             validation_result['message'] = f"Valid {validation_result['query_type']} query"
+            validation_result['cleaned_query'] = query  # Add the cleaned query
             return validation_result
         except Exception as e:
             validation_result['message'] = f"Query parsing error: {str(e)}"

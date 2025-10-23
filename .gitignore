@@ -4,6 +4,7 @@ config.py
 # Data folder
 data/
 models/
+2025/
 # Python cache
 __pycache__/
 *.py[cod]

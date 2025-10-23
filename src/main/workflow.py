@@ -360,6 +360,8 @@ class QueryWorkflow:
         - Executes via SPARQLHandler with validation + timeout + caching.
         """
         try:
+            print("[NODE: process_with_sparql] Generating SPARQL query...")
+            
             # Generate SPARQL (NLToSPARQL is model-first per orchestrator)
             sparql_result = self.orchestrator.nl_to_sparql.convert(state["raw_query"])
 
@@ -367,6 +369,23 @@ class QueryWorkflow:
             state["generated_sparql"] = sparql_result.query
             state["sparql_confidence"] = float(getattr(sparql_result, "confidence", 0.0))
             state["sparql_explanation"] = getattr(sparql_result, "explanation", None)
+
+            # Log generation details
+            print(f"[NODE: process_with_sparql] 📊 Confidence: {state['sparql_confidence']:.2f}")
+            if state["sparql_explanation"]:
+                print(f"[NODE: process_with_sparql] 💡 Method: {state['sparql_explanation']}")
+            
+            # Determine if it was rule-based or LLM
+            explanation_lower = (state["sparql_explanation"] or "").lower()
+            if "pattern-matched" in explanation_lower or "rule" in explanation_lower:
+                generation_method = "🎯 Rule-based (Pattern Matching)"
+            elif "llm" in explanation_lower or "model" in explanation_lower:
+                generation_method = "🤖 LLM-generated (DeepSeek)"
+            else:
+                generation_method = "❓ Unknown method"
+            
+            print(f"[NODE: process_with_sparql] 🔧 Generation: {generation_method}")
+            print(f"[NODE: process_with_sparql] 📝 Query preview: {state['generated_sparql'][:100]}...")
 
             # Optional: language guard for labels
             # state["generated_sparql"] = self.orchestrator.sparql_handler.add_lang_filter(
