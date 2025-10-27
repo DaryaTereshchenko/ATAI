@@ -281,9 +281,38 @@ class EmbeddingHandler:
         P31 = URIRef("http://www.wikidata.org/prop/direct/P31")
         
         for entity in graph.subjects(P31, type_ref):
-            entities.append(str(entity))
+            entity_uri = str(entity)
+            # Only include entities that have embeddings
+            if entity_uri in self.entity_uri_to_id:
+                entities.append(entity_uri)
         
         for entity in graph.subjects(RDF.type, type_ref):
-            entities.append(str(entity))
+            entity_uri = str(entity)
+            if entity_uri in self.entity_uri_to_id:
+                entities.append(entity_uri)
         
         return list(set(entities))  # Remove duplicates
+    
+    def get_entity_type_qcode(self, entity_uri: str, graph) -> Optional[str]:
+        """
+        Get the Wikidata Q-code for an entity's type.
+        
+        Args:
+            entity_uri: Entity URI
+            graph: RDFLib graph
+            
+        Returns:
+            Q-code string (e.g., 'Q201658') or None
+        """
+        from rdflib import URIRef
+        
+        entity_ref = URIRef(entity_uri)
+        P31 = URIRef("http://www.wikidata.org/prop/direct/P31")
+        
+        for type_uri in graph.objects(entity_ref, P31):
+            type_str = str(type_uri)
+            if '/Q' in type_str:
+                # Extract Q-code
+                return type_str.split('/Q')[-1].split('#')[0]
+        
+        return None

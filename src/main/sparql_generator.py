@@ -24,7 +24,8 @@ class SPARQLGenerator:
         'producer': 'http://www.wikidata.org/prop/direct/P162',
         'genre': 'http://www.wikidata.org/prop/direct/P136',
         'publication_date': 'http://www.wikidata.org/prop/direct/P577',
-        'rating': 'http://ddis.ch/atai/rating'
+        'rating': 'http://ddis.ch/atai/rating',
+        'country_of_origin': 'http://www.wikidata.org/prop/direct/P495'  # ✅ NEW
     }
     
     # Type URIs

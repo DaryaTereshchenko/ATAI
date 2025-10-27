@@ -93,6 +93,7 @@ class QueryAnalyzer:
             'genre': {'subject': 'movie', 'object': 'string'},
             'publication_date': {'subject': 'movie', 'object': 'date'},
             'rating': {'subject': 'movie', 'object': 'string'},
+            'country_of_origin': {'subject': 'movie', 'object': 'string'},  # ✅ NEW
         }
     
     def _setup_entity_hints(self):
@@ -263,7 +264,37 @@ class QueryAnalyzer:
                 'subject': 'movie',
                 'object': 'string',
                 'confidence': 0.90
-            }
+            },
+            
+            # ✅ NEW: Country of origin queries
+            {
+                'regex': r'\b(?:from|of)\s+(?:what|which)\s+country\s+(?:is|was)\s+',
+                'relation': 'country_of_origin',
+                'subject': 'movie',
+                'object': 'string',
+                'confidence': 0.98
+            },
+            {
+                'regex': r'\b(?:what|which)\s+country\s+(?:is|was|did)\s+.*?\s+from\b',
+                'relation': 'country_of_origin',
+                'subject': 'movie',
+                'object': 'string',
+                'confidence': 0.98
+            },
+            {
+                'regex': r'\bcountry\s+of\s+origin\s+(?:of|for)\s+',
+                'relation': 'country_of_origin',
+                'subject': 'movie',
+                'object': 'string',
+                'confidence': 0.95
+            },
+            {
+                'regex': r'\b(?:where|which\s+country)\s+(?:is|was|does)\s+.*?\s+(?:made|produced|filmed)\b',
+                'relation': 'country_of_origin',
+                'subject': 'movie',
+                'object': 'string',
+                'confidence': 0.90
+            },
         ]
         
         # ==================== REVERSE PATTERNS ====================
@@ -438,7 +469,8 @@ class QueryAnalyzer:
                 # ✅ Check if this is a superlative variant of forward query
                 if pattern.pattern_type == 'forward' and self._is_superlative_query(query_lower):
                     print(f"[Analyzer] ✅ Detected superlative modifier on forward query")
-                    pattern.extracted_entities = pattern.extracted_entities or {}
+                    if not pattern.extracted_entities:
+                        pattern.extracted_entities = {}
                     pattern.extracted_entities['superlative'] = self._extract_superlative_type(query_lower)
                 return pattern
         
@@ -457,7 +489,8 @@ class QueryAnalyzer:
             # ✅ Check if this is a superlative variant
             if self._is_superlative_query(query_lower):
                 print(f"[Analyzer] ✅ Detected superlative modifier on forward query")
-                pattern.extracted_entities = pattern.extracted_entities or {}
+                if not pattern.extracted_entities:
+                    pattern.extracted_entities = {}
                 pattern.extracted_entities['superlative'] = self._extract_superlative_type(query_lower)
             return pattern
         
@@ -467,18 +500,21 @@ class QueryAnalyzer:
         """Check if query contains superlative modifiers (highest/lowest/best/worst)."""
         superlative_keywords = [
             'highest', 'lowest', 'best', 'worst', 'top', 'bottom',
-            'maximum', 'minimum', 'greatest', 'least'
+            'maximum', 'minimum', 'greatest', 'least', 'most', 'fewest'
         ]
-        return any(keyword in query for keyword in superlative_keywords)
+        query_lower = query.lower()
+        return any(keyword in query_lower for keyword in superlative_keywords)
     
     def _extract_superlative_type(self, query: str) -> str:
         """Extract superlative type (MAX or MIN) from query."""
         max_keywords = ['highest', 'best', 'top', 'maximum', 'greatest', 'most']
-        min_keywords = ['lowest', 'worst', 'bottom', 'minimum', 'least']
+        min_keywords = ['lowest', 'worst', 'bottom', 'minimum', 'least', 'fewest']
         
-        if any(keyword in query for keyword in max_keywords):
+        query_lower = query.lower()
+        
+        if any(keyword in query_lower for keyword in max_keywords):
             return 'MAX'
-        elif any(keyword in query for keyword in min_keywords):
+        elif any(keyword in query_lower for keyword in min_keywords):
             return 'MIN'
         return 'MAX'  # Default
 

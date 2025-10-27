@@ -5,15 +5,19 @@ Tests the complete flow: Classification → Pattern Analysis → Entity Extracti
 
 Focus on:
 1. FACTUAL queries: Full pipeline with LLM-first, template-fallback strategy
-2. OUT-OF-SCOPE queries: Proper rejection at classification stage
-3. Pattern-specific few-shot prompting for LLM
+2. EMBEDDING queries: Pure embedding-based approach with entity type reporting
+3. HYBRID queries: Both factual and embedding answers
+4. Answer validation against expected results
 
-Uses real Wikidata entities that should exist in the knowledge graph.
+Uses real Wikidata entities from the provided test cases.
 """
 
 import sys
 import os
 import json
+import re
+from datetime import datetime
+from pathlib import Path
 
 # Add project root to path
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
@@ -27,393 +31,551 @@ logging.getLogger('sentence_transformers').setLevel(logging.ERROR)
 logging.getLogger('src.main.sparql_handler').setLevel(logging.ERROR)
 
 
-def diagnose_entity_extraction(query: str, orchestrator):
-    """
-    Diagnostic function to test entity extraction with pattern-aware architecture.
+class TeeOutput:
+    """Utility class to write output to both console and file."""
     
-    Uses QueryAnalyzer to understand query pattern, then extracts appropriate entities.
-    """
-    embedding_proc = orchestrator.embedding_processor
-    if not embedding_proc:
-        return None
+    def __init__(self, file_path: str):
+        self.terminal = sys.stdout
+        self.log_file = open(file_path, 'w', encoding='utf-8')
     
-    # Pattern Analysis
-    pattern = embedding_proc.query_analyzer.analyze(query)
+    def write(self, message):
+        self.terminal.write(message)
+        self.log_file.write(message)
+        self.log_file.flush()  # Ensure immediate write
     
-    if not pattern:
-        return None
+    def flush(self):
+        self.terminal.flush()
+        self.log_file.flush()
     
-    # Entity Extraction
-    entities_found = {}
-    
-    if pattern.pattern_type == 'forward':
-        entity_type = "http://www.wikidata.org/entity/Q11424"  # Q11424 = film
-        entities = embedding_proc.entity_extractor.extract_entities(
-            query,
-            entity_type=entity_type,
-            threshold=70
-        )
-        
-        if entities:
-            entities_found['movie'] = (entities[0], entity_type)
-    
-    elif pattern.pattern_type == 'reverse':
-        entity_type = "http://www.wikidata.org/entity/Q5"  # Q5 = human
-        entities = embedding_proc.entity_extractor.extract_entities(
-            query,
-            entity_type=entity_type,
-            threshold=70
-        )
-        
-        if entities:
-            entities_found['person'] = (entities[0], entity_type)
-    
-    elif pattern.pattern_type == 'verification':
-        movie_type = "http://www.wikidata.org/entity/Q11424"
-        person_type = "http://www.wikidata.org/entity/Q5"
-        
-        movie_entities = embedding_proc.entity_extractor.extract_entities(
-            query,
-            entity_type=movie_type,
-            threshold=70
-        )
-        
-        person_entities = embedding_proc.entity_extractor.extract_entities(
-            query,
-            entity_type=person_type,
-            threshold=70
-        )
-        
-        if movie_entities:
-            entities_found['movie'] = (movie_entities[0], movie_type)
-        
-        if person_entities:
-            entities_found['person'] = (person_entities[0], person_type)  # Fixed: was personEntities
-    
-    return {
-        'pattern': pattern,
-        'entities': entities_found
-    }
+    def close(self):
+        self.log_file.close()
 
 
-def test_sparql_generation(pattern, entities_found, embedding_proc):
+def extract_answer_from_response(response: str) -> str:
     """
-    Test SPARQL generation with LLM-first, template-fallback strategy.
+    Extract the actual answer from a formatted response.
     
     Args:
-        pattern: QueryPattern from analyzer
-        entities_found: Dict with extracted entities (now includes entity_type)
-        embedding_proc: Embedding processor instance
-    """
-    if not entities_found:
-        return None
-    
-    # Determine subject and object labels
-    subject_label = None
-    object_label = None
-    
-    if pattern.pattern_type == 'forward':
-        if 'movie' in entities_found:
-            (uri, text, score), entity_type = entities_found['movie']
-            subject_label = embedding_proc.entity_extractor.get_entity_label(uri)
-    
-    elif pattern.pattern_type == 'reverse':
-        if 'person' in entities_found:
-            (uri, text, score), entity_type = entities_found['person']
-            subject_label = embedding_proc.entity_extractor.get_entity_label(uri)
-    
-    elif pattern.pattern_type == 'verification':
-        if 'person' in entities_found:
-            (uri, text, score), entity_type = entities_found['person']
-            subject_label = embedding_proc.entity_extractor.get_entity_label(uri)
-        if 'movie' in entities_found:
-            (uri, text, score), entity_type = entities_found['movie']
-            object_label = embedding_proc.entity_extractor.get_entity_label(uri)
-    
-    if not subject_label:
-        return None
-    
-    # Test SPARQL generation with fallback
-    try:
-        sparql_result = embedding_proc._generate_sparql_with_fallback(
-            pattern=pattern,
-            subject_label=subject_label,
-            object_label=object_label
-        )
+        response: Full formatted response string
         
-        return sparql_result
+    Returns:
+        Extracted answer text
+    """
+    # Remove markdown formatting
+    response = re.sub(r'\*\*([^*]+)\*\*', r'\1', response)
     
-    except Exception as e:
-        return None
+    # For factual responses: extract text after "was" or "is"
+    # Example: "✅ 'Movie' was released in **1974**."
+    match = re.search(r'(?:was|is|are)\s+(?:released in\s+)?(.+?)(?:\.|$)', response, re.IGNORECASE)
+    if match:
+        answer = match.group(1).strip()
+        # Clean up common prefixes
+        answer = re.sub(r'^(?:directed by|starring|written by|produced by)\s+', '', answer, flags=re.IGNORECASE)
+        return answer
+    
+    # For embedding responses: extract "answer suggested by embeddings is: X (type: Y)"
+    match = re.search(r'answer suggested by embeddings is:\s*([^(]+)\s*\(type:\s*([^)]+)\)', response, re.IGNORECASE)
+    if match:
+        answer = match.group(1).strip()
+        entity_type = match.group(2).strip()
+        return f"{answer} (type: {entity_type})"
+    
+    # For list responses: extract items
+    lines = [line.strip() for line in response.split('\n') if line.strip()]
+    for line in lines:
+        # Look for bullet points or answer lines
+        if line.startswith('•') or line.startswith('-'):
+            return line.lstrip('•-').strip()
+    
+    # Fallback: return cleaned response
+    return response.strip()
+
+
+def normalize_answer(answer: str) -> str:
+    """Normalize answer for comparison."""
+    # Remove extra whitespace
+    answer = ' '.join(answer.split())
+    # Remove quotes
+    answer = answer.replace('"', '').replace("'", '')
+    # Lowercase
+    answer = answer.lower()
+    return answer
+
+
+def compare_answers(actual: str, expected: str) -> tuple:
+    """
+    Compare actual answer with expected answer.
+    
+    Returns:
+        (is_match: bool, similarity_score: float)
+    """
+    actual_norm = normalize_answer(actual)
+    expected_norm = normalize_answer(expected)
+    
+    # Exact match
+    if actual_norm == expected_norm:
+        return True, 1.0
+    
+    # Check if expected is contained in actual (for multi-part answers)
+    if expected_norm in actual_norm:
+        return True, 0.9
+    
+    # Check word overlap for partial match
+    actual_words = set(actual_norm.split())
+    expected_words = set(expected_norm.split())
+    
+    if expected_words and actual_words:
+        overlap = len(actual_words & expected_words)
+        total = len(expected_words)
+        similarity = overlap / total
+        
+        # Consider it a match if >70% word overlap
+        return similarity > 0.7, similarity
+    
+    return False, 0.0
 
 
 def test_transformer_pipeline():
-    """Test complete pipeline with transformer classifier for factual and out-of-scope queries."""
+    """Test complete pipeline with provided example queries."""
     
-    print("\n" + "="*80)
-    print("TRANSFORMER CLASSIFIER - END-TO-END PIPELINE TEST")
-    print("="*80 + "\n")
+    # ✅ NEW: Setup file logging
+    # Create logs directory if it doesn't exist
+    logs_dir = Path(project_root) / 'logs'
+    logs_dir.mkdir(exist_ok=True)
     
-    from src.main.orchestrator import Orchestrator
-    from src.config import USE_EMBEDDINGS
+    # Generate log filename with timestamp
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    log_file_path = logs_dir / f'test_pipeline_{timestamp}.log'
     
-    # Initialize orchestrator (suppress initialization output)
-    import io
-    import contextlib
+    # Setup tee output to write to both console and file
+    tee = TeeOutput(str(log_file_path))
+    original_stdout = sys.stdout
+    sys.stdout = tee
     
-    f = io.StringIO()
     try:
-        with contextlib.redirect_stdout(f):
-            orchestrator = Orchestrator(
-                use_workflow=True,
-                use_transformer_classifier=True,
-                transformer_model_path=TRANSFORMER_MODEL_PATH
-            )
-    except Exception as e:
-        print(f"❌ Failed to initialize: {e}")
-        return
-    
-    # ==================== TEST CASES ====================
-    test_cases = [
-        {
-            'query': 'What are the genres of the movie Even Cowgirls Get the Blues?',
-            'expected_type': 'factual',
-            'expected_pattern': 'forward_genre',
-            'description': 'Multi-genre query',
-            'should_process': True
-        },
-        {
-            'query': 'Who produced the movie Tesis?',
-            'expected_type': 'factual',
-            'expected_pattern': 'forward_producer',
-            'description': 'Producer query',
-            'should_process': True
-        },
-        {
-            'query': 'Which movie has the highest user rating?',
-            'expected_type': 'factual',
-            'expected_pattern': None,  # Complex query, pattern may vary
-            'description': 'Superlative query (highest rating)',
-            'should_process': True
-        },
-        {
-            'query': "Who directed the movie 'The Bridge on the River Kwai'?",
-            'expected_type': 'factual',
-            'expected_pattern': 'forward_director',
-            'description': 'Director query with title case',
-            'should_process': True
-        },
-        {
-            'query': "What genre is the movie 'Shoplifters'?",
-            'expected_type': 'factual',
-            'expected_pattern': 'forward_genre',
-            'description': 'Genre query (single)',
-            'should_process': True
-        },
-        {
-            'query': "Who is the producer of the movie 'French Kiss'?",
-            'expected_type': 'factual',
-            'expected_pattern': 'forward_producer',
-            'description': 'Producer query variant',
-            'should_process': True
-        },
-        {
-            'query': "Which movie, originally from the country 'South Korea', received the award 'Academy Award for Best Picture'?",
-            'expected_type': 'factual',
-            'expected_pattern': None,  # Complex multi-constraint query
-            'description': 'Complex multi-constraint query (country + award)',
-            'should_process': True
-        },
-        {
-            'query': 'What is the weather today?',
-            'expected_type': 'out_of_scope',
-            'expected_pattern': None,
-            'description': 'Out-of-scope query',
-            'should_process': False
-        }
-    ]
-    
-    # Run tests
-    results = {
-        'total': len(test_cases),
-        'classification_correct': 0,
-        'pattern_correct': 0,
-        'entity_extraction_success': 0,
-        'sparql_generation_success': 0,
-        'processing_correct': 0,
-        'factual_success': 0,
-        'oos_rejected': 0,
-        'llm_used': 0,
-        'template_used': 0
-    }
-    
-    for i, test_case in enumerate(test_cases, 1):
-        query = test_case['query']
-        expected_type = test_case['expected_type']
-        expected_pattern = test_case.get('expected_pattern')
-        description = test_case['description']
-        should_process = test_case['should_process']
+        print("\n" + "="*80)
+        print("TRANSFORMER CLASSIFIER - FULL PIPELINE TEST")
+        print("Testing Factual, Embedding, and Hybrid Approaches")
+        print("="*80)
+        print(f"\n📝 Log file: {log_file_path}")
+        print(f"📅 Test started: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
         
-        print(f"[{i}/{len(test_cases)}] {description}")
-        print(f"Query: '{query}'")
+        from src.main.orchestrator import Orchestrator
         
-        # Classification (suppress verbose output)
+        # Initialize orchestrator (suppress initialization output)
+        import io
+        import contextlib
+        
+        print("🔧 Initializing Orchestrator...")
         f = io.StringIO()
-        with contextlib.redirect_stdout(f):
-            classification = orchestrator.classify_query(query)
-        
-        # Check classification
-        if classification.question_type.value == expected_type:
-            results['classification_correct'] += 1
-            print(f"✅ Classification: {classification.question_type.value}")
-        else:
-            print(f"❌ Classification: {classification.question_type.value} (expected: {expected_type})")
-            print()
-            continue
-        
-        # Processing (only for FACTUAL)
-        if should_process and classification.question_type.value == 'factual':
-            
-            # Entity extraction diagnostics (suppress verbose output)
-            f = io.StringIO()
+        try:
             with contextlib.redirect_stdout(f):
-                diagnostic_result = diagnose_entity_extraction(query, orchestrator)
+                orchestrator = Orchestrator(use_workflow=True)
+            print("✅ Orchestrator initialized\n")
+        except Exception as e:
+            print(f"❌ Failed to initialize: {e}")
+            return
+        
+        # ==================== TEST CASES ====================
+        test_cases = [
+            # FACTUAL APPROACH TESTS
+            {
+                'query': "Please answer this question with a factual approach: From what country is the movie 'Aro Tolbukhin. En la mente del asesino'?",
+                'expected_type': 'factual',
+                'expected_answer': 'Mexico',
+                'description': 'Country of origin query'
+            },
+            {
+                'query': "Please answer this question with a factual approach: Who is the screenwriter of 'Shortcut to Happiness'?",
+                'expected_type': 'factual',
+                'expected_answer': 'Pete Dexter',
+                'description': 'Screenwriter query'
+            },
+            {
+                'query': "Please answer this question with a factual approach: What country is 'The Bridge on the River Kwai' from?",
+                'expected_type': 'factual',
+                'expected_answer': 'United Kingdom',
+                'description': 'Country of origin query (alternate phrasing)'
+            },
+            {
+                'query': "Please answer this question with a factual approach: Who directed 'Fargo'?",
+                'expected_type': 'factual',
+                'expected_answer': 'Ethan Coen and Joel Coen',
+                'description': 'Director query (multiple directors)'
+            },
+            {
+                'query': "Please answer this question with a factual approach: What genre is the movie 'Bandit Queen'?",
+                'expected_type': 'factual',
+                'expected_answer': 'drama film and biographical film and crime film',
+                'description': 'Genre query (multiple genres)'
+            },
+            {
+                'query': "Please answer this question with a factual approach: When did the movie 'Miracles Still Happen' come out?",
+                'expected_type': 'factual',
+                'expected_answer': '1974-07-19',
+                'description': 'Release date query'
+            },
             
-            if diagnostic_result:
-                pattern = diagnostic_result['pattern']
-                entities_found = diagnostic_result['entities']
-                
-                # Check pattern (if expected pattern is specified)
-                pattern_label = f"{pattern.pattern_type}_{pattern.relation}"
-                if expected_pattern:
-                    if pattern_label == expected_pattern:
-                        results['pattern_correct'] += 1
-                        print(f"✅ Pattern: {pattern_label}")
-                    else:
-                        print(f"⚠️  Pattern: {pattern_label} (expected: {expected_pattern})")
-                else:
-                    # No expected pattern, just show detected pattern
-                    print(f"ℹ️  Pattern: {pattern_label}")
-                    results['pattern_correct'] += 1  # Count as correct if no expectation
-                
-                # Check entity extraction - NOW WITH TYPE INFO
-                if entities_found:
-                    results['entity_extraction_success'] += 1
-                    print(f"✅ Entities:")
-                    for key, ((uri, text, score), entity_type) in entities_found.items():
-                        label = orchestrator.embedding_processor.entity_extractor.get_entity_label(uri)
-                        # Extract QID from entity type URI
-                        type_qid = entity_type.split('/')[-1] if '/' in entity_type else entity_type
-                        print(f"   • {key.capitalize()}: {label}")
-                        print(f"     Type: {type_qid}, Score: {score}%")
-                else:
-                    print(f"❌ Entity extraction failed")
-                
-                # SPARQL generation (suppress verbose output)
-                f = io.StringIO()
-                with contextlib.redirect_stdout(f):
-                    sparql_result = test_sparql_generation(
-                        pattern, 
-                        entities_found, 
-                        orchestrator.embedding_processor
-                    )
-                
-                if sparql_result:
-                    results['sparql_generation_success'] += 1
-                    print(f"✅ SPARQL: {sparql_result['method'].upper()}")
-                    
-                    # SHOW FULL SPARQL QUERY
-                    print(f"\n📝 Generated SPARQL Query:")
-                    print("-" * 80)
-                    print(sparql_result['query'])
-                    print("-" * 80)
-                    
-                    if sparql_result['method'] == 'llm':
-                        results['llm_used'] += 1
-                    else:
-                        results['template_used'] += 1
-                else:
-                    print(f"❌ SPARQL generation failed")
+            # EMBEDDING APPROACH TESTS
+            {
+                'query': "Please answer this question with an embedding approach: Who is the director of 'Apocalypse Now'?",
+                'expected_type': 'embeddings',
+                'expected_answer': 'John Milius (type: Q5)',
+                'description': 'Embedding director query'
+            },
+            {
+                'query': "Please answer this question with an embedding approach: Who is the screenwriter of '12 Monkeys'?",
+                'expected_type': 'embeddings',
+                'expected_answer': 'Carol Florence (type: Q5)',
+                'description': 'Embedding screenwriter query'
+            },
+            {
+                'query': "Please answer this question with an embedding approach: What is the genre of 'Shoplifters'?",
+                'expected_type': 'embeddings',
+                'expected_answer': 'comedy film (type: Q201658)',
+                'description': 'Embedding genre query'
+            },
             
-            # Full pipeline test - Execute and show results
-            print(f"\n📊 Query Results:")
+            # HYBRID APPROACH TEST (no explicit approach specified)
+            {
+                'query': "Please answer this question: Who is the director of 'Good Will Hunting'?",
+                'expected_type': 'hybrid',
+                'expected_factual_answer': 'Gus Van Sant',
+                'expected_embedding_answer': 'Harmony Korine (type: Q5)',
+                'description': 'Hybrid query (both approaches)'
+            },
+            {
+                'query': "Which movie has the highest user rating?",
+                'expected_type': 'hybrid',
+                'expected_factual_answer': 'The Shawshank Redemption',
+                'expected_embedding_answer': 'The Godfather (type: Q11424)',
+                'description': 'Hybrid query - highest rated movie'
+            },
+            {
+                'query': "Who directed the movie 'The Bridge on the River Kwai'?",
+                'expected_type': 'hybrid',
+                'expected_factual_answer': 'David Lean',
+                'expected_embedding_answer': 'David Lean (type: Q5)',
+                'description': 'Hybrid query - director of classic film'
+            },
+            {
+                'query': "What genre is the movie 'Shoplifters'?",
+                'expected_type': 'hybrid',
+                'expected_factual_answer': 'drama film',
+                'expected_embedding_answer': 'comedy film (type: Q201658)',
+                'description': 'Hybrid query - genre identification'
+            },
+            {
+                'query': "Who is the producer of the movie 'French Kiss'?",
+                'expected_type': 'hybrid',
+                'expected_factual_answer': 'Meg Ryan',
+                'expected_embedding_answer': 'Tim Bevan (type: Q5)',
+                'description': 'Hybrid query - producer query'
+            },
+            {
+                'query': "Which movie, originally from the country 'South Korea', received the award 'Academy Award for Best Picture'?",
+                'expected_type': 'hybrid',
+                'expected_factual_answer': 'Parasite',
+                'expected_embedding_answer': 'Parasite (type: Q11424)',
+                'description': 'Hybrid query - complex multi-criteria query'
+            }
+        ]
+        
+        # Run tests
+        results = {
+            'total': len(test_cases),
+            'classification_correct': 0,
+            'answer_correct': 0,
+            'answer_partial': 0,
+            'factual_correct': 0,
+            'embedding_correct': 0,
+            'hybrid_correct': 0
+        }
+        
+        for i, test_case in enumerate(test_cases, 1):
+            query = test_case['query']
+            expected_type = test_case['expected_type']
+            description = test_case['description']
+            
+            print(f"\n{'='*80}")
+            print(f"TEST CASE [{i}/{len(test_cases)}]: {description}")
+            print(f"{'='*80}")
+            print(f"📝 Query: '{query}'")
+            print()
+            
+            # ==================== STAGE 1: CLASSIFICATION ====================
+            print("🔍 STAGE 1: QUERY CLASSIFICATION")
             print("-" * 80)
+            
+            classification = orchestrator.classify_query(query)
+            
+            print(f"Classification Result:")
+            print(f"  • Type:       {classification.question_type.value}")
+            print(f"  • Confidence: {classification.confidence:.1%}")
+            print(f"  • Expected:   {expected_type}")
+            
+            # Check classification
+            if classification.question_type.value == expected_type:
+                results['classification_correct'] += 1
+                print(f"✅ Classification: CORRECT")
+            else:
+                print(f"❌ Classification: INCORRECT (got {classification.question_type.value}, expected {expected_type})")
+                print()
+                continue
+            print()
+            
+            # ==================== STAGE 2: QUERY PROCESSING ====================
+            print("⚙️  STAGE 2: QUERY PROCESSING")
+            print("-" * 80)
+            
             try:
-                # Suppress processing output, only show final results
-                f = io.StringIO()
-                with contextlib.redirect_stdout(f):
-                    response = orchestrator.process_query(query)
+                # Log which processor will be used
+                if expected_type == 'factual':
+                    print("📌 Pipeline: FACTUAL APPROACH")
+                    print("  → Clean query → Extract entities → Generate SPARQL → Execute → Format response")
+                    print()
+                    
+                    # Call process with detailed output
+                    print("🔄 Step 2.1: Cleaning query...")
+                    clean_query = orchestrator._clean_query_for_processing(query)
+                    print(f"  Clean query: '{clean_query}'")
+                    print()
+                    
+                    print("🔄 Step 2.2: Processing with embedding processor (factual mode)...")
+                    response = orchestrator.embedding_processor.process_hybrid_factual_query(clean_query)
+                    
+                elif expected_type == 'embeddings':
+                    print("📌 Pipeline: EMBEDDING APPROACH")
+                    print("  → Clean query → Encode query → Search embedding space → Find nearest entities → Format response")
+                    print()
+                    
+                    print("🔄 Step 2.1: Cleaning query...")
+                    clean_query = orchestrator._clean_query_for_processing(query)
+                    print(f"  Clean query: '{clean_query}'")
+                    print()
+                    
+                    print("🔄 Step 2.2: Processing with embedding processor (embedding mode)...")
+                    response = orchestrator.embedding_processor.process_embedding_query(clean_query)
+                    
+                elif expected_type == 'hybrid':
+                    print("📌 Pipeline: HYBRID APPROACH")
+                    print("  → Run FACTUAL pipeline")
+                    print("  → Run EMBEDDING pipeline")
+                    print("  → Combine results")
+                    print()
+                    
+                    print("🔄 Step 2.1: Cleaning query...")
+                    clean_query = orchestrator._clean_query_for_processing(query)
+                    print(f"  Clean query: '{clean_query}'")
+                    print()
+                    
+                    print("🔄 Step 2.2a: Running FACTUAL pipeline...")
+                    factual_result = orchestrator.embedding_processor.process_hybrid_factual_query(clean_query)
+                    print(f"  Factual result (preview): {factual_result[:100]}...")
+                    print()
+                    
+                    print("🔄 Step 2.2b: Running EMBEDDING pipeline...")
+                    embeddings_result = orchestrator.embedding_processor.process_embedding_query(clean_query)
+                    print(f"  Embeddings result (preview): {embeddings_result[:100]}...")
+                    print()
+                    
+                    print("🔄 Step 2.3: Combining results...")
+                    response = f"**Factual Answer:**\n{factual_result}\n\n"
+                    response += f"**Embeddings Answer:**\n{embeddings_result}"
                 
-                # Extract and show only the results data
-                if "✅" in response:
-                    # Parse and show clean results
-                    lines = response.split('\n')
-                    result_lines = []
+                print("✅ Query processing completed")
+                print()
+                
+                # ==================== STAGE 3: RESPONSE ANALYSIS ====================
+                print("📊 STAGE 3: RESPONSE ANALYSIS")
+                print("-" * 80)
+                print(f"Full Response:")
+                print("-" * 40)
+                print(response)
+                print("-" * 40)
+                print()
+                
+                # ==================== STAGE 4: ANSWER EXTRACTION ====================
+                print("🎯 STAGE 4: ANSWER EXTRACTION")
+                print("-" * 80)
+                
+                if expected_type == 'factual':
+                    expected_answer = test_case['expected_answer']
+                    actual_answer = extract_answer_from_response(response)
                     
-                    for line in lines:
-                        # Skip headers and formatting
-                        if '📊' in line or '##' in line or '===' in line or '---' in line:
-                            continue
-                        # Skip status messages at start
-                        if line.startswith('✅') or line.startswith('❌') or line.startswith('⚠️'):
-                            continue
-                        # Skip empty lines
-                        if not line.strip():
-                            continue
-                        # Show actual data (lines with content)
-                        stripped = line.strip()
-                        if stripped and (stripped.startswith('•') or stripped.startswith('-') or ':' in stripped):
-                            result_lines.append(stripped)
+                    print(f"Extraction Method: Factual answer extraction")
+                    print(f"Expected Answer:   '{expected_answer}'")
+                    print(f"Extracted Answer:  '{actual_answer}'")
+                    print()
                     
-                    if result_lines:
-                        for line in result_lines[:10]:  # Show first 10 results
-                            print(line)
+                    print("🔍 STAGE 5: ANSWER VALIDATION")
+                    print("-" * 80)
+                    is_match, similarity = compare_answers(actual_answer, expected_answer)
+                    
+                    print(f"Comparison Details:")
+                    print(f"  • Normalized Expected: '{normalize_answer(expected_answer)}'")
+                    print(f"  • Normalized Actual:   '{normalize_answer(actual_answer)}'")
+                    print(f"  • Similarity Score:    {similarity:.1%}")
+                    print(f"  • Match Threshold:     70%")
+                    
+                    if is_match:
+                        results['answer_correct'] += 1
+                        results['factual_correct'] += 1
+                        print(f"✅ Answer VALIDATION: PASSED (similarity: {similarity:.1%})")
+                    elif similarity > 0.5:
+                        results['answer_partial'] += 1
+                        print(f"⚠️  Answer VALIDATION: PARTIAL MATCH (similarity: {similarity:.1%})")
                     else:
-                        # Fallback: show the whole response
-                        print(response.strip())
+                        print(f"❌ Answer VALIDATION: FAILED (similarity: {similarity:.1%})")
+                
+                elif expected_type == 'embeddings':
+                    expected_answer = test_case['expected_answer']
+                    actual_answer = extract_answer_from_response(response)
                     
-                    results['factual_success'] += 1
-                    results['processing_correct'] += 1
-                else:
-                    print("Query execution failed")
+                    print(f"Extraction Method: Embedding answer extraction (with entity type)")
+                    print(f"Expected Answer:   '{expected_answer}'")
+                    print(f"Extracted Answer:  '{actual_answer}'")
+                    print()
+                    
+                    print("🔍 STAGE 5: ANSWER VALIDATION")
+                    print("-" * 80)
+                    
+                    # For embedding answers, check if entity type is correct
+                    if '(type:' in actual_answer:
+                        type_match = re.search(r'\(type:\s*([^)]+)\)', actual_answer)
+                        entity_match = re.search(r'^([^(]+)\s*\(type:', actual_answer)
+                        
+                        if type_match and entity_match:
+                            actual_type = type_match.group(1).strip()
+                            actual_entity = entity_match.group(1).strip()
+                            expected_type_match = re.search(r'\(type:\s*([^)]+)\)', expected_answer)
+                            expected_entity_match = re.search(r'^([^(]+)\s*\(type:', expected_answer)
+                            
+                            if expected_type_match and expected_entity_match:
+                                expected_type_val = expected_type_match.group(1).strip()
+                                expected_entity_val = expected_entity_match.group(1).strip()
+                                
+                                print(f"Entity Comparison:")
+                                print(f"  • Expected Entity: '{expected_entity_val}'")
+                                print(f"  • Actual Entity:   '{actual_entity}'")
+                                print(f"Entity Type Comparison:")
+                                print(f"  • Expected Type: '{expected_type_val}'")
+                                print(f"  • Actual Type:   '{actual_type}'")
+                                
+                                if actual_type == expected_type_val:
+                                    results['answer_correct'] += 1
+                                    results['embedding_correct'] += 1
+                                    print(f"✅ Answer VALIDATION: PASSED (entity type match: {actual_type})")
+                                else:
+                                    print(f"❌ Answer VALIDATION: FAILED (wrong entity type)")
+                            else:
+                                results['answer_partial'] += 1
+                                print(f"⚠️  Answer VALIDATION: PARTIAL (has type: {actual_type})")
+                        else:
+                            print(f"❌ Answer VALIDATION: FAILED (malformed type information)")
+                    else:
+                        print(f"❌ Answer VALIDATION: FAILED (missing type information)")
+                
+                elif expected_type == 'hybrid':
+                    expected_factual = test_case['expected_factual_answer']
+                    expected_embedding = test_case['expected_embedding_answer']
+                    
+                    print(f"Extraction Method: Hybrid (both factual and embedding)")
+                    print(f"Expected Factual Answer:   '{expected_factual}'")
+                    print(f"Expected Embedding Answer: '{expected_embedding}'")
+                    print()
+                    
+                    # Split response into factual and embedding parts
+                    if 'Factual Answer:' in response and 'Embeddings Answer:' in response:
+                        parts = response.split('Embeddings Answer:')
+                        factual_part = parts[0]
+                        embedding_part = parts[1] if len(parts) > 1 else ''
+                        
+                        factual_answer = extract_answer_from_response(factual_part)
+                        embedding_answer = extract_answer_from_response(embedding_part)
+                        
+                        print(f"Extracted Factual Answer:   '{factual_answer}'")
+                        print(f"Extracted Embedding Answer: '{embedding_answer}'")
+                        print()
+                        
+                        print("🔍 STAGE 5: ANSWER VALIDATION")
+                        print("-" * 80)
+                        
+                        # Check factual
+                        print("Validating Factual Answer:")
+                        factual_match, factual_sim = compare_answers(factual_answer, expected_factual)
+                        print(f"  • Similarity: {factual_sim:.1%}")
+                        print(f"  • Match: {factual_match}")
+                        
+                        # Check embedding type
+                        print("Validating Embedding Answer:")
+                        embedding_match = False
+                        if '(type:' in embedding_answer:
+                            type_match = re.search(r'\(type:\s*([^)]+)\)', embedding_answer)
+                            if type_match:
+                                actual_type = type_match.group(1).strip()
+                                expected_type_match = re.search(r'\(type:\s*([^)]+)\)', expected_embedding)
+                                if expected_type_match:
+                                    expected_type_val = expected_type_match.group(1).strip()
+                                    embedding_match = actual_type == expected_type_val
+                                    print(f"  • Expected Type: {expected_type_val}")
+                                    print(f"  • Actual Type: {actual_type}")
+                                    print(f"  • Match: {embedding_match}")
+                        
+                        if factual_match and embedding_match:
+                            results['answer_correct'] += 1
+                            results['hybrid_correct'] += 1
+                            print(f"✅ Answer VALIDATION: PASSED (both answers correct)")
+                        elif factual_match or embedding_match:
+                            results['answer_partial'] += 1
+                            print(f"⚠️  Answer VALIDATION: PARTIAL (factual: {factual_match}, embedding: {embedding_match})")
+                        else:
+                            print(f"❌ Answer VALIDATION: FAILED (both answers incorrect)")
+                    else:
+                        print(f"❌ Response format incorrect (missing Factual/Embeddings sections)")
                 
             except Exception as e:
-                print(f"Error: {e}")
-            
-            print("-" * 80)
+                print(f"\n❌ ERROR during query processing:")
+                print(f"   {str(e)}")
+                print("\nStack trace:")
+                import traceback
+                traceback.print_exc()
         
-        elif not should_process and classification.question_type.value == 'out_of_scope':
-            results['oos_rejected'] += 1
-            results['processing_correct'] += 1
-            print(f"✅ Correctly rejected")
+        # Summary
+        print("="*80)
+        print("TEST SUMMARY")
+        print("="*80)
         
-        print()
+        print(f"\n📊 Results:")
+        print(f"  Classification:     {results['classification_correct']}/{results['total']}")
+        print(f"  Answer Validation:")
+        print(f"    ✅ Correct:       {results['answer_correct']}/{results['total']}")
+        print(f"    ⚠️  Partial:       {results['answer_partial']}/{results['total']}")
+        print(f"    ❌ Incorrect:     {results['total'] - results['answer_correct'] - results['answer_partial']}/{results['total']}")
+        
+        print(f"\n  By Approach:")
+        print(f"    Factual:          {results['factual_correct']}/{sum(1 for tc in test_cases if tc['expected_type'] == 'factual')}")
+        print(f"    Embedding:        {results['embedding_correct']}/{sum(1 for tc in test_cases if tc['expected_type'] == 'embeddings')}")
+        print(f"    Hybrid:           {results['hybrid_correct']}/{sum(1 for tc in test_cases if tc['expected_type'] == 'hybrid')}")
+        
+        success_rate = results['answer_correct'] / results['total']
+        print(f"\n  Overall Success:    {results['answer_correct']}/{results['total']} ({success_rate:.1%})")
+        
+        if results['answer_correct'] == results['total']:
+            print("\n🎉 ALL TESTS PASSED!\n")
+        elif success_rate >= 0.7:
+            print(f"\n✅ Most tests passed ({success_rate:.1%} success rate)\n")
+        else:
+            print(f"\n⚠️  {results['total'] - results['answer_correct']} test(s) failed or partially matched\n")
+        
+        print(f"📝 Full test log saved to: {log_file_path}")
+        print(f"📅 Test completed: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
     
-    # Summary
-    print("="*80)
-    print("TEST SUMMARY")
-    print("="*80)
-    
-    factual_tests = sum(1 for tc in test_cases if tc['should_process'])
-    
-    print(f"\n📊 Results:")
-    print(f"  Classification:     {results['classification_correct']}/{results['total']}")
-    
-    if factual_tests > 0:
-        print(f"  Pattern Analysis:   {results['pattern_correct']}/{factual_tests}")
-        print(f"  Entity Extraction:  {results['entity_extraction_success']}/{factual_tests}")
-        print(f"  SPARQL Generation:  {results['sparql_generation_success']}/{factual_tests} [LLM: {results['llm_used']}, Template: {results['template_used']}]")
-        print(f"  Full Pipeline:      {results['factual_success']}/{factual_tests}")
-    
-    if results['oos_rejected'] > 0:
-        print(f"  OOS Rejection:      {results['oos_rejected']}/{results['total'] - factual_tests}")
-    
-    print(f"\n  Overall Success:    {results['processing_correct']}/{results['total']}")
-    
-    if results['classification_correct'] == results['total'] and results['processing_correct'] == results['total']:
-        print("\n🎉 ALL TESTS PASSED!\n")
-    else:
-        print(f"\n⚠️  {results['total'] - results['processing_correct']} test(s) failed\n")
+    finally:
+        # ✅ Restore original stdout and close log file
+        sys.stdout = original_stdout
+        tee.close()
+        print(f"\n✅ Log saved to: {log_file_path}")
 
 
 if __name__ == "__main__":

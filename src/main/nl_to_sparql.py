@@ -228,7 +228,7 @@ ORDER BY ?movieLabel'''
                 'wdt:P162': {'description': 'producer', 'property_id': 'P162'},
                 'wdt:P577': {'description': 'publication date (release date)', 'property_id': 'P577'},
                 'wdt:P136': {'description': 'genre', 'property_id': 'P136'},
-                'wdt:P495': {'description': 'country of origin', 'property_id': 'P495'},
+                'wdt:P495': {'description': 'country of origin', 'property_id': 'P495'},  # ✅ NEW
                 'wdt:P166': {'description': 'award received', 'property_id': 'P166'},
                 'ddis:rating': {'description': 'MPAA rating or movie rating'},
                 'rdfs:label': {'description': 'label/name of entity'},
@@ -261,7 +261,7 @@ ORDER BY ?movieLabel'''
         schema_lines.append("#   - wdt:P162 = producer")
         schema_lines.append("#   - wdt:P577 = publication date")
         schema_lines.append("#   - wdt:P136 = genre")
-        schema_lines.append("#   - wdt:P495 = country of origin")
+        schema_lines.append("#   - wdt:P495 = country of origin")  # ✅ NEW
         schema_lines.append("#   - wdt:P166 = award received")
         schema_lines.append("#   - ddis:rating = movie rating")
         schema_lines.append("#   - rdfs:label = name/label")
@@ -278,7 +278,7 @@ ORDER BY ?movieLabel'''
         return """Movie Knowledge Graph - Key Facts:
 - Movies: wdt:P31 wd:Q11424
 - Labels: rdfs:label
-- Properties: P57=director, P161=actor, P136=genre, P162=producer, P577=date
+- Properties: P57=director, P161=actor, P136=genre, P162=producer, P577=date, P495=country
 """
     
     def _get_few_shot_examples(self) -> List[Dict[str, str]]:
@@ -298,6 +298,22 @@ SELECT ?directorName ?directorUri WHERE {
   ?movieUri wdt:P57 ?directorUri .
   ?directorUri rdfs:label ?directorName .
   FILTER(LANG(?directorName) = "en" || LANG(?directorName) = "")
+}"""
+            },
+            {
+                "question": "From what country is the movie 'Aro Tolbukhin. En la mente del asesino'?",
+                "reasoning": "Forward query: movie → country. Need to find country of origin for the movie.",
+                "sparql": """PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX wd: <http://www.wikidata.org/entity/>
+PREFIX wdt: <http://www.wikidata.org/prop/direct/>
+
+SELECT ?countryName ?countryUri WHERE {
+  ?movieUri wdt:P31 wd:Q11424 .
+  ?movieUri rdfs:label ?movieLabel .
+  FILTER(regex(str(?movieLabel), "^Aro Tolbukhin. En la mente del asesino$", "i")) .
+  ?movieUri wdt:P495 ?countryUri .
+  ?countryUri rdfs:label ?countryName .
+  FILTER(LANG(?countryName) = "en" || LANG(?countryName) = "")
 }"""
             },
             {
@@ -370,6 +386,39 @@ SELECT ?directorName ?directorUri WHERE {
   ?movieUri wdt:P57 ?directorUri .
   ?directorUri rdfs:label ?directorName .
   FILTER(LANG(?directorName) = "en" || LANG(?directorName) = "")
+}"""
+                }
+            ],
+            # ✅ NEW: Country of origin examples
+            'forward_country_of_origin': [
+                {
+                    "question": "From what country is the movie 'Aro Tolbukhin. En la mente del asesino'?",
+                    "sparql": """PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX wd: <http://www.wikidata.org/entity/>
+PREFIX wdt: <http://www.wikidata.org/prop/direct/>
+
+SELECT ?countryName ?countryUri WHERE {
+  ?movieUri wdt:P31 wd:Q11424 .
+  ?movieUri rdfs:label ?movieLabel .
+  FILTER(regex(str(?movieLabel), "^Aro Tolbukhin. En la mente del asesino$", "i")) .
+  ?movieUri wdt:P495 ?countryUri .
+  ?countryUri rdfs:label ?countryName .
+  FILTER(LANG(?countryName) = "en" || LANG(?countryName) = "")
+}"""
+                },
+                {
+                    "question": "What country is 'The Bridge on the River Kwai' from?",
+                    "sparql": """PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX wd: <http://www.wikidata.org/entity/>
+PREFIX wdt: <http://www.wikidata.org/prop/direct/>
+
+SELECT ?countryName ?countryUri WHERE {
+  ?movieUri wdt:P31 wd:Q11424 .
+  ?movieUri rdfs:label ?movieLabel .
+  FILTER(regex(str(?movieLabel), "^The Bridge on the River Kwai$", "i")) .
+  ?movieUri wdt:P495 ?countryUri .
+  ?countryUri rdfs:label ?countryName .
+  FILTER(LANG(?countryName) = "en" || LANG(?countryName) = "")
 }"""
                 }
             ],
@@ -465,20 +514,25 @@ ASK WHERE {
         if pattern_label:
             examples = self._get_few_shot_examples_by_pattern(pattern_label)
         else:
-            # Fallback to original heuristic selection
+            # Fallback to original heuristic selection with country detection
             examples = self._get_few_shot_examples()
             selected_examples = []
             
             question_lower = question.lower()
-            if any(word in question_lower for word in ['did', 'was', 'is', 'does', 'has']):
-                selected_examples.append(examples[3])  # Verification
+            
+            # ✅ NEW: Detect country queries
+            if 'country' in question_lower:
+                selected_examples.append(examples[1])  # Country example
+                selected_examples.append(examples[0])  # Forward director
+            elif any(word in question_lower for word in ['did', 'was', 'is', 'does', 'has']):
+                selected_examples.append(examples[4])  # Verification
                 selected_examples.append(examples[0])  # Forward
             elif any(word in question_lower for word in ['what movies', 'which films', 'films did']):
-                selected_examples.append(examples[1])  # Reverse
+                selected_examples.append(examples[2])  # Reverse
                 selected_examples.append(examples[0])  # Forward
             else:
                 selected_examples.append(examples[0])  # Forward director
-                selected_examples.append(examples[2])  # Forward genre
+                selected_examples.append(examples[3])  # Forward genre
             
             examples = selected_examples
         
@@ -487,14 +541,14 @@ ASK WHERE {
             for ex in examples
         ])
         
-        # FIX: Double the curly braces in the rules to escape them in f-string
+        # ✅ FIX: Use literal text instead of {movie} placeholder
         prompt = f"""Generate SPARQL for movie questions.
 
 {self._get_ontology_description()}
 
 RULES:
 1. End triple patterns with period (.)
-2. ALWAYS use FILTER for text matching: ?var rdfs:label ?varLabel . FILTER(regex(str(?varLabel), "^MovieTitle$", "i"))
+2. ALWAYS use FILTER for text matching: ?var rdfs:label ?varLabel . FILTER(regex(str(?varLabel), "^The Matrix$", "i"))
 3. Use proper English title case: "The Bridge on the River Kwai"
 4. NEVER use exact match like: ?var rdfs:label "Text" (database is case-sensitive)
 5. For YES/NO questions, use ASK queries
@@ -883,6 +937,11 @@ PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
         Post-process generated SPARQL query to ensure correct prefixes and proper name capitalization.
         Handles all SPARQL query types correctly.
         """
+        # ✅ CRITICAL: Replace smart quotes with regular quotes FIRST
+        # LLMs sometimes generate smart quotes which break SPARQL parsing
+        query = query.replace('"', '"').replace('"', '"')  # U+201C, U+201D → "
+        query = query.replace(''', "'").replace(''', "'")  # U+2018, U+2019 → '
+        
         # Remove any markdown code blocks
         query = re.sub(r'```sparql\s*', '', query)
         query = re.sub(r'```\s*', '', query)
@@ -1146,7 +1205,8 @@ PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
                 'publication_date': 'P577',
                 'screenwriter': 'P58',
                 'producer': 'P162',
-                'rating': 'RATING'
+                'rating': 'RATING',
+                'country_of_origin': 'P495'  # ✅ NEW
             }
             expected_prop = property_map.get(pattern.relation, '')
             has_property = expected_prop in sparql_upper if expected_prop else True

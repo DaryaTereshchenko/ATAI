@@ -3,6 +3,7 @@ config.py
 
 # Data folder
 2025/
+logs/
 data/
 models/
 # Python cache
