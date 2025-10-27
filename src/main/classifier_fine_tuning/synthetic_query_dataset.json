@@ -1,0 +1,5291 @@
+{
+  "train": [
+    {
+      "text": "Give me the latest news",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "FIND THE DIRECTOR OF THE SILENCE OF THE LAMBS",
+      "label": "factual"
+    },
+    {
+      "text": "find the director of interstellar",
+      "label": "factual"
+    },
+    {
+      "text": "display a photo of inception",
+      "label": "multimedia"
+    },
+    {
+      "text": "can i see an image of star wars?",
+      "label": "multimedia"
+    },
+    {
+      "text": "Can I see an image of Forrest Gump?",
+      "label": "multimedia"
+    },
+    {
+      "text": "I want to see the image of The Shawshank Redemption",
+      "label": "multimedia"
+    },
+    {
+      "text": "what movies are similar to schindler's list?",
+      "label": "factual"
+    },
+    {
+      "text": "What movies are similar to Casablanca?",
+      "label": "factual"
+    },
+    {
+      "text": "calculate 15 * 23",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "display a photo of the shawshank redemption",
+      "label": "multimedia"
+    },
+    {
+      "text": "How long to bake chicken?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Help me find a movie to watch",
+      "label": "recommendation"
+    },
+    {
+      "text": "help me find a movie to watch",
+      "label": "recommendation"
+    },
+    {
+      "text": "What is the speed of light?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "find the director of the lord of the rings",
+      "label": "factual"
+    },
+    {
+      "text": "write a function to sort an array",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what is a for loop in java?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "WHAT DIRECTOR MADE AVATAR?",
+      "label": "factual"
+    },
+    {
+      "text": "list films starring tom hanks",
+      "label": "factual"
+    },
+    {
+      "text": "FIND MOVIES DIRECTED BY JAMES CAMERON",
+      "label": "factual"
+    },
+    {
+      "text": "I want to see the image of The Shawshank Redemption",
+      "label": "multimedia"
+    },
+    {
+      "text": "can i see an image of fight club?",
+      "label": "multimedia"
+    },
+    {
+      "text": "Show me a picture of Fight Club",
+      "label": "multimedia"
+    },
+    {
+      "text": "what's the derivative of x squared?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "What movies are similar to Goodfellas?",
+      "label": "factual"
+    },
+    {
+      "text": "give me the latest news",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what director made parasite?",
+      "label": "factual"
+    },
+    {
+      "text": "Where should I go on vacation?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Display a photo of Parasite",
+      "label": "multimedia"
+    },
+    {
+      "text": "Find films like Forrest Gump",
+      "label": "factual"
+    },
+    {
+      "text": "how tall is mount everest?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "how do i get to the airport?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "I want to see the image of The Departed",
+      "label": "multimedia"
+    },
+    {
+      "text": "what's the nba score?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "How to lose weight fast?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "How much does a flight to Paris cost?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "debug my code please",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "What medication should I take?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "search for movies about space",
+      "label": "factual"
+    },
+    {
+      "text": "what does the godfather look like?",
+      "label": "multimedia"
+    },
+    {
+      "text": "Where should I go on vacation?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Can I see an image of Star Wars?",
+      "label": "multimedia"
+    },
+    {
+      "text": "give me a movie recommendation",
+      "label": "recommendation"
+    },
+    {
+      "text": "how do i get to the airport?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "show me the poster of avatar",
+      "label": "multimedia"
+    },
+    {
+      "text": "What does Star Wars look like?",
+      "label": "multimedia"
+    },
+    {
+      "text": "how are you?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Help me find a movie to watch",
+      "label": "recommendation"
+    },
+    {
+      "text": "What is a for loop in Java?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Can I see an image of The Matrix?",
+      "label": "multimedia"
+    },
+    {
+      "text": "WHEN WAS PARASITE RELEASED?",
+      "label": "factual"
+    },
+    {
+      "text": "what is a for loop in java?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Give me a movie recommendation",
+      "label": "recommendation"
+    },
+    {
+      "text": "Find the director of The Departed",
+      "label": "factual"
+    },
+    {
+      "text": "when did titanic premiere?",
+      "label": "factual"
+    },
+    {
+      "text": "what should i watch tonight?",
+      "label": "recommendation"
+    },
+    {
+      "text": "who plays in the departed?",
+      "label": "factual"
+    },
+    {
+      "text": "i want to see the image of fight club",
+      "label": "multimedia"
+    },
+    {
+      "text": "help me find a movie to watch",
+      "label": "recommendation"
+    },
+    {
+      "text": "give me a movie recommendation",
+      "label": "recommendation"
+    },
+    {
+      "text": "what does this error mean: nullpointerexception?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "What should I watch tonight?",
+      "label": "recommendation"
+    },
+    {
+      "text": "What should I watch tonight?",
+      "label": "recommendation"
+    },
+    {
+      "text": "what's the weather today?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "What's the temperature outside?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what's the nba score?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what does inception look like?",
+      "label": "multimedia"
+    },
+    {
+      "text": "What does The Shawshank Redemption look like?",
+      "label": "multimedia"
+    },
+    {
+      "text": "Search for movies about space",
+      "label": "factual"
+    },
+    {
+      "text": "How long to bake chicken?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Suggest movies similar to The Departed",
+      "label": "recommendation"
+    },
+    {
+      "text": "What should I watch tonight?",
+      "label": "recommendation"
+    },
+    {
+      "text": "When is the next Olympics?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "display a photo of schindler's list",
+      "label": "multimedia"
+    },
+    {
+      "text": "What does Parasite look like?",
+      "label": "multimedia"
+    },
+    {
+      "text": "what should i watch tonight?",
+      "label": "recommendation"
+    },
+    {
+      "text": "what is a for loop in java?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "show me the poster of the lord of the rings",
+      "label": "multimedia"
+    },
+    {
+      "text": "give me the latest news",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Help me find a movie to watch",
+      "label": "recommendation"
+    },
+    {
+      "text": "Show me the poster of Fight Club",
+      "label": "multimedia"
+    },
+    {
+      "text": "What's the NBA score?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "What's the derivative of x squared?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "When is the next Olympics?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "What does this error mean: NullPointerException?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "when was fight club released?",
+      "label": "factual"
+    },
+    {
+      "text": "Solve for x: 2x + 5 = 15",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what is a for loop in java?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "What year did Inception come out?",
+      "label": "factual"
+    },
+    {
+      "text": "What does The Shawshank Redemption look like?",
+      "label": "multimedia"
+    },
+    {
+      "text": "When was Parasite released?",
+      "label": "factual"
+    },
+    {
+      "text": "i want to see the image of interstellar",
+      "label": "multimedia"
+    },
+    {
+      "text": "give me a movie recommendation",
+      "label": "recommendation"
+    },
+    {
+      "text": "how to cook rice?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "How do I treat a headache?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "What does this error mean: NullPointerException?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "What movies are similar to Parasite?",
+      "label": "factual"
+    },
+    {
+      "text": "What is the population of China?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "WHAT IS THE RELEASE DATE OF THE SHAWSHANK REDEMPTION?",
+      "label": "factual"
+    },
+    {
+      "text": "Where should I go on vacation?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "can i see an image of the godfather?",
+      "label": "multimedia"
+    },
+    {
+      "text": "what genre is goodfellas?",
+      "label": "factual"
+    },
+    {
+      "text": "Who directed Interstellar?",
+      "label": "factual"
+    },
+    {
+      "text": "calculate 15 * 23",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "help me find a movie to watch",
+      "label": "recommendation"
+    },
+    {
+      "text": "suggest movies similar to star wars",
+      "label": "recommendation"
+    },
+    {
+      "text": "What's trending on social media?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "help me find a movie to watch",
+      "label": "recommendation"
+    },
+    {
+      "text": "i want to see the image of titanic",
+      "label": "multimedia"
+    },
+    {
+      "text": "WHAT ACTORS ARE IN PARASITE?",
+      "label": "factual"
+    },
+    {
+      "text": "what's your name?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "list the cast of gladiator",
+      "label": "factual"
+    },
+    {
+      "text": "what kind of film is schindler's list?",
+      "label": "factual"
+    },
+    {
+      "text": "What type of movie is The Departed?",
+      "label": "factual"
+    },
+    {
+      "text": "Display a photo of Schindler's List",
+      "label": "multimedia"
+    },
+    {
+      "text": "what does forrest gump look like?",
+      "label": "multimedia"
+    },
+    {
+      "text": "show me the poster of goodfellas",
+      "label": "multimedia"
+    },
+    {
+      "text": "Help me find a movie to watch",
+      "label": "recommendation"
+    },
+    {
+      "text": "Who directed The Shawshank Redemption?",
+      "label": "factual"
+    },
+    {
+      "text": "when did the godfather premiere?",
+      "label": "factual"
+    },
+    {
+      "text": "when was titanic released?",
+      "label": "factual"
+    },
+    {
+      "text": "Show me a picture of The Dark Knight",
+      "label": "multimedia"
+    },
+    {
+      "text": "what is the population of china?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "give me a movie recommendation",
+      "label": "recommendation"
+    },
+    {
+      "text": "What is a for loop in Java?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "What's your name?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "What's the NBA score?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Tell me about recent events",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "give me a movie recommendation",
+      "label": "recommendation"
+    },
+    {
+      "text": "Solve for x: 2x + 5 = 15",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "When was Fight Club released?",
+      "label": "factual"
+    },
+    {
+      "text": "can i see an image of forrest gump?",
+      "label": "multimedia"
+    },
+    {
+      "text": "WHAT KIND OF FILM IS THE SILENCE OF THE LAMBS?",
+      "label": "factual"
+    },
+    {
+      "text": "what kind of film is star wars?",
+      "label": "factual"
+    },
+    {
+      "text": "Can I see an image of The Silence of the Lambs?",
+      "label": "multimedia"
+    },
+    {
+      "text": "solve for x: 2x + 5 = 15",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "SEARCH FOR MOVIES ABOUT SPORTS",
+      "label": "factual"
+    },
+    {
+      "text": "i want to see the image of the godfather",
+      "label": "multimedia"
+    },
+    {
+      "text": "what's trending on social media?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "suggest movies similar to interstellar",
+      "label": "recommendation"
+    },
+    {
+      "text": "What's happening in the world?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Suggest movies similar to The Departed",
+      "label": "recommendation"
+    },
+    {
+      "text": "who directed interstellar?",
+      "label": "factual"
+    },
+    {
+      "text": "i want to see the image of titanic",
+      "label": "multimedia"
+    },
+    {
+      "text": "what documents do i need to travel?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Who directed Goodfellas?",
+      "label": "factual"
+    },
+    {
+      "text": "where should i go on vacation?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what documents do i need to travel?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what year did the departed come out?",
+      "label": "factual"
+    },
+    {
+      "text": "what is 2 + 2?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "How long to bake chicken?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Tell me who directed The Dark Knight",
+      "label": "factual"
+    },
+    {
+      "text": "What does Inception look like?",
+      "label": "multimedia"
+    },
+    {
+      "text": "What's the NBA score?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Find the director of The Matrix",
+      "label": "factual"
+    },
+    {
+      "text": "what documents do i need to travel?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "I want to see the image of The Departed",
+      "label": "multimedia"
+    },
+    {
+      "text": "Calculate 15 * 23",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what kind of film is the silence of the lambs?",
+      "label": "factual"
+    },
+    {
+      "text": "What year did The Departed come out?",
+      "label": "factual"
+    },
+    {
+      "text": "what does this error mean: nullpointerexception?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "What is the population of China?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what does this error mean: nullpointerexception?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Should I see a doctor?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "How old are you?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "What's your favorite color?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "when was the shawshank redemption released?",
+      "label": "factual"
+    },
+    {
+      "text": "What is the capital of France?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "when did interstellar premiere?",
+      "label": "factual"
+    },
+    {
+      "text": "What director made Avatar?",
+      "label": "factual"
+    },
+    {
+      "text": "how are you?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "What documents do I need to travel?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "What movies did Christopher Nolan direct?",
+      "label": "factual"
+    },
+    {
+      "text": "How are you?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Show me the poster of Casablanca",
+      "label": "multimedia"
+    },
+    {
+      "text": "when is the next olympics?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what medication should i take?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "when is the next olympics?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what type of movie is inception?",
+      "label": "factual"
+    },
+    {
+      "text": "Suggest movies similar to Star Wars",
+      "label": "recommendation"
+    },
+    {
+      "text": "i want to see the image of the lord of the rings",
+      "label": "multimedia"
+    },
+    {
+      "text": "Help me find a movie to watch",
+      "label": "recommendation"
+    },
+    {
+      "text": "who directed gladiator?",
+      "label": "factual"
+    },
+    {
+      "text": "what should i watch tonight?",
+      "label": "recommendation"
+    },
+    {
+      "text": "can i see an image of star wars?",
+      "label": "multimedia"
+    },
+    {
+      "text": "What director made Titanic?",
+      "label": "factual"
+    },
+    {
+      "text": "list the cast of inception",
+      "label": "factual"
+    },
+    {
+      "text": "show me a picture of goodfellas",
+      "label": "multimedia"
+    },
+    {
+      "text": "what's the derivative of x squared?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Display a photo of The Godfather",
+      "label": "multimedia"
+    },
+    {
+      "text": "What kind of film is Schindler's List?",
+      "label": "factual"
+    },
+    {
+      "text": "List films starring Leonardo DiCaprio",
+      "label": "factual"
+    },
+    {
+      "text": "list the cast of interstellar",
+      "label": "factual"
+    },
+    {
+      "text": "display a photo of casablanca",
+      "label": "multimedia"
+    },
+    {
+      "text": "Suggest movies similar to Fight Club",
+      "label": "recommendation"
+    },
+    {
+      "text": "Give me a movie recommendation",
+      "label": "recommendation"
+    },
+    {
+      "text": "Show me a picture of Goodfellas",
+      "label": "multimedia"
+    },
+    {
+      "text": "tell me the genre of fight club",
+      "label": "factual"
+    },
+    {
+      "text": "What does The Godfather look like?",
+      "label": "multimedia"
+    },
+    {
+      "text": "display a photo of the lord of the rings",
+      "label": "multimedia"
+    },
+    {
+      "text": "How do I treat a headache?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "How to implement binary search?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Suggest movies similar to The Departed",
+      "label": "recommendation"
+    },
+    {
+      "text": "Display a photo of Avatar",
+      "label": "multimedia"
+    },
+    {
+      "text": "How old are you?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Give me a movie recommendation",
+      "label": "recommendation"
+    },
+    {
+      "text": "I want to see the image of Pulp Fiction",
+      "label": "multimedia"
+    },
+    {
+      "text": "What should I watch tonight?",
+      "label": "recommendation"
+    },
+    {
+      "text": "what is the square root of 144?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what genre is the silence of the lambs?",
+      "label": "factual"
+    },
+    {
+      "text": "What's the derivative of x squared?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Solve for x: 2x + 5 = 15",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "show me a picture of casablanca",
+      "label": "multimedia"
+    },
+    {
+      "text": "What time is the football match?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "how much does a flight to paris cost?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "when did world war ii end?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "When did Gladiator premiere?",
+      "label": "factual"
+    },
+    {
+      "text": "What is the population of China?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "What kind of film is The Dark Knight?",
+      "label": "factual"
+    },
+    {
+      "text": "what should i watch tonight?",
+      "label": "recommendation"
+    },
+    {
+      "text": "What kind of film is Pulp Fiction?",
+      "label": "factual"
+    },
+    {
+      "text": "give me a movie recommendation",
+      "label": "recommendation"
+    },
+    {
+      "text": "How do you calculate the area of a circle?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "How tall is Mount Everest?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what ingredients do i need for pizza?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Show me a picture of Casablanca",
+      "label": "multimedia"
+    },
+    {
+      "text": "Tell me about yourself",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "What's the temperature outside?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "who acted in inception?",
+      "label": "factual"
+    },
+    {
+      "text": "What documents do I need to travel?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "FIND MOVIES DIRECTED BY BRAD PITT",
+      "label": "factual"
+    },
+    {
+      "text": "Can I see an image of Inception?",
+      "label": "multimedia"
+    },
+    {
+      "text": "What's the NBA score?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "give me a movie recommendation",
+      "label": "recommendation"
+    },
+    {
+      "text": "Help me find a movie to watch",
+      "label": "recommendation"
+    },
+    {
+      "text": "What's the derivative of x squared?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Debug my code please",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Find films like Pulp Fiction",
+      "label": "factual"
+    },
+    {
+      "text": "What should I watch tonight?",
+      "label": "recommendation"
+    },
+    {
+      "text": "Tell me the genre of The Godfather",
+      "label": "factual"
+    },
+    {
+      "text": "how to lose weight fast?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "i want to see the image of the shawshank redemption",
+      "label": "multimedia"
+    },
+    {
+      "text": "what does the godfather look like?",
+      "label": "multimedia"
+    },
+    {
+      "text": "suggest movies similar to interstellar",
+      "label": "recommendation"
+    },
+    {
+      "text": "Show me the poster of The Godfather",
+      "label": "multimedia"
+    },
+    {
+      "text": "what genre is fight club?",
+      "label": "factual"
+    },
+    {
+      "text": "is it going to rain tomorrow?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "What does Interstellar look like?",
+      "label": "multimedia"
+    },
+    {
+      "text": "show me the poster of fight club",
+      "label": "multimedia"
+    },
+    {
+      "text": "what type of movie is titanic?",
+      "label": "factual"
+    },
+    {
+      "text": "how much does a flight to paris cost?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "What's your favorite color?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what type of movie is parasite?",
+      "label": "factual"
+    },
+    {
+      "text": "tell me about yourself",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "What does this error mean: NullPointerException?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "how long to bake chicken?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what year did gladiator come out?",
+      "label": "factual"
+    },
+    {
+      "text": "I want to see the image of Gladiator",
+      "label": "multimedia"
+    },
+    {
+      "text": "what is 2 + 2?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Display a photo of Casablanca",
+      "label": "multimedia"
+    },
+    {
+      "text": "how old are you?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "where should i go on vacation?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "What should I watch tonight?",
+      "label": "recommendation"
+    },
+    {
+      "text": "Who starred in Titanic?",
+      "label": "factual"
+    },
+    {
+      "text": "help me find a movie to watch",
+      "label": "recommendation"
+    },
+    {
+      "text": "how tall is mount everest?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "How tall is Mount Everest?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "how long to bake chicken?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what should i watch tonight?",
+      "label": "recommendation"
+    },
+    {
+      "text": "What does The Godfather look like?",
+      "label": "multimedia"
+    },
+    {
+      "text": "how hot will it be this weekend?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "What genre is The Matrix?",
+      "label": "factual"
+    },
+    {
+      "text": "When did Star Wars premiere?",
+      "label": "factual"
+    },
+    {
+      "text": "Tell me the genre of The Silence of the Lambs",
+      "label": "factual"
+    },
+    {
+      "text": "Help me find a movie to watch",
+      "label": "recommendation"
+    },
+    {
+      "text": "What is the population of China?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "How long to bake chicken?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "What type of movie is Inception?",
+      "label": "factual"
+    },
+    {
+      "text": "how long to bake chicken?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Solve for x: 2x + 5 = 15",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "write a function to sort an array",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "FIND MOVIES DIRECTED BY LEONARDO DICAPRIO",
+      "label": "factual"
+    },
+    {
+      "text": "Give me a movie recommendation",
+      "label": "recommendation"
+    },
+    {
+      "text": "how to lose weight fast?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what is the capital of france?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Find movies directed by Robert De Niro",
+      "label": "factual"
+    },
+    {
+      "text": "show me the poster of casablanca",
+      "label": "multimedia"
+    },
+    {
+      "text": "How do I treat a headache?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Who won the Super Bowl?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Can I see an image of Forrest Gump?",
+      "label": "multimedia"
+    },
+    {
+      "text": "I want to see the image of The Departed",
+      "label": "multimedia"
+    },
+    {
+      "text": "suggest movies similar to the godfather",
+      "label": "recommendation"
+    },
+    {
+      "text": "what's happening in the world?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Who acted in Interstellar?",
+      "label": "factual"
+    },
+    {
+      "text": "Show me a picture of Pulp Fiction",
+      "label": "multimedia"
+    },
+    {
+      "text": "What is the population of China?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Can I see an image of Star Wars?",
+      "label": "multimedia"
+    },
+    {
+      "text": "Calculate 15 * 23",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "find the director of the departed",
+      "label": "factual"
+    },
+    {
+      "text": "Help me find a movie to watch",
+      "label": "recommendation"
+    },
+    {
+      "text": "debug my code please",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "WHAT KIND OF FILM IS STAR WARS?",
+      "label": "factual"
+    },
+    {
+      "text": "Help me find a movie to watch",
+      "label": "recommendation"
+    },
+    {
+      "text": "what happened today?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Show me films with Al Pacino",
+      "label": "factual"
+    },
+    {
+      "text": "Give me a movie recommendation",
+      "label": "recommendation"
+    },
+    {
+      "text": "Give me a movie recommendation",
+      "label": "recommendation"
+    },
+    {
+      "text": "Show me a picture of Gladiator",
+      "label": "multimedia"
+    },
+    {
+      "text": "What documents do I need to travel?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "What actors are in Parasite?",
+      "label": "factual"
+    },
+    {
+      "text": "what actors are in interstellar?",
+      "label": "factual"
+    },
+    {
+      "text": "how do i treat a headache?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Can I see an image of The Godfather?",
+      "label": "multimedia"
+    },
+    {
+      "text": "I want to see the image of The Dark Knight",
+      "label": "multimedia"
+    },
+    {
+      "text": "what movies did meryl streep direct?",
+      "label": "factual"
+    },
+    {
+      "text": "display a photo of avatar",
+      "label": "multimedia"
+    },
+    {
+      "text": "I want to see the image of Goodfellas",
+      "label": "multimedia"
+    },
+    {
+      "text": "help me find a movie to watch",
+      "label": "recommendation"
+    },
+    {
+      "text": "what does this error mean: nullpointerexception?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Find movies directed by Brad Pitt",
+      "label": "factual"
+    },
+    {
+      "text": "can i see an image of forrest gump?",
+      "label": "multimedia"
+    },
+    {
+      "text": "show me a picture of inception",
+      "label": "multimedia"
+    },
+    {
+      "text": "what kind of film is pulp fiction?",
+      "label": "factual"
+    },
+    {
+      "text": "What is the square root of 144?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "WHAT TYPE OF MOVIE IS INCEPTION?",
+      "label": "factual"
+    },
+    {
+      "text": "What's the weather today?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "What is the square root of 144?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what is the speed of light?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Can I see an image of The Lord of the Rings?",
+      "label": "multimedia"
+    },
+    {
+      "text": "What's the derivative of x squared?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "who acted in the godfather?",
+      "label": "factual"
+    },
+    {
+      "text": "TELL ME WHO DIRECTED TITANIC",
+      "label": "factual"
+    },
+    {
+      "text": "What's trending on social media?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what's the temperature outside?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "find movies directed by brad pitt",
+      "label": "factual"
+    },
+    {
+      "text": "What should I watch tonight?",
+      "label": "recommendation"
+    },
+    {
+      "text": "what happened today?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "What kind of film is Inception?",
+      "label": "factual"
+    },
+    {
+      "text": "i want to see the image of forrest gump",
+      "label": "multimedia"
+    },
+    {
+      "text": "how long to bake chicken?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what is the square root of 144?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "who directed pulp fiction?",
+      "label": "factual"
+    },
+    {
+      "text": "what does the shawshank redemption look like?",
+      "label": "multimedia"
+    },
+    {
+      "text": "What's the derivative of x squared?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "give me a recipe for chocolate cake",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Can I see an image of Casablanca?",
+      "label": "multimedia"
+    },
+    {
+      "text": "i want to see the image of pulp fiction",
+      "label": "multimedia"
+    },
+    {
+      "text": "Show me a picture of The Dark Knight",
+      "label": "multimedia"
+    },
+    {
+      "text": "What is the capital of France?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what's the derivative of x squared?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Show me a picture of Inception",
+      "label": "multimedia"
+    },
+    {
+      "text": "What actors are in Parasite?",
+      "label": "factual"
+    },
+    {
+      "text": "what is 2 + 2?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Display a photo of Inception",
+      "label": "multimedia"
+    },
+    {
+      "text": "what is 2 + 2?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "How are you?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what should i watch tonight?",
+      "label": "recommendation"
+    },
+    {
+      "text": "What's the derivative of x squared?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Who starred in The Shawshank Redemption?",
+      "label": "factual"
+    },
+    {
+      "text": "What are the symptoms of flu?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "TELL ME THE GENRE OF THE GODFATHER",
+      "label": "factual"
+    },
+    {
+      "text": "How to lose weight fast?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "What are the symptoms of flu?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "List the cast of Interstellar",
+      "label": "factual"
+    },
+    {
+      "text": "what should i watch tonight?",
+      "label": "recommendation"
+    },
+    {
+      "text": "How do I treat a headache?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "how do i make pasta?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "solve for x: 2x + 5 = 15",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Give me a recipe for chocolate cake",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "i want to see the image of inception",
+      "label": "multimedia"
+    },
+    {
+      "text": "how long to bake chicken?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "How tall is Mount Everest?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "give me a movie recommendation",
+      "label": "recommendation"
+    },
+    {
+      "text": "Give me a movie recommendation",
+      "label": "recommendation"
+    },
+    {
+      "text": "Give me the latest news",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "give me the latest news",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "show me the poster of the godfather",
+      "label": "multimedia"
+    },
+    {
+      "text": "what's your favorite color?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what should i watch tonight?",
+      "label": "recommendation"
+    },
+    {
+      "text": "give me the latest news",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "help me find a movie to watch",
+      "label": "recommendation"
+    },
+    {
+      "text": "Show me the poster of Casablanca",
+      "label": "multimedia"
+    },
+    {
+      "text": "what should i watch tonight?",
+      "label": "recommendation"
+    },
+    {
+      "text": "Debug my code please",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "What is the square root of 144?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "What movies are similar to Schindler's List?",
+      "label": "factual"
+    },
+    {
+      "text": "who won the super bowl?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "who directed casablanca?",
+      "label": "factual"
+    },
+    {
+      "text": "What's happening in the world?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "who directed the godfather?",
+      "label": "factual"
+    },
+    {
+      "text": "what's the weather today?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what medication should i take?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what's trending on social media?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "suggest movies similar to star wars",
+      "label": "recommendation"
+    },
+    {
+      "text": "WHO STARRED IN TITANIC?",
+      "label": "factual"
+    },
+    {
+      "text": "display a photo of the matrix",
+      "label": "multimedia"
+    },
+    {
+      "text": "What year did Interstellar come out?",
+      "label": "factual"
+    },
+    {
+      "text": "What movies did Al Pacino direct?",
+      "label": "factual"
+    },
+    {
+      "text": "What happened today?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "who acted in fight club?",
+      "label": "factual"
+    },
+    {
+      "text": "help me find a movie to watch",
+      "label": "recommendation"
+    },
+    {
+      "text": "display a photo of interstellar",
+      "label": "multimedia"
+    },
+    {
+      "text": "suggest movies similar to fight club",
+      "label": "recommendation"
+    },
+    {
+      "text": "tell me about recent events",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Search for movies about artificial intelligence",
+      "label": "factual"
+    },
+    {
+      "text": "What is a for loop in Java?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "i want to see the image of goodfellas",
+      "label": "multimedia"
+    },
+    {
+      "text": "give me a movie recommendation",
+      "label": "recommendation"
+    },
+    {
+      "text": "What is the population of China?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "When is the next Olympics?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "What is the capital of France?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "i want to see the image of the dark knight",
+      "label": "multimedia"
+    },
+    {
+      "text": "find the director of the silence of the lambs",
+      "label": "factual"
+    },
+    {
+      "text": "Debug my code please",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Can I see an image of Fight Club?",
+      "label": "multimedia"
+    },
+    {
+      "text": "FIND MOVIES DIRECTED BY BRAD PITT",
+      "label": "factual"
+    },
+    {
+      "text": "What should I watch tonight?",
+      "label": "recommendation"
+    },
+    {
+      "text": "Show me the poster of Forrest Gump",
+      "label": "multimedia"
+    },
+    {
+      "text": "when was parasite released?",
+      "label": "factual"
+    },
+    {
+      "text": "when was the departed released?",
+      "label": "factual"
+    },
+    {
+      "text": "What's happening in the world?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "show me the poster of casablanca",
+      "label": "multimedia"
+    },
+    {
+      "text": "search for movies about music",
+      "label": "factual"
+    },
+    {
+      "text": "I want to see the image of Inception",
+      "label": "multimedia"
+    },
+    {
+      "text": "How much does a flight to Paris cost?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "how do you calculate the area of a circle?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "How tall is Mount Everest?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Show me the poster of Parasite",
+      "label": "multimedia"
+    },
+    {
+      "text": "what type of movie is the godfather?",
+      "label": "factual"
+    },
+    {
+      "text": "how old are you?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "List films starring Quentin Tarantino",
+      "label": "factual"
+    },
+    {
+      "text": "Display a photo of Pulp Fiction",
+      "label": "multimedia"
+    },
+    {
+      "text": "what's the temperature outside?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "List the cast of Parasite",
+      "label": "factual"
+    },
+    {
+      "text": "What does Casablanca look like?",
+      "label": "multimedia"
+    },
+    {
+      "text": "what is the square root of 144?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "show me a picture of fight club",
+      "label": "multimedia"
+    },
+    {
+      "text": "what are movies comparable to the departed?",
+      "label": "factual"
+    },
+    {
+      "text": "i want to see the image of the shawshank redemption",
+      "label": "multimedia"
+    },
+    {
+      "text": "What kind of film is Parasite?",
+      "label": "factual"
+    },
+    {
+      "text": "WHO ACTED IN THE GODFATHER?",
+      "label": "factual"
+    },
+    {
+      "text": "What should I watch tonight?",
+      "label": "recommendation"
+    },
+    {
+      "text": "Who directed The Godfather?",
+      "label": "factual"
+    },
+    {
+      "text": "solve for x: 2x + 5 = 15",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "What medication should I take?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "can i see an image of casablanca?",
+      "label": "multimedia"
+    },
+    {
+      "text": "What's happening in the world?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "What is the speed of light?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "can i see an image of inception?",
+      "label": "multimedia"
+    },
+    {
+      "text": "How hot will it be this weekend?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "How to cook rice?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Can I see an image of Goodfellas?",
+      "label": "multimedia"
+    },
+    {
+      "text": "show me the poster of forrest gump",
+      "label": "multimedia"
+    },
+    {
+      "text": "Tell me about recent events",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "can i see an image of the departed?",
+      "label": "multimedia"
+    },
+    {
+      "text": "what is the speed of light?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "What is 2 + 2?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "show me films with robert de niro",
+      "label": "factual"
+    },
+    {
+      "text": "What kind of film is Star Wars?",
+      "label": "factual"
+    },
+    {
+      "text": "is it going to rain tomorrow?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what should i watch tonight?",
+      "label": "recommendation"
+    },
+    {
+      "text": "suggest movies similar to fight club",
+      "label": "recommendation"
+    },
+    {
+      "text": "What's your name?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "What type of movie is Casablanca?",
+      "label": "factual"
+    },
+    {
+      "text": "Where should I go on vacation?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "What's happening in the world?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "What movies did Christopher Nolan direct?",
+      "label": "factual"
+    },
+    {
+      "text": "What are the symptoms of flu?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "help me find a movie to watch",
+      "label": "recommendation"
+    },
+    {
+      "text": "Show me a picture of Forrest Gump",
+      "label": "multimedia"
+    },
+    {
+      "text": "find movies directed by leonardo dicaprio",
+      "label": "factual"
+    },
+    {
+      "text": "give me a movie recommendation",
+      "label": "recommendation"
+    },
+    {
+      "text": "Help me find a movie to watch",
+      "label": "recommendation"
+    },
+    {
+      "text": "What's the weather today?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Who is the best soccer player?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Suggest movies similar to Fight Club",
+      "label": "recommendation"
+    },
+    {
+      "text": "can i see an image of titanic?",
+      "label": "multimedia"
+    },
+    {
+      "text": "I want to see the image of Titanic",
+      "label": "multimedia"
+    },
+    {
+      "text": "Give me a movie recommendation",
+      "label": "recommendation"
+    },
+    {
+      "text": "What does Avatar look like?",
+      "label": "multimedia"
+    },
+    {
+      "text": "give me a movie recommendation",
+      "label": "recommendation"
+    },
+    {
+      "text": "find movies directed by brad pitt",
+      "label": "factual"
+    },
+    {
+      "text": "what's the derivative of x squared?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Debug my code please",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what time is the football match?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "when was the dark knight released?",
+      "label": "factual"
+    },
+    {
+      "text": "give me a movie recommendation",
+      "label": "recommendation"
+    },
+    {
+      "text": "how do i make pasta?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what's the derivative of x squared?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Give me a movie recommendation",
+      "label": "recommendation"
+    },
+    {
+      "text": "give me a movie recommendation",
+      "label": "recommendation"
+    },
+    {
+      "text": "what's your name?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what time is the football match?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what's the derivative of x squared?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Display a photo of The Shawshank Redemption",
+      "label": "multimedia"
+    },
+    {
+      "text": "Can I see an image of The Departed?",
+      "label": "multimedia"
+    },
+    {
+      "text": "when did world war ii end?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "What does Goodfellas look like?",
+      "label": "multimedia"
+    },
+    {
+      "text": "Show me films with Martin Scorsese",
+      "label": "factual"
+    },
+    {
+      "text": "Calculate 15 * 23",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "tell me about yourself",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "What does Goodfellas look like?",
+      "label": "multimedia"
+    },
+    {
+      "text": "Give me a movie recommendation",
+      "label": "recommendation"
+    },
+    {
+      "text": "give me the latest news",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Give me a movie recommendation",
+      "label": "recommendation"
+    },
+    {
+      "text": "What's trending on social media?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "What should I watch tonight?",
+      "label": "recommendation"
+    },
+    {
+      "text": "Display a photo of Interstellar",
+      "label": "multimedia"
+    },
+    {
+      "text": "What movies did Christopher Nolan direct?",
+      "label": "factual"
+    },
+    {
+      "text": "Give me a movie recommendation",
+      "label": "recommendation"
+    },
+    {
+      "text": "where should i go on vacation?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "When was The Shawshank Redemption released?",
+      "label": "factual"
+    },
+    {
+      "text": "is it going to rain tomorrow?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what's the derivative of x squared?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "how do i treat a headache?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "How do I treat a headache?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what's the temperature outside?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "What's the temperature outside?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "What movies did Robert De Niro direct?",
+      "label": "factual"
+    },
+    {
+      "text": "Help me find a movie to watch",
+      "label": "recommendation"
+    },
+    {
+      "text": "What genre is Interstellar?",
+      "label": "factual"
+    },
+    {
+      "text": "can i see an image of star wars?",
+      "label": "multimedia"
+    },
+    {
+      "text": "WHO ACTED IN INCEPTION?",
+      "label": "factual"
+    },
+    {
+      "text": "Show me a picture of The Matrix",
+      "label": "multimedia"
+    },
+    {
+      "text": "what type of movie is star wars?",
+      "label": "factual"
+    },
+    {
+      "text": "find films like titanic",
+      "label": "factual"
+    },
+    {
+      "text": "SHOW ME FILMS WITH TOM HANKS",
+      "label": "factual"
+    },
+    {
+      "text": "what's your favorite color?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what is 2 + 2?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Give me the latest news",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Who acted in Fight Club?",
+      "label": "factual"
+    },
+    {
+      "text": "where should i go on vacation?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "can i see an image of the silence of the lambs?",
+      "label": "multimedia"
+    },
+    {
+      "text": "what documents do i need to travel?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what director made schindler's list?",
+      "label": "factual"
+    },
+    {
+      "text": "What is 2 + 2?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "How to implement binary search?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what is the population of china?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "What kind of film is Inception?",
+      "label": "factual"
+    },
+    {
+      "text": "show me the poster of inception",
+      "label": "multimedia"
+    },
+    {
+      "text": "Tell me about recent events",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "I want to see the image of Titanic",
+      "label": "multimedia"
+    },
+    {
+      "text": "List films starring Tom Hanks",
+      "label": "factual"
+    },
+    {
+      "text": "show me a picture of the matrix",
+      "label": "multimedia"
+    },
+    {
+      "text": "what should i watch tonight?",
+      "label": "recommendation"
+    },
+    {
+      "text": "where should i go on vacation?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Give me a movie recommendation",
+      "label": "recommendation"
+    },
+    {
+      "text": "what happened today?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Give me a movie recommendation",
+      "label": "recommendation"
+    },
+    {
+      "text": "who is the director of gladiator?",
+      "label": "factual"
+    },
+    {
+      "text": "What is the square root of 144?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what should i watch tonight?",
+      "label": "recommendation"
+    },
+    {
+      "text": "What should I watch tonight?",
+      "label": "recommendation"
+    },
+    {
+      "text": "How do I get to the airport?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what actors are in parasite?",
+      "label": "factual"
+    },
+    {
+      "text": "What time is the football match?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Display a photo of The Lord of the Rings",
+      "label": "multimedia"
+    },
+    {
+      "text": "What happened today?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "WHAT MOVIES ARE SIMILAR TO SCHINDLER'S LIST?",
+      "label": "factual"
+    },
+    {
+      "text": "find films like the departed",
+      "label": "factual"
+    },
+    {
+      "text": "what genre is forrest gump?",
+      "label": "factual"
+    },
+    {
+      "text": "WHO IS THE DIRECTOR OF INTERSTELLAR?",
+      "label": "factual"
+    },
+    {
+      "text": "Who is the president of the United States?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what movies are similar to casablanca?",
+      "label": "factual"
+    },
+    {
+      "text": "give me a movie recommendation",
+      "label": "recommendation"
+    },
+    {
+      "text": "List the cast of Inception",
+      "label": "factual"
+    },
+    {
+      "text": "Give me a movie recommendation",
+      "label": "recommendation"
+    },
+    {
+      "text": "How do you calculate the area of a circle?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "give me a movie recommendation",
+      "label": "recommendation"
+    },
+    {
+      "text": "i want to see the image of the lord of the rings",
+      "label": "multimedia"
+    },
+    {
+      "text": "show me the poster of the lord of the rings",
+      "label": "multimedia"
+    },
+    {
+      "text": "How do I make pasta?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "can i see an image of gladiator?",
+      "label": "multimedia"
+    },
+    {
+      "text": "how old are you?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "give me a movie recommendation",
+      "label": "recommendation"
+    },
+    {
+      "text": "What is 2 + 2?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "suggest movies similar to the departed",
+      "label": "recommendation"
+    },
+    {
+      "text": "what type of movie is the godfather?",
+      "label": "factual"
+    },
+    {
+      "text": "what documents do i need to travel?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "How do I treat a headache?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what does goodfellas look like?",
+      "label": "multimedia"
+    },
+    {
+      "text": "Who is the director of Schindler's List?",
+      "label": "factual"
+    },
+    {
+      "text": "What time is the football match?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "What are the symptoms of flu?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what actors are in the shawshank redemption?",
+      "label": "factual"
+    },
+    {
+      "text": "What movies did Meryl Streep direct?",
+      "label": "factual"
+    },
+    {
+      "text": "Can I see an image of Inception?",
+      "label": "multimedia"
+    },
+    {
+      "text": "who starred in forrest gump?",
+      "label": "factual"
+    },
+    {
+      "text": "how do i treat a headache?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what is a for loop in java?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "What's the derivative of x squared?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "What is the capital of France?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "how are you?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "how old are you?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Who won the Super Bowl?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "What is a for loop in Java?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what is the speed of light?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what director made titanic?",
+      "label": "factual"
+    },
+    {
+      "text": "tell me about recent events",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what movies did christopher nolan direct?",
+      "label": "factual"
+    },
+    {
+      "text": "tell me about recent events",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "When did World War II end?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Where should I go on vacation?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Who directed Avatar?",
+      "label": "factual"
+    },
+    {
+      "text": "Is it going to rain tomorrow?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "where should i go on vacation?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "who acted in the departed?",
+      "label": "factual"
+    },
+    {
+      "text": "What type of movie is Parasite?",
+      "label": "factual"
+    },
+    {
+      "text": "give me a recipe for chocolate cake",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what's the temperature outside?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "I want to see the image of The Lord of the Rings",
+      "label": "multimedia"
+    },
+    {
+      "text": "Can I see an image of Avatar?",
+      "label": "multimedia"
+    },
+    {
+      "text": "what is the population of china?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "give me a movie recommendation",
+      "label": "recommendation"
+    },
+    {
+      "text": "solve for x: 2x + 5 = 15",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "What should I watch tonight?",
+      "label": "recommendation"
+    },
+    {
+      "text": "find movies directed by brad pitt",
+      "label": "factual"
+    },
+    {
+      "text": "Show me the poster of The Lord of the Rings",
+      "label": "multimedia"
+    },
+    {
+      "text": "Show me films with Leonardo DiCaprio",
+      "label": "factual"
+    },
+    {
+      "text": "What genre is Fight Club?",
+      "label": "factual"
+    },
+    {
+      "text": "what director made gladiator?",
+      "label": "factual"
+    },
+    {
+      "text": "what does the matrix look like?",
+      "label": "multimedia"
+    },
+    {
+      "text": "what's your name?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "display a photo of the shawshank redemption",
+      "label": "multimedia"
+    },
+    {
+      "text": "who is the president of the united states?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "where should i go on vacation?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "What does this error mean: NullPointerException?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what's happening in the world?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "What time is the football match?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what type of movie is casablanca?",
+      "label": "factual"
+    },
+    {
+      "text": "show me films with quentin tarantino",
+      "label": "factual"
+    },
+    {
+      "text": "who is the best soccer player?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "What genre is The Silence of the Lambs?",
+      "label": "factual"
+    },
+    {
+      "text": "how do you calculate the area of a circle?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "What medication should I take?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "What type of movie is The Godfather?",
+      "label": "factual"
+    },
+    {
+      "text": "what documents do i need to travel?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "i want to see the image of goodfellas",
+      "label": "multimedia"
+    },
+    {
+      "text": "what's the derivative of x squared?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Solve for x: 2x + 5 = 15",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "WHAT DIRECTOR MADE TITANIC?",
+      "label": "factual"
+    },
+    {
+      "text": "search for movies about sports",
+      "label": "factual"
+    },
+    {
+      "text": "who won the super bowl?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "how to lose weight fast?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Who is the best soccer player?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "how to cook rice?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what year did inception come out?",
+      "label": "factual"
+    },
+    {
+      "text": "debug my code please",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what's the nba score?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "List the cast of Gladiator",
+      "label": "factual"
+    },
+    {
+      "text": "what kind of film is inception?",
+      "label": "factual"
+    },
+    {
+      "text": "what does interstellar look like?",
+      "label": "multimedia"
+    },
+    {
+      "text": "When did Goodfellas premiere?",
+      "label": "factual"
+    },
+    {
+      "text": "Find the director of The Lord of the Rings",
+      "label": "factual"
+    },
+    {
+      "text": "Show me the poster of The Silence of the Lambs",
+      "label": "multimedia"
+    },
+    {
+      "text": "What is the speed of light?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what movies did robert de niro direct?",
+      "label": "factual"
+    },
+    {
+      "text": "Who is the director of Gladiator?",
+      "label": "factual"
+    },
+    {
+      "text": "What is the speed of light?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "I want to see the image of Star Wars",
+      "label": "multimedia"
+    },
+    {
+      "text": "How long to bake chicken?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what are the symptoms of flu?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what's the nba score?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what happened today?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what should i watch tonight?",
+      "label": "recommendation"
+    },
+    {
+      "text": "What's the temperature outside?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "What's the derivative of x squared?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "list films starring leonardo dicaprio",
+      "label": "factual"
+    },
+    {
+      "text": "Give me the latest news",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Can I see an image of Gladiator?",
+      "label": "multimedia"
+    },
+    {
+      "text": "what does this error mean: nullpointerexception?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "i want to see the image of the dark knight",
+      "label": "multimedia"
+    },
+    {
+      "text": "Can I see an image of Forrest Gump?",
+      "label": "multimedia"
+    },
+    {
+      "text": "display a photo of the silence of the lambs",
+      "label": "multimedia"
+    },
+    {
+      "text": "what is the capital of france?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what should i watch tonight?",
+      "label": "recommendation"
+    },
+    {
+      "text": "Suggest movies similar to Avatar",
+      "label": "recommendation"
+    },
+    {
+      "text": "Who directed Pulp Fiction?",
+      "label": "factual"
+    },
+    {
+      "text": "Show me a picture of The Silence of the Lambs",
+      "label": "multimedia"
+    },
+    {
+      "text": "Give me a movie recommendation",
+      "label": "recommendation"
+    },
+    {
+      "text": "what medication should i take?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "tell me about yourself",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what is the speed of light?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "What is the population of China?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what is the capital of france?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Search for movies about revenge",
+      "label": "factual"
+    },
+    {
+      "text": "What kind of film is The Silence of the Lambs?",
+      "label": "factual"
+    },
+    {
+      "text": "What actors are in Interstellar?",
+      "label": "factual"
+    },
+    {
+      "text": "Who starred in The Silence of the Lambs?",
+      "label": "factual"
+    },
+    {
+      "text": "List films starring Al Pacino",
+      "label": "factual"
+    },
+    {
+      "text": "What does The Matrix look like?",
+      "label": "multimedia"
+    },
+    {
+      "text": "when was parasite released?",
+      "label": "factual"
+    },
+    {
+      "text": "Help me find a movie to watch",
+      "label": "recommendation"
+    },
+    {
+      "text": "what year did interstellar come out?",
+      "label": "factual"
+    },
+    {
+      "text": "What should I watch tonight?",
+      "label": "recommendation"
+    },
+    {
+      "text": "Give me a recipe for chocolate cake",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Find movies directed by James Cameron",
+      "label": "factual"
+    },
+    {
+      "text": "Give me a movie recommendation",
+      "label": "recommendation"
+    },
+    {
+      "text": "What kind of film is Goodfellas?",
+      "label": "factual"
+    },
+    {
+      "text": "What director made Avatar?",
+      "label": "factual"
+    },
+    {
+      "text": "what is the speed of light?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "What is 2 + 2?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Is it going to rain tomorrow?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "How to cook rice?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "How do I get to the airport?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "What year did Gladiator come out?",
+      "label": "factual"
+    },
+    {
+      "text": "Find films like Goodfellas",
+      "label": "factual"
+    },
+    {
+      "text": "calculate 15 * 23",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "give me a movie recommendation",
+      "label": "recommendation"
+    },
+    {
+      "text": "Suggest movies similar to Interstellar",
+      "label": "recommendation"
+    },
+    {
+      "text": "what should i watch tonight?",
+      "label": "recommendation"
+    },
+    {
+      "text": "Can I see an image of The Departed?",
+      "label": "multimedia"
+    },
+    {
+      "text": "what does avatar look like?",
+      "label": "multimedia"
+    },
+    {
+      "text": "When is the next Olympics?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what's the temperature outside?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "how to lose weight fast?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "How to cook rice?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Where should I go on vacation?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "When did World War II end?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "display a photo of the dark knight",
+      "label": "multimedia"
+    },
+    {
+      "text": "how do i treat a headache?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "how do i treat a headache?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "How to lose weight fast?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "When did Titanic premiere?",
+      "label": "factual"
+    },
+    {
+      "text": "Find movies directed by Brad Pitt",
+      "label": "factual"
+    },
+    {
+      "text": "calculate 15 * 23",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what should i watch tonight?",
+      "label": "recommendation"
+    },
+    {
+      "text": "What is 2 + 2?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "WHEN DID THE GODFATHER PREMIERE?",
+      "label": "factual"
+    },
+    {
+      "text": "Show me films with Tom Hanks",
+      "label": "factual"
+    },
+    {
+      "text": "display a photo of casablanca",
+      "label": "multimedia"
+    },
+    {
+      "text": "find films like forrest gump",
+      "label": "factual"
+    },
+    {
+      "text": "What does Casablanca look like?",
+      "label": "multimedia"
+    },
+    {
+      "text": "When is the next Olympics?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Who acted in The Godfather?",
+      "label": "factual"
+    },
+    {
+      "text": "tell me the genre of the godfather",
+      "label": "factual"
+    },
+    {
+      "text": "what kind of film is goodfellas?",
+      "label": "factual"
+    },
+    {
+      "text": "What happened today?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what does star wars look like?",
+      "label": "multimedia"
+    },
+    {
+      "text": "suggest movies similar to avatar",
+      "label": "recommendation"
+    },
+    {
+      "text": "Show me the poster of Inception",
+      "label": "multimedia"
+    },
+    {
+      "text": "suggest movies similar to star wars",
+      "label": "recommendation"
+    },
+    {
+      "text": "what type of movie is the departed?",
+      "label": "factual"
+    },
+    {
+      "text": "how do i treat a headache?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Who plays in The Departed?",
+      "label": "factual"
+    },
+    {
+      "text": "what are the symptoms of flu?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Display a photo of Avatar",
+      "label": "multimedia"
+    },
+    {
+      "text": "what time is the football match?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Give me the latest news",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "how do i get to the airport?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "How tall is Mount Everest?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "give me a movie recommendation",
+      "label": "recommendation"
+    },
+    {
+      "text": "Suggest movies similar to Avatar",
+      "label": "recommendation"
+    },
+    {
+      "text": "help me find a movie to watch",
+      "label": "recommendation"
+    },
+    {
+      "text": "What should I watch tonight?",
+      "label": "recommendation"
+    },
+    {
+      "text": "When was The Godfather released?",
+      "label": "factual"
+    },
+    {
+      "text": "i want to see the image of gladiator",
+      "label": "multimedia"
+    },
+    {
+      "text": "what does the shawshank redemption look like?",
+      "label": "multimedia"
+    },
+    {
+      "text": "find the director of avatar",
+      "label": "factual"
+    },
+    {
+      "text": "what's your favorite color?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Suggest movies similar to Star Wars",
+      "label": "recommendation"
+    },
+    {
+      "text": "when was the godfather released?",
+      "label": "factual"
+    },
+    {
+      "text": "what's your name?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "What's the derivative of x squared?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "When did World War II end?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "when did star wars premiere?",
+      "label": "factual"
+    },
+    {
+      "text": "What's the derivative of x squared?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "What is the population of China?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "What actors are in The Shawshank Redemption?",
+      "label": "factual"
+    },
+    {
+      "text": "What's your name?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Is it going to rain tomorrow?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "I want to see the image of Goodfellas",
+      "label": "multimedia"
+    },
+    {
+      "text": "How do I treat a headache?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "What genre is Goodfellas?",
+      "label": "factual"
+    },
+    {
+      "text": "Find the director of The Silence of the Lambs",
+      "label": "factual"
+    },
+    {
+      "text": "When did The Godfather premiere?",
+      "label": "factual"
+    },
+    {
+      "text": "Display a photo of The Matrix",
+      "label": "multimedia"
+    },
+    {
+      "text": "When was Parasite released?",
+      "label": "factual"
+    },
+    {
+      "text": "What genre is Inception?",
+      "label": "factual"
+    },
+    {
+      "text": "Is it going to rain tomorrow?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "WHO STARRED IN THE DEPARTED?",
+      "label": "factual"
+    },
+    {
+      "text": "Who directed Casablanca?",
+      "label": "factual"
+    },
+    {
+      "text": "give me a movie recommendation",
+      "label": "recommendation"
+    },
+    {
+      "text": "what does this error mean: nullpointerexception?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Find films like The Departed",
+      "label": "factual"
+    },
+    {
+      "text": "display a photo of casablanca",
+      "label": "multimedia"
+    },
+    {
+      "text": "i want to see the image of casablanca",
+      "label": "multimedia"
+    },
+    {
+      "text": "What director made Schindler's List?",
+      "label": "factual"
+    },
+    {
+      "text": "Give me the latest news",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what should i watch tonight?",
+      "label": "recommendation"
+    },
+    {
+      "text": "How to cook rice?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "how old are you?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "show me a picture of forrest gump",
+      "label": "multimedia"
+    },
+    {
+      "text": "suggest movies similar to pulp fiction",
+      "label": "recommendation"
+    },
+    {
+      "text": "What is the speed of light?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what's the nba score?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "tell me the genre of forrest gump",
+      "label": "factual"
+    },
+    {
+      "text": "Give me a movie recommendation",
+      "label": "recommendation"
+    },
+    {
+      "text": "what kind of film is parasite?",
+      "label": "factual"
+    },
+    {
+      "text": "what is the square root of 144?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what is the release date of titanic?",
+      "label": "factual"
+    },
+    {
+      "text": "WHAT ARE MOVIES COMPARABLE TO THE DEPARTED?",
+      "label": "factual"
+    },
+    {
+      "text": "who is the director of interstellar?",
+      "label": "factual"
+    },
+    {
+      "text": "how to cook rice?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "how do i treat a headache?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Display a photo of Casablanca",
+      "label": "multimedia"
+    },
+    {
+      "text": "What happened today?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "What ingredients do I need for pizza?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "LIST FILMS STARRING TOM HANKS",
+      "label": "factual"
+    },
+    {
+      "text": "how hot will it be this weekend?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "is it going to rain tomorrow?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "can i see an image of goodfellas?",
+      "label": "multimedia"
+    },
+    {
+      "text": "show me a picture of the silence of the lambs",
+      "label": "multimedia"
+    },
+    {
+      "text": "What ingredients do I need for pizza?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "What type of movie is Titanic?",
+      "label": "factual"
+    },
+    {
+      "text": "what is the population of china?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "I want to see the image of The Shawshank Redemption",
+      "label": "multimedia"
+    },
+    {
+      "text": "how do i treat a headache?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "i want to see the image of avatar",
+      "label": "multimedia"
+    },
+    {
+      "text": "what is a for loop in java?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "I want to see the image of The Lord of the Rings",
+      "label": "multimedia"
+    },
+    {
+      "text": "Find movies directed by James Cameron",
+      "label": "factual"
+    },
+    {
+      "text": "who directed the godfather?",
+      "label": "factual"
+    },
+    {
+      "text": "What does this error mean: NullPointerException?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what is the release date of gladiator?",
+      "label": "factual"
+    },
+    {
+      "text": "I want to see the image of The Silence of the Lambs",
+      "label": "multimedia"
+    },
+    {
+      "text": "LIST THE CAST OF GLADIATOR",
+      "label": "factual"
+    },
+    {
+      "text": "What is the release date of Gladiator?",
+      "label": "factual"
+    },
+    {
+      "text": "what is the population of china?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "What does The Godfather look like?",
+      "label": "multimedia"
+    },
+    {
+      "text": "can i see an image of the matrix?",
+      "label": "multimedia"
+    },
+    {
+      "text": "Calculate 15 * 23",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "WHO IS THE DIRECTOR OF PARASITE?",
+      "label": "factual"
+    },
+    {
+      "text": "Give me a movie recommendation",
+      "label": "recommendation"
+    },
+    {
+      "text": "I want to see the image of Avatar",
+      "label": "multimedia"
+    },
+    {
+      "text": "how do i treat a headache?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what time is the football match?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what is the population of china?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "I want to see the image of Casablanca",
+      "label": "multimedia"
+    },
+    {
+      "text": "find movies directed by james cameron",
+      "label": "factual"
+    },
+    {
+      "text": "how tall is mount everest?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "What is the release date of Gladiator?",
+      "label": "factual"
+    },
+    {
+      "text": "How do I make pasta?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what's your favorite color?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what does goodfellas look like?",
+      "label": "multimedia"
+    },
+    {
+      "text": "what is the capital of france?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "How tall is Mount Everest?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Give me a movie recommendation",
+      "label": "recommendation"
+    },
+    {
+      "text": "What's the temperature outside?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Show me the poster of The Lord of the Rings",
+      "label": "multimedia"
+    },
+    {
+      "text": "tell me who directed gladiator",
+      "label": "factual"
+    },
+    {
+      "text": "Search for movies about artificial intelligence",
+      "label": "factual"
+    },
+    {
+      "text": "help me find a movie to watch",
+      "label": "recommendation"
+    },
+    {
+      "text": "Display a photo of The Silence of the Lambs",
+      "label": "multimedia"
+    },
+    {
+      "text": "What medication should I take?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Can I see an image of Casablanca?",
+      "label": "multimedia"
+    },
+    {
+      "text": "When was Titanic released?",
+      "label": "factual"
+    },
+    {
+      "text": "What is the population of China?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Show me the poster of Fight Club",
+      "label": "multimedia"
+    },
+    {
+      "text": "Help me find a movie to watch",
+      "label": "recommendation"
+    },
+    {
+      "text": "What is the square root of 144?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Tell me who directed Gladiator",
+      "label": "factual"
+    },
+    {
+      "text": "Display a photo of The Silence of the Lambs",
+      "label": "multimedia"
+    },
+    {
+      "text": "What should I watch tonight?",
+      "label": "recommendation"
+    },
+    {
+      "text": "can i see an image of the matrix?",
+      "label": "multimedia"
+    },
+    {
+      "text": "WHAT MOVIES DID ROBERT DE NIRO DIRECT?",
+      "label": "factual"
+    },
+    {
+      "text": "search for movies about revenge",
+      "label": "factual"
+    },
+    {
+      "text": "show me a picture of forrest gump",
+      "label": "multimedia"
+    },
+    {
+      "text": "what's the derivative of x squared?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "how much does a flight to paris cost?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Who acted in The Matrix?",
+      "label": "factual"
+    },
+    {
+      "text": "Suggest movies similar to Pulp Fiction",
+      "label": "recommendation"
+    },
+    {
+      "text": "how tall is mount everest?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "can i see an image of inception?",
+      "label": "multimedia"
+    },
+    {
+      "text": "how tall is mount everest?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "WHAT KIND OF FILM IS PARASITE?",
+      "label": "factual"
+    },
+    {
+      "text": "should i see a doctor?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "What is 2 + 2?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "What is the release date of The Shawshank Redemption?",
+      "label": "factual"
+    },
+    {
+      "text": "what are the symptoms of flu?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Display a photo of The Shawshank Redemption",
+      "label": "multimedia"
+    },
+    {
+      "text": "How old are you?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "when is the next olympics?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "can i see an image of casablanca?",
+      "label": "multimedia"
+    },
+    {
+      "text": "Show me the poster of The Lord of the Rings",
+      "label": "multimedia"
+    },
+    {
+      "text": "Find the director of Avatar",
+      "label": "factual"
+    },
+    {
+      "text": "what are the symptoms of flu?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "WHAT TYPE OF MOVIE IS GOODFELLAS?",
+      "label": "factual"
+    },
+    {
+      "text": "how tall is mount everest?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "How do I make pasta?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "help me find a movie to watch",
+      "label": "recommendation"
+    },
+    {
+      "text": "how to implement binary search?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Suggest movies similar to The Godfather",
+      "label": "recommendation"
+    },
+    {
+      "text": "What should I watch tonight?",
+      "label": "recommendation"
+    },
+    {
+      "text": "How do I treat a headache?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "How to lose weight fast?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "help me find a movie to watch",
+      "label": "recommendation"
+    },
+    {
+      "text": "who starred in titanic?",
+      "label": "factual"
+    },
+    {
+      "text": "what genre is inception?",
+      "label": "factual"
+    },
+    {
+      "text": "I want to see the image of The Godfather",
+      "label": "multimedia"
+    },
+    {
+      "text": "Debug my code please",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "What should I watch tonight?",
+      "label": "recommendation"
+    },
+    {
+      "text": "how long to bake chicken?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "when is the next olympics?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Who directed Casablanca?",
+      "label": "factual"
+    },
+    {
+      "text": "list the cast of parasite",
+      "label": "factual"
+    },
+    {
+      "text": "who is the president of the united states?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "when is the next olympics?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Where should I go on vacation?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "can i see an image of fight club?",
+      "label": "multimedia"
+    },
+    {
+      "text": "show me the poster of the lord of the rings",
+      "label": "multimedia"
+    },
+    {
+      "text": "what should i watch tonight?",
+      "label": "recommendation"
+    },
+    {
+      "text": "WHAT MOVIES ARE SIMILAR TO CASABLANCA?",
+      "label": "factual"
+    },
+    {
+      "text": "i want to see the image of the shawshank redemption",
+      "label": "multimedia"
+    },
+    {
+      "text": "i want to see the image of schindler's list",
+      "label": "multimedia"
+    },
+    {
+      "text": "what medication should i take?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "find movies directed by james cameron",
+      "label": "factual"
+    },
+    {
+      "text": "give me a movie recommendation",
+      "label": "recommendation"
+    },
+    {
+      "text": "Tell me about recent events",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "help me find a movie to watch",
+      "label": "recommendation"
+    },
+    {
+      "text": "Display a photo of Casablanca",
+      "label": "multimedia"
+    },
+    {
+      "text": "what movies did christopher nolan direct?",
+      "label": "factual"
+    },
+    {
+      "text": "what kind of film is the dark knight?",
+      "label": "factual"
+    },
+    {
+      "text": "Show me a picture of Forrest Gump",
+      "label": "multimedia"
+    },
+    {
+      "text": "I want to see the image of Avatar",
+      "label": "multimedia"
+    },
+    {
+      "text": "Show me the poster of Inception",
+      "label": "multimedia"
+    },
+    {
+      "text": "give me a movie recommendation",
+      "label": "recommendation"
+    },
+    {
+      "text": "when did world war ii end?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "I want to see the image of Fight Club",
+      "label": "multimedia"
+    },
+    {
+      "text": "Give me a movie recommendation",
+      "label": "recommendation"
+    },
+    {
+      "text": "Display a photo of The Lord of the Rings",
+      "label": "multimedia"
+    },
+    {
+      "text": "How do I write a Python function?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "how do i write a python function?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "give me a movie recommendation",
+      "label": "recommendation"
+    },
+    {
+      "text": "Help me find a movie to watch",
+      "label": "recommendation"
+    },
+    {
+      "text": "I want to see the image of The Dark Knight",
+      "label": "multimedia"
+    },
+    {
+      "text": "what is the release date of the dark knight?",
+      "label": "factual"
+    },
+    {
+      "text": "display a photo of the godfather",
+      "label": "multimedia"
+    },
+    {
+      "text": "what does casablanca look like?",
+      "label": "multimedia"
+    },
+    {
+      "text": "solve for x: 2x + 5 = 15",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Calculate 15 * 23",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "debug my code please",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "TELL ME THE GENRE OF FIGHT CLUB",
+      "label": "factual"
+    },
+    {
+      "text": "i want to see the image of schindler's list",
+      "label": "multimedia"
+    },
+    {
+      "text": "Who is the president of the United States?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "How do I get to the airport?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Tell me about yourself",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "What is the release date of Titanic?",
+      "label": "factual"
+    },
+    {
+      "text": "What documents do I need to travel?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what ingredients do i need for pizza?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Give me the latest news",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what are the symptoms of flu?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Tell me about yourself",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "suggest movies similar to avatar",
+      "label": "recommendation"
+    },
+    {
+      "text": "Show me the poster of Star Wars",
+      "label": "multimedia"
+    },
+    {
+      "text": "what is the speed of light?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "show me a picture of the dark knight",
+      "label": "multimedia"
+    },
+    {
+      "text": "How do I treat a headache?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Search for movies about sports",
+      "label": "factual"
+    },
+    {
+      "text": "What happened today?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "What type of movie is Star Wars?",
+      "label": "factual"
+    },
+    {
+      "text": "what is the population of china?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what does schindler's list look like?",
+      "label": "multimedia"
+    },
+    {
+      "text": "how do i get to the airport?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Who is the director of The Departed?",
+      "label": "factual"
+    },
+    {
+      "text": "suggest movies similar to the dark knight",
+      "label": "recommendation"
+    },
+    {
+      "text": "help me find a movie to watch",
+      "label": "recommendation"
+    },
+    {
+      "text": "What happened today?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "I want to see the image of Schindler's List",
+      "label": "multimedia"
+    },
+    {
+      "text": "give me a movie recommendation",
+      "label": "recommendation"
+    },
+    {
+      "text": "I want to see the image of Titanic",
+      "label": "multimedia"
+    },
+    {
+      "text": "Can I see an image of Fight Club?",
+      "label": "multimedia"
+    },
+    {
+      "text": "what is the square root of 144?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "show me films with martin scorsese",
+      "label": "factual"
+    },
+    {
+      "text": "who starred in schindler's list?",
+      "label": "factual"
+    },
+    {
+      "text": "Debug my code please",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Give me a movie recommendation",
+      "label": "recommendation"
+    },
+    {
+      "text": "What's the temperature outside?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "i want to see the image of titanic",
+      "label": "multimedia"
+    },
+    {
+      "text": "show me the poster of parasite",
+      "label": "multimedia"
+    },
+    {
+      "text": "debug my code please",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Show me a picture of The Shawshank Redemption",
+      "label": "multimedia"
+    },
+    {
+      "text": "how to lose weight fast?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what genre is interstellar?",
+      "label": "factual"
+    },
+    {
+      "text": "What is 2 + 2?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "calculate 15 * 23",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "What genre is Forrest Gump?",
+      "label": "factual"
+    },
+    {
+      "text": "What director made Gladiator?",
+      "label": "factual"
+    },
+    {
+      "text": "What is the capital of France?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "What's the weather today?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "How tall is Mount Everest?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "What movies are similar to Goodfellas?",
+      "label": "factual"
+    },
+    {
+      "text": "Who is the director of Interstellar?",
+      "label": "factual"
+    },
+    {
+      "text": "show me a picture of the silence of the lambs",
+      "label": "multimedia"
+    },
+    {
+      "text": "show me a picture of the silence of the lambs",
+      "label": "multimedia"
+    },
+    {
+      "text": "tell me the genre of the silence of the lambs",
+      "label": "factual"
+    },
+    {
+      "text": "show me the poster of fight club",
+      "label": "multimedia"
+    },
+    {
+      "text": "how do i make pasta?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "LIST THE CAST OF INCEPTION",
+      "label": "factual"
+    },
+    {
+      "text": "suggest movies similar to the departed",
+      "label": "recommendation"
+    },
+    {
+      "text": "Can I see an image of The Matrix?",
+      "label": "multimedia"
+    },
+    {
+      "text": "What are movies comparable to The Departed?",
+      "label": "factual"
+    },
+    {
+      "text": "I want to see the image of Casablanca",
+      "label": "multimedia"
+    },
+    {
+      "text": "How old are you?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what should i watch tonight?",
+      "label": "recommendation"
+    },
+    {
+      "text": "What are the symptoms of flu?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what is the capital of france?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "who directed casablanca?",
+      "label": "factual"
+    },
+    {
+      "text": "Suggest movies similar to The Dark Knight",
+      "label": "recommendation"
+    },
+    {
+      "text": "Give me a recipe for chocolate cake",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "how are you?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "can i see an image of interstellar?",
+      "label": "multimedia"
+    },
+    {
+      "text": "show me the poster of star wars",
+      "label": "multimedia"
+    },
+    {
+      "text": "give me the latest news",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "how tall is mount everest?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Tell me who directed Titanic",
+      "label": "factual"
+    },
+    {
+      "text": "tell me who directed the dark knight",
+      "label": "factual"
+    },
+    {
+      "text": "What does Schindler's List look like?",
+      "label": "multimedia"
+    },
+    {
+      "text": "is it going to rain tomorrow?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what genre is forrest gump?",
+      "label": "factual"
+    },
+    {
+      "text": "Where should I go on vacation?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "How much does a flight to Paris cost?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "What is the speed of light?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "How hot will it be this weekend?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "show me a picture of interstellar",
+      "label": "multimedia"
+    },
+    {
+      "text": "solve for x: 2x + 5 = 15",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Is it going to rain tomorrow?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "When was The Dark Knight released?",
+      "label": "factual"
+    },
+    {
+      "text": "who won the super bowl?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "What ingredients do I need for pizza?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "What's the temperature outside?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "how do i make pasta?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Who acted in Inception?",
+      "label": "factual"
+    },
+    {
+      "text": "Can I see an image of The Silence of the Lambs?",
+      "label": "multimedia"
+    },
+    {
+      "text": "What kind of film is The Silence of the Lambs?",
+      "label": "factual"
+    },
+    {
+      "text": "Who is the director of Parasite?",
+      "label": "factual"
+    },
+    {
+      "text": "when did world war ii end?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "display a photo of interstellar",
+      "label": "multimedia"
+    },
+    {
+      "text": "Give me a movie recommendation",
+      "label": "recommendation"
+    },
+    {
+      "text": "suggest movies similar to the departed",
+      "label": "recommendation"
+    },
+    {
+      "text": "Who starred in Schindler's List?",
+      "label": "factual"
+    },
+    {
+      "text": "list films starring quentin tarantino",
+      "label": "factual"
+    },
+    {
+      "text": "who directed avatar?",
+      "label": "factual"
+    },
+    {
+      "text": "what's trending on social media?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "I want to see the image of Interstellar",
+      "label": "multimedia"
+    },
+    {
+      "text": "what movies did christopher nolan direct?",
+      "label": "factual"
+    },
+    {
+      "text": "What is 2 + 2?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "display a photo of pulp fiction",
+      "label": "multimedia"
+    },
+    {
+      "text": "how much does a flight to paris cost?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "list films starring al pacino",
+      "label": "factual"
+    },
+    {
+      "text": "What kind of film is The Silence of the Lambs?",
+      "label": "factual"
+    },
+    {
+      "text": "Where should I go on vacation?",
+      "label": "out_of_scope"
+    }
+  ],
+  "validation": [
+    {
+      "text": "give me a movie recommendation",
+      "label": "recommendation"
+    },
+    {
+      "text": "Who starred in The Departed?",
+      "label": "factual"
+    },
+    {
+      "text": "Display a photo of Interstellar",
+      "label": "multimedia"
+    },
+    {
+      "text": "search for movies about artificial intelligence",
+      "label": "factual"
+    },
+    {
+      "text": "who acted in interstellar?",
+      "label": "factual"
+    },
+    {
+      "text": "give me a movie recommendation",
+      "label": "recommendation"
+    },
+    {
+      "text": "What's your favorite color?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "show me a picture of goodfellas",
+      "label": "multimedia"
+    },
+    {
+      "text": "What's your favorite color?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "who is the director of schindler's list?",
+      "label": "factual"
+    },
+    {
+      "text": "give me the latest news",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "What actors are in Forrest Gump?",
+      "label": "factual"
+    },
+    {
+      "text": "I want to see the image of Forrest Gump",
+      "label": "multimedia"
+    },
+    {
+      "text": "who is the best soccer player?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what documents do i need to travel?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "how do i treat a headache?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "who is the best soccer player?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "can i see an image of forrest gump?",
+      "label": "multimedia"
+    },
+    {
+      "text": "how to cook rice?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "how to implement binary search?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Find movies directed by Leonardo DiCaprio",
+      "label": "factual"
+    },
+    {
+      "text": "what is the release date of the shawshank redemption?",
+      "label": "factual"
+    },
+    {
+      "text": "what is the population of china?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "find films like goodfellas",
+      "label": "factual"
+    },
+    {
+      "text": "Show me a picture of The Silence of the Lambs",
+      "label": "multimedia"
+    },
+    {
+      "text": "what genre is the matrix?",
+      "label": "factual"
+    },
+    {
+      "text": "Give me a movie recommendation",
+      "label": "recommendation"
+    },
+    {
+      "text": "what does the godfather look like?",
+      "label": "multimedia"
+    },
+    {
+      "text": "i want to see the image of forrest gump",
+      "label": "multimedia"
+    },
+    {
+      "text": "how do i get to the airport?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what kind of film is the silence of the lambs?",
+      "label": "factual"
+    },
+    {
+      "text": "show me a picture of the dark knight",
+      "label": "multimedia"
+    },
+    {
+      "text": "What medication should I take?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "What does this error mean: NullPointerException?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what's the weather today?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "search for movies about artificial intelligence",
+      "label": "factual"
+    },
+    {
+      "text": "Show me films with Robert De Niro",
+      "label": "factual"
+    },
+    {
+      "text": "what does pulp fiction look like?",
+      "label": "multimedia"
+    },
+    {
+      "text": "what movies did al pacino direct?",
+      "label": "factual"
+    },
+    {
+      "text": "What are the symptoms of flu?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "What type of movie is Goodfellas?",
+      "label": "factual"
+    },
+    {
+      "text": "what's the weather today?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Give me a movie recommendation",
+      "label": "recommendation"
+    },
+    {
+      "text": "Solve for x: 2x + 5 = 15",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "find the director of the matrix",
+      "label": "factual"
+    },
+    {
+      "text": "WHAT TYPE OF MOVIE IS CASABLANCA?",
+      "label": "factual"
+    },
+    {
+      "text": "debug my code please",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "show me a picture of gladiator",
+      "label": "multimedia"
+    },
+    {
+      "text": "how to lose weight fast?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "tell me who directed titanic",
+      "label": "factual"
+    },
+    {
+      "text": "I want to see the image of Schindler's List",
+      "label": "multimedia"
+    },
+    {
+      "text": "where should i go on vacation?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "What is the release date of The Dark Knight?",
+      "label": "factual"
+    },
+    {
+      "text": "What is the release date of Inception?",
+      "label": "factual"
+    },
+    {
+      "text": "Search for movies about music",
+      "label": "factual"
+    },
+    {
+      "text": "what ingredients do i need for pizza?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "suggest movies similar to titanic",
+      "label": "recommendation"
+    },
+    {
+      "text": "What's the temperature outside?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "What documents do I need to travel?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Help me find a movie to watch",
+      "label": "recommendation"
+    },
+    {
+      "text": "How old are you?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "What does Pulp Fiction look like?",
+      "label": "multimedia"
+    },
+    {
+      "text": "Give me a movie recommendation",
+      "label": "recommendation"
+    },
+    {
+      "text": "What is the population of China?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what happened today?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "I want to see the image of The Dark Knight",
+      "label": "multimedia"
+    },
+    {
+      "text": "what is a for loop in java?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "What is a for loop in Java?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what should i watch tonight?",
+      "label": "recommendation"
+    },
+    {
+      "text": "how old are you?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what is the population of china?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "when did gladiator premiere?",
+      "label": "factual"
+    },
+    {
+      "text": "WHAT GENRE IS INCEPTION?",
+      "label": "factual"
+    },
+    {
+      "text": "show me a picture of pulp fiction",
+      "label": "multimedia"
+    },
+    {
+      "text": "give me a movie recommendation",
+      "label": "recommendation"
+    },
+    {
+      "text": "i want to see the image of the silence of the lambs",
+      "label": "multimedia"
+    },
+    {
+      "text": "Give me a movie recommendation",
+      "label": "recommendation"
+    },
+    {
+      "text": "who directed the shawshank redemption?",
+      "label": "factual"
+    },
+    {
+      "text": "Tell me the genre of Forrest Gump",
+      "label": "factual"
+    },
+    {
+      "text": "Find the director of Interstellar",
+      "label": "factual"
+    },
+    {
+      "text": "Who acted in The Departed?",
+      "label": "factual"
+    },
+    {
+      "text": "Suggest movies similar to Titanic",
+      "label": "recommendation"
+    },
+    {
+      "text": "What should I watch tonight?",
+      "label": "recommendation"
+    },
+    {
+      "text": "What is a for loop in Java?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "how are you?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "WHEN DID INTERSTELLAR PREMIERE?",
+      "label": "factual"
+    },
+    {
+      "text": "i want to see the image of avatar",
+      "label": "multimedia"
+    },
+    {
+      "text": "How to lose weight fast?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what kind of film is inception?",
+      "label": "factual"
+    },
+    {
+      "text": "Help me find a movie to watch",
+      "label": "recommendation"
+    },
+    {
+      "text": "Suggest movies similar to Star Wars",
+      "label": "recommendation"
+    },
+    {
+      "text": "show me the poster of the silence of the lambs",
+      "label": "multimedia"
+    },
+    {
+      "text": "When did Interstellar premiere?",
+      "label": "factual"
+    },
+    {
+      "text": "what does inception look like?",
+      "label": "multimedia"
+    },
+    {
+      "text": "What's your name?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "What documents do I need to travel?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "What should I watch tonight?",
+      "label": "recommendation"
+    },
+    {
+      "text": "what's the derivative of x squared?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Write a function to sort an array",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what medication should i take?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "What does this error mean: NullPointerException?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Solve for x: 2x + 5 = 15",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "How are you?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Give me a movie recommendation",
+      "label": "recommendation"
+    },
+    {
+      "text": "i want to see the image of the dark knight",
+      "label": "multimedia"
+    },
+    {
+      "text": "How do I treat a headache?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what's happening in the world?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Show me a picture of Fight Club",
+      "label": "multimedia"
+    },
+    {
+      "text": "Suggest movies similar to Interstellar",
+      "label": "recommendation"
+    },
+    {
+      "text": "what movies are similar to goodfellas?",
+      "label": "factual"
+    },
+    {
+      "text": "Help me find a movie to watch",
+      "label": "recommendation"
+    },
+    {
+      "text": "What is 2 + 2?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Show me films with Robert De Niro",
+      "label": "factual"
+    },
+    {
+      "text": "How are you?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "show me the poster of fight club",
+      "label": "multimedia"
+    },
+    {
+      "text": "What time is the football match?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "help me find a movie to watch",
+      "label": "recommendation"
+    },
+    {
+      "text": "what should i watch tonight?",
+      "label": "recommendation"
+    },
+    {
+      "text": "What's your name?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what is the population of china?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "give me a movie recommendation",
+      "label": "recommendation"
+    },
+    {
+      "text": "help me find a movie to watch",
+      "label": "recommendation"
+    },
+    {
+      "text": "Give me a movie recommendation",
+      "label": "recommendation"
+    },
+    {
+      "text": "WHO STARRED IN THE SILENCE OF THE LAMBS?",
+      "label": "factual"
+    },
+    {
+      "text": "i want to see the image of the departed",
+      "label": "multimedia"
+    },
+    {
+      "text": "What medication should I take?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "who starred in the shawshank redemption?",
+      "label": "factual"
+    },
+    {
+      "text": "Show me a picture of Star Wars",
+      "label": "multimedia"
+    },
+    {
+      "text": "What should I watch tonight?",
+      "label": "recommendation"
+    },
+    {
+      "text": "i want to see the image of the departed",
+      "label": "multimedia"
+    },
+    {
+      "text": "what movies are similar to parasite?",
+      "label": "factual"
+    },
+    {
+      "text": "Show me the poster of Goodfellas",
+      "label": "multimedia"
+    },
+    {
+      "text": "Give me the latest news",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "show me a picture of the shawshank redemption",
+      "label": "multimedia"
+    },
+    {
+      "text": "show me films with leonardo dicaprio",
+      "label": "factual"
+    },
+    {
+      "text": "How are you?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what movies did brad pitt direct?",
+      "label": "factual"
+    },
+    {
+      "text": "WHO DIRECTED GLADIATOR?",
+      "label": "factual"
+    },
+    {
+      "text": "Show me the poster of Fight Club",
+      "label": "multimedia"
+    },
+    {
+      "text": "How much does a flight to Paris cost?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "help me find a movie to watch",
+      "label": "recommendation"
+    },
+    {
+      "text": "Show me a picture of Interstellar",
+      "label": "multimedia"
+    },
+    {
+      "text": "what does this error mean: nullpointerexception?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what kind of film is the silence of the lambs?",
+      "label": "factual"
+    },
+    {
+      "text": "What is a for loop in Java?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what is 2 + 2?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what does parasite look like?",
+      "label": "multimedia"
+    },
+    {
+      "text": "What movies did Brad Pitt direct?",
+      "label": "factual"
+    },
+    {
+      "text": "what does schindler's list look like?",
+      "label": "multimedia"
+    },
+    {
+      "text": "what actors are in parasite?",
+      "label": "factual"
+    },
+    {
+      "text": "WHAT KIND OF FILM IS INCEPTION?",
+      "label": "factual"
+    },
+    {
+      "text": "Show me the poster of Avatar",
+      "label": "multimedia"
+    },
+    {
+      "text": "i want to see the image of the departed",
+      "label": "multimedia"
+    },
+    {
+      "text": "Show me a picture of The Silence of the Lambs",
+      "label": "multimedia"
+    },
+    {
+      "text": "display a photo of the lord of the rings",
+      "label": "multimedia"
+    },
+    {
+      "text": "How long to bake chicken?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "who starred in the silence of the lambs?",
+      "label": "factual"
+    },
+    {
+      "text": "I want to see the image of Gladiator",
+      "label": "multimedia"
+    },
+    {
+      "text": "display a photo of parasite",
+      "label": "multimedia"
+    },
+    {
+      "text": "when did goodfellas premiere?",
+      "label": "factual"
+    },
+    {
+      "text": "how to lose weight fast?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "i want to see the image of star wars",
+      "label": "multimedia"
+    },
+    {
+      "text": "What does Schindler's List look like?",
+      "label": "multimedia"
+    },
+    {
+      "text": "what time is the football match?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "How do I make pasta?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what is the release date of gladiator?",
+      "label": "factual"
+    },
+    {
+      "text": "what should i watch tonight?",
+      "label": "recommendation"
+    },
+    {
+      "text": "Find films like Titanic",
+      "label": "factual"
+    },
+    {
+      "text": "display a photo of avatar",
+      "label": "multimedia"
+    },
+    {
+      "text": "What should I watch tonight?",
+      "label": "recommendation"
+    },
+    {
+      "text": "who is the director of parasite?",
+      "label": "factual"
+    },
+    {
+      "text": "What's your favorite color?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "display a photo of the silence of the lambs",
+      "label": "multimedia"
+    },
+    {
+      "text": "Can I see an image of Interstellar?",
+      "label": "multimedia"
+    },
+    {
+      "text": "what movies are similar to goodfellas?",
+      "label": "factual"
+    },
+    {
+      "text": "WHEN DID GLADIATOR PREMIERE?",
+      "label": "factual"
+    },
+    {
+      "text": "show me a picture of star wars",
+      "label": "multimedia"
+    },
+    {
+      "text": "who acted in the matrix?",
+      "label": "factual"
+    },
+    {
+      "text": "solve for x: 2x + 5 = 15",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Help me find a movie to watch",
+      "label": "recommendation"
+    },
+    {
+      "text": "what does casablanca look like?",
+      "label": "multimedia"
+    },
+    {
+      "text": "What is the population of China?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "How to implement binary search?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "who starred in the departed?",
+      "label": "factual"
+    },
+    {
+      "text": "Who won the Super Bowl?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "When was The Departed released?",
+      "label": "factual"
+    },
+    {
+      "text": "who is the director of the departed?",
+      "label": "factual"
+    },
+    {
+      "text": "What does Forrest Gump look like?",
+      "label": "multimedia"
+    },
+    {
+      "text": "What is the speed of light?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what are the symptoms of flu?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what is 2 + 2?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what happened today?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "What is a for loop in Java?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Write a function to sort an array",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "WHO PLAYS IN THE DEPARTED?",
+      "label": "factual"
+    },
+    {
+      "text": "What's the NBA score?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Debug my code please",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "How to lose weight fast?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "find films like pulp fiction",
+      "label": "factual"
+    },
+    {
+      "text": "what is the population of china?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "What director made Parasite?",
+      "label": "factual"
+    },
+    {
+      "text": "what's the temperature outside?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what director made avatar?",
+      "label": "factual"
+    },
+    {
+      "text": "When did World War II end?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what's the temperature outside?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what is the release date of inception?",
+      "label": "factual"
+    },
+    {
+      "text": "what is 2 + 2?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "What is 2 + 2?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "give me a movie recommendation",
+      "label": "recommendation"
+    },
+    {
+      "text": "what is the speed of light?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Who starred in Forrest Gump?",
+      "label": "factual"
+    },
+    {
+      "text": "show me films with al pacino",
+      "label": "factual"
+    },
+    {
+      "text": "How do I get to the airport?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "give me a recipe for chocolate cake",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what is a for loop in java?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "What documents do I need to travel?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "who directed goodfellas?",
+      "label": "factual"
+    },
+    {
+      "text": "show me films with tom hanks",
+      "label": "factual"
+    },
+    {
+      "text": "WHO IS THE DIRECTOR OF SCHINDLER'S LIST?",
+      "label": "factual"
+    },
+    {
+      "text": "can i see an image of the departed?",
+      "label": "multimedia"
+    },
+    {
+      "text": "Show me films with Quentin Tarantino",
+      "label": "factual"
+    },
+    {
+      "text": "Can I see an image of Titanic?",
+      "label": "multimedia"
+    },
+    {
+      "text": "what's the temperature outside?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what's your favorite color?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "debug my code please",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "What should I watch tonight?",
+      "label": "recommendation"
+    },
+    {
+      "text": "what type of movie is goodfellas?",
+      "label": "factual"
+    },
+    {
+      "text": "what is 2 + 2?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Find movies directed by Brad Pitt",
+      "label": "factual"
+    },
+    {
+      "text": "I want to see the image of Forrest Gump",
+      "label": "multimedia"
+    },
+    {
+      "text": "i want to see the image of casablanca",
+      "label": "multimedia"
+    },
+    {
+      "text": "where should i go on vacation?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "Who directed The Godfather?",
+      "label": "factual"
+    },
+    {
+      "text": "Who directed Gladiator?",
+      "label": "factual"
+    },
+    {
+      "text": "Who is the best soccer player?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "How old are you?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what director made avatar?",
+      "label": "factual"
+    },
+    {
+      "text": "what's happening in the world?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "How to lose weight fast?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "What type of movie is The Godfather?",
+      "label": "factual"
+    },
+    {
+      "text": "what is 2 + 2?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "What genre is Forrest Gump?",
+      "label": "factual"
+    },
+    {
+      "text": "can i see an image of avatar?",
+      "label": "multimedia"
+    },
+    {
+      "text": "Show me a picture of Goodfellas",
+      "label": "multimedia"
+    },
+    {
+      "text": "Can I see an image of Star Wars?",
+      "label": "multimedia"
+    },
+    {
+      "text": "give me the latest news",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "show me films with robert de niro",
+      "label": "factual"
+    },
+    {
+      "text": "How do I get to the airport?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "show me the poster of inception",
+      "label": "multimedia"
+    },
+    {
+      "text": "find movies directed by robert de niro",
+      "label": "factual"
+    },
+    {
+      "text": "how to implement binary search?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what medication should i take?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "show me a picture of fight club",
+      "label": "multimedia"
+    },
+    {
+      "text": "Display a photo of The Dark Knight",
+      "label": "multimedia"
+    },
+    {
+      "text": "what actors are in forrest gump?",
+      "label": "factual"
+    },
+    {
+      "text": "Tell me the genre of Fight Club",
+      "label": "factual"
+    },
+    {
+      "text": "What does Inception look like?",
+      "label": "multimedia"
+    },
+    {
+      "text": "can i see an image of the lord of the rings?",
+      "label": "multimedia"
+    },
+    {
+      "text": "what's happening in the world?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "what's your name?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "tell me about recent events",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "i want to see the image of gladiator",
+      "label": "multimedia"
+    },
+    {
+      "text": "What's the weather today?",
+      "label": "out_of_scope"
+    },
+    {
+      "text": "can i see an image of the silence of the lambs?",
+      "label": "multimedia"
+    }
+  ],
+  "metadata": {
+    "num_classes": 4,
+    "classes": [
+      "factual",
+      "multimedia",
+      "recommendation",
+      "out_of_scope"
+    ],
+    "train_size": 1053,
+    "val_size": 264,
+    "label_distribution": {
+      "out_of_scope": 536,
+      "factual": 343,
+      "multimedia": 268,
+      "recommendation": 170
+    }
+  }
+}

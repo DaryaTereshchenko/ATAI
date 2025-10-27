@@ -45,39 +45,54 @@ class SPARQLHandler:
         r'UNION.*UNION.*UNION.*UNION',    # Excessive UNIONs
     ]
 
-    def __init__(self, graph_file_path: str = None, return_format: str = "json"):
+    def __init__(self, graph_file_path: str = None, return_format: str = "json", graph_instance: Graph = None):
         """
-        Initialize the SPARQL handler with a local graph file.
+        Initialize the SPARQL handler with a local graph file or existing graph instance.
 
         Args:
             graph_file_path: Path to the N-Triples graph file.
             return_format: The desired return format for query results (e.g., "json", "xml").
+            graph_instance: Optional pre-loaded Graph instance to reuse (avoids reloading).
         """
         self.graph_file_path = graph_file_path or GRAPH_FILE_PATH
         self.return_format = return_format
-        self.graph = Graph()
-
+        
         # Lowercased label -> {canonical variants}
         # Enables fast snap-back to your graph's exact casing from NL layer.
         self.label_index: Dict[str, set] = defaultdict(set)
 
-        self._load_graph()
+        # If graph instance provided, use it directly (avoid reloading)
+        if graph_instance is not None:
+            logger.info("Using provided graph instance (cached)...")
+            self.graph = graph_instance
+            self._build_label_index()  # Still build index if not already built
+        else:
+            self.graph = Graph()
+            self._load_graph()
 
+    def _build_label_index(self):
+        """Build label index from graph (separate from loading)."""
+        if len(self.label_index) > 0:
+            logger.info("Label index already built, skipping...")
+            return
+        
+        cnt = 0
+        for s, p, o in self.graph.triples((None, RDFS.label, None)):
+            if isinstance(o, Literal):
+                lbl = str(o)
+                self.label_index[lbl.casefold()].add(lbl)
+                cnt += 1
+        logger.info(f"Label index built with {cnt} labels.")
+    
     def _load_graph(self):
         """Load the knowledge graph from file and build label index."""
         logger.info(f"Loading graph from {self.graph_file_path}...")
         try:
             self.graph.parse(self.graph_file_path, format="nt")
             logger.info(f"Graph loaded successfully. Contains {len(self.graph)} triples.")
-
-            # Build label index once (helps NL layer "snap" titles to canonical casing)
-            cnt = 0
-            for s, p, o in self.graph.triples((None, RDFS.label, None)):
-                if isinstance(o, Literal):
-                    lbl = str(o)
-                    self.label_index[lbl.casefold()].add(lbl)
-                    cnt += 1
-            logger.info(f"Label index built with {cnt} labels.")
+            
+            # Build label index
+            self._build_label_index()
         except Exception as e:
             logger.error(f"Error loading graph: {e}")
             raise

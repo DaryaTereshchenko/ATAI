@@ -20,7 +20,7 @@ def test_case_insensitive_queries():
     
     # Initialize components
     sparql_handler = SPARQLHandler()
-    nl_to_sparql = NLToSPARQL(method="rule-based", sparql_handler=sparql_handler)
+    nl_to_sparql = NLToSPARQL(method="llm", sparql_handler=sparql_handler)
     
     # Test cases with different capitalizations
     test_cases = [

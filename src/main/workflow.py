@@ -199,6 +199,23 @@ class QueryWorkflow:
 
     # ==================== WORKFLOW NODES ====================
 
+    def decide_processing_method(self, state: WorkflowState) -> WorkflowState:
+        """
+        Node 3: Decide processing method.
+        All queries use HYBRID (entity extraction + relation detection + SPARQL).
+        """
+        print(f"\n[NODE: decide_processing_method] Using hybrid approach for all queries...")
+
+        # All queries use hybrid approach
+        state["processing_method"] = ProcessingMethod.HYBRID
+        state["routing_reason"] = "All queries use hybrid: entity extraction → relation detection → SPARQL."
+
+        state["current_node"] = "decide_processing_method"
+        print(f"[NODE: decide_processing_method] ✅ Method: {state['processing_method'].value}")
+        print(f"[NODE: decide_processing_method] 📋 Reason: {state['routing_reason']}")
+
+        return state
+
     def run(self, query: str) -> str:
         """
         Execute the complete workflow for a user query.
@@ -239,22 +256,17 @@ class QueryWorkflow:
                 state = self.format_response(state)
                 return state['formatted_response']
             
-            # Node 2: Classify query
+            # Node 2: Classify query (for future routing if needed)
             state = self.classify_query(state)
             if state.get('error'):
                 state = self.format_response(state)
                 return state['formatted_response']
             
-            # Node 3: Decide processing method
+            # Node 3: Set hybrid processing
             state = self.decide_processing_method(state)
             
-            # Node 4: Process based on method
-            if state['processing_method'] == ProcessingMethod.SPARQL:
-                state = self.process_with_sparql(state)
-            elif state['processing_method'] == ProcessingMethod.EMBEDDING:
-                state = self.process_with_embeddings(state)
-            else:
-                state['error'] = "Unknown processing method"
+            # Node 4: Process with hybrid approach (only path)
+            state = self.process_with_hybrid(state)
             
             # Node 5: Format response
             state = self.format_response(state)
@@ -308,9 +320,11 @@ class QueryWorkflow:
 
         return state
 
+
     def classify_query(self, state: WorkflowState) -> WorkflowState:
         """
         Node 2: Classify the query type using the orchestrator.
+        NOW HANDLES: out_of_scope queries (rejection).
         """
         print(f"\n[NODE: classify_query] Classifying query...")
 
@@ -318,7 +332,19 @@ class QueryWorkflow:
             classification = self.orchestrator.classify_query(state["raw_query"])
             state["query_type"] = classification.question_type.value
             state["current_node"] = "classify_query"
+            
             print(f"[NODE: classify_query] Type: {state['query_type']}")
+            print(f"[NODE: classify_query] Confidence: {classification.confidence:.2%}")
+            
+            # ✅ NEW: Handle out-of-scope queries
+            if state["query_type"] == "out_of_scope":
+                state["error"] = (
+                    "I'm a movie information assistant. I can only answer questions about movies, "
+                    "actors, directors, and related topics. Please ask a movie-related question!"
+                )
+                state["processing_method"] = "failed"
+                print(f"[NODE: classify_query] ❌ Query rejected: out of scope")
+            
         except Exception as e:
             print(f"[NODE: classify_query] ❌ Classification error: {e}")
             state["error"] = f"Classification failed: {str(e)}"
@@ -328,81 +354,55 @@ class QueryWorkflow:
 
     def decide_processing_method(self, state: WorkflowState) -> WorkflowState:
         """
-        Node 3: Decide whether to use SPARQL or embeddings based on query type.
+        Node 3: Decide processing method.
+        All queries use HYBRID (entity extraction + relation detection + SPARQL).
         """
-        print(f"\n[NODE: decide_processing_method] Deciding processing method...")
+        print(f"\n[NODE: decide_processing_method] Using hybrid approach for all queries...")
 
-        query_type = state.get("query_type", "unknown")
-
-        # Decision logic
-        if query_type == "factual":
-            state["processing_method"] = ProcessingMethod.SPARQL
-            state["routing_reason"] = "Factual questions use SPARQL for precise data retrieval."
-        elif query_type == "embedding":
-            state["processing_method"] = ProcessingMethod.EMBEDDING
-            state["routing_reason"] = "This question requires semantic search."
-        elif query_type in ["multimedia", "recommendation"]:
-            state["processing_method"] = ProcessingMethod.SPARQL
-            state["routing_reason"] = f"{query_type.capitalize()} questions will use SPARQL for now."
-        else:
-            state["processing_method"] = ProcessingMethod.SPARQL
-            state["routing_reason"] = "Defaulting to SPARQL-based processing."
+        # All queries use hybrid approach
+        state["processing_method"] = ProcessingMethod.HYBRID
+        state["routing_reason"] = "All queries use hybrid: entity extraction → relation detection → SPARQL."
 
         state["current_node"] = "decide_processing_method"
         print(f"[NODE: decide_processing_method] ✅ Method: {state['processing_method'].value}")
+        print(f"[NODE: decide_processing_method] 📋 Reason: {state['routing_reason']}")
 
         return state
 
-    def process_with_sparql(self, state: WorkflowState) -> WorkflowState:
+    def process_with_hybrid(self, state: WorkflowState) -> WorkflowState:
         """
-        Node 4a: Process query using SPARQL generation and execution.
-        - Uses orchestrator.nl_to_sparql (model-first) to generate SPARQL.
-        - Executes via SPARQLHandler with validation + timeout + caching.
+        Node 4: Hybrid processing - entity extraction + relation detection + SPARQL.
+        This is the ONLY processing method used.
         """
+        print(f"\n[NODE: process_with_hybrid] Processing with hybrid approach...")
+        
+        # Check if embedding processor is available
+        if not hasattr(self.orchestrator, 'embedding_processor') or self.orchestrator.embedding_processor is None:
+            print(f"[NODE: process_with_hybrid] ❌ Embedding processor not available")
+            state['error'] = "Embedding processor not initialized. Cannot process query."
+            state["current_node"] = "process_with_hybrid"
+            return state
+        
         try:
-            # Generate SPARQL (NLToSPARQL is model-first per orchestrator)
-            sparql_result = self.orchestrator.nl_to_sparql.convert(state["raw_query"])
-
-            # Store generated query + metadata in state
-            state["generated_sparql"] = sparql_result.query
-            state["sparql_confidence"] = float(getattr(sparql_result, "confidence", 0.0))
-            state["sparql_explanation"] = getattr(sparql_result, "explanation", None)
-
-            # Optional: language guard for labels
-            # state["generated_sparql"] = self.orchestrator.sparql_handler.add_lang_filter(
-            #     state["generated_sparql"], ["?movieLabel", "?personLabel"], "en"
-            # )
-
-            print("[NODE: process_with_sparql] Executing SPARQL query...")
-            exec_result = self.orchestrator.sparql_handler.execute_query(
-                state["generated_sparql"], validate=True
-            )
-
-            if not exec_result.get("success"):
-                state["error"] = exec_result.get("error", "Unknown error")
-                state["current_node"] = "process_with_sparql"
-                print(f"[NODE: process_with_sparql] ❌ Execution error: {state['error']}")
-                return state
-
-            state["raw_result"] = exec_result.get("data") or "No answer found in the database."
-            state["current_node"] = "process_with_sparql"
-            print("[NODE: process_with_sparql] ✅ Query executed successfully")
-
+            query = state["raw_query"]
+            
+            # ✅ Use hybrid method: entity extraction + relation detection + template-based SPARQL
+            result = self.orchestrator.embedding_processor.process_hybrid_factual_query(query)
+            
+            state["raw_result"] = result
+            state["formatted_response"] = result
+            state["processing_method"] = ProcessingMethod.HYBRID
+            state["current_node"] = "process_with_hybrid"
+            
+            print(f"[NODE: process_with_hybrid] ✅ Hybrid processing successful")
+            
         except Exception as e:
-            state["error"] = f"SPARQL processing error: {e}"
-            state["current_node"] = "process_with_sparql"
-            print(f"[NODE: process_with_sparql] ❌ {state['error']}")
-
-        return state
-
-    def process_with_embeddings(self, state: WorkflowState) -> WorkflowState:
-        """
-        Node 4b: Process query using embeddings (placeholder).
-        """
-        print(f"\n[NODE: process_with_embeddings] Processing with embeddings...")
-        state["error"] = "Embedding-based processing not yet implemented."
-        state["current_node"] = "process_with_embeddings"
-        print(f"[NODE: process_with_embeddings] ⚠️ Not implemented yet")
+            state["error"] = f"Hybrid processing error: {e}"
+            state["current_node"] = "process_with_hybrid"
+            print(f"[NODE: process_with_hybrid] ❌ {state['error']}")
+            import traceback
+            traceback.print_exc()
+        
         return state
 
     def format_response(self, state: WorkflowState) -> WorkflowState:
@@ -426,31 +426,19 @@ class QueryWorkflow:
             state["current_node"] = "format_response"
             return state
 
-        # SPARQL / Embedding responses
-        if state["processing_method"] == ProcessingMethod.SPARQL:
-            state["formatted_response"] = self._format_sparql_response(state)
-        elif state["processing_method"] == ProcessingMethod.EMBEDDING:
-            state["formatted_response"] = self._format_embedding_response(state)
-        else:
-            state["formatted_response"] = state["raw_result"]
+        # Check if response is already formatted (from hybrid mode)
+        if state.get("formatted_response"):
+            state["current_node"] = "format_response"
+            print(f"[NODE: format_response] ✅ Response already formatted")
+            return state
+
+        # Hybrid responses are pre-formatted
+        state["formatted_response"] = state["raw_result"]
 
         state["current_node"] = "format_response"
         print(f"[NODE: format_response] ✅ Response formatted")
 
         return state
-
-    def _format_sparql_response(self, state: WorkflowState) -> str:
-        """Format response for SPARQL processing using templates."""
-        raw_result = state["raw_result"]
-        explanation = state.get("sparql_explanation")
-        # Template-based formatter for human-friendly output
-        return self.formatter.format(raw_result, explanation)
-
-    def _format_embedding_response(self, state: WorkflowState) -> str:
-        """Format response for embedding processing (placeholder)."""
-        response = "🔍 **Query processed using Semantic Search (Embeddings)**\n\n"
-        response += "📊 **Answer:**\n" + (state["raw_result"] or "")
-        return response
 
     def _format_error_response(self, state: WorkflowState) -> str:
         """Format error response."""

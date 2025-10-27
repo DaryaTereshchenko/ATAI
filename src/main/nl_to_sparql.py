@@ -129,6 +129,82 @@ class NLToSPARQL:
             self.method = "rule-based"
             self.llm = None
 
+    def _setup_patterns(self):
+        """Set up rule-based patterns for NL to SPARQL conversion."""
+        self.patterns = [
+            {
+                'pattern': r'who (?:directed|was the director of) (.+)',
+                'type': 'director',
+                'sparql_template': '''SELECT ?directorName ?directorUri WHERE {{
+  ?movieUri wdt:P31 wd:Q11424 .
+  ?movieUri rdfs:label ?movieLabel .
+  FILTER(regex(str(?movieLabel), "^{movie}$", "i")) .
+  ?movieUri wdt:P57 ?directorUri .
+  ?directorUri rdfs:label ?directorName .
+  FILTER(LANG(?directorName) = "en" || LANG(?directorName) = "")
+}}'''
+            },
+            {
+                'pattern': r'who (?:acted in|starred in|was in) (.+)',
+                'type': 'cast',
+                'sparql_template': '''SELECT ?actorName ?actorUri WHERE {{
+  ?movieUri wdt:P31 wd:Q11424 .
+  ?movieUri rdfs:label ?movieLabel .
+  FILTER(regex(str(?movieLabel), "^{movie}$", "i")) .
+  ?movieUri wdt:P161 ?actorUri .
+  ?actorUri rdfs:label ?actorName .
+  FILTER(LANG(?actorName) = "en" || LANG(?actorName) = "")
+}}'''
+            },
+            {
+                'pattern': r'what (?:is|was) the genre of (.+)',
+                'type': 'genre',
+                'sparql_template': '''SELECT ?genreName ?genreUri WHERE {{
+  ?movieUri wdt:P31 wd:Q11424 .
+  ?movieUri rdfs:label ?movieLabel .
+  FILTER(regex(str(?movieLabel), "^{movie}$", "i")) .
+  ?movieUri wdt:P136 ?genreUri .
+  ?genreUri rdfs:label ?genreName .
+  FILTER(LANG(?genreName) = "en" || LANG(?genreName) = "")
+}}'''
+            },
+            {
+                'pattern': r'when (?:was|did) (.+?) (?:released|come out)',
+                'type': 'release_date',
+                'sparql_template': '''SELECT ?date WHERE {{
+  ?movieUri wdt:P31 wd:Q11424 .
+  ?movieUri rdfs:label ?movieLabel .
+  FILTER(regex(str(?movieLabel), "^{movie}$", "i")) .
+  ?movieUri wdt:P577 ?date .
+}}'''
+            },
+            {
+                'pattern': r'what (?:movies|films) did (.+?) direct',
+                'type': 'director_filmography',
+                'sparql_template': '''SELECT ?movieLabel ?movieUri WHERE {{
+  ?personUri rdfs:label ?personLabel .
+  FILTER(regex(str(?personLabel), "^{person}$", "i")) .
+  ?movieUri wdt:P31 wd:Q11424 .
+  ?movieUri wdt:P57 ?personUri .
+  ?movieUri rdfs:label ?movieLabel .
+  FILTER(LANG(?movieLabel) = "en" || LANG(?movieLabel) = "")
+}}
+ORDER BY ?movieLabel'''
+            },
+            {
+                'pattern': r'did (.+?) direct (.+)',
+                'type': 'director_verification',
+                'sparql_template': '''ASK WHERE {{
+  ?personUri rdfs:label ?personLabel .
+  FILTER(regex(str(?personLabel), "^{person}$", "i")) .
+  ?movieUri wdt:P31 wd:Q11424 .
+  ?movieUri rdfs:label ?movieLabel .
+  FILTER(regex(str(?movieLabel), "^{movie}$", "i")) .
+  ?movieUri wdt:P57 ?personUri .
+}}'''
+            }
+        ]
+
     def _setup_schema(self):
         """Set up the movie ontology schema for NL2SPARQL prompting."""
         self.schema_info = {
@@ -206,503 +282,479 @@ class NLToSPARQL:
 """
     
     def _get_few_shot_examples(self) -> List[Dict[str, str]]:
-        """Get few-shot examples - REDUCED to 2 for small model."""
+        """Get few-shot examples - IMPROVED with diverse patterns."""
         return [
             {
-                "question": "Who directed Star Wars?",
-                "sparql": """SELECT ?directorName ?directorItem WHERE {
-  ?movieItem wdt:P31 wd:Q11424 .
-  ?movieItem rdfs:label ?movieLabel .
-  FILTER(regex(str(?movieLabel), "^Star Wars$", "i")) .
-  ?movieItem wdt:P57 ?directorItem .
-  ?directorItem rdfs:label ?directorName .
+                "question": "Who directed The Matrix?",
+                "reasoning": "Forward query: movie → director. Need to find director of 'The Matrix'.",
+                "sparql": """PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX wd: <http://www.wikidata.org/entity/>
+PREFIX wdt: <http://www.wikidata.org/prop/direct/>
+
+SELECT ?directorName ?directorUri WHERE {
+  ?movieUri wdt:P31 wd:Q11424 .
+  ?movieUri rdfs:label ?movieLabel .
+  FILTER(regex(str(?movieLabel), "^The Matrix$", "i")) .
+  ?movieUri wdt:P57 ?directorUri .
+  ?directorUri rdfs:label ?directorName .
+  FILTER(LANG(?directorName) = "en" || LANG(?directorName) = "")
 }"""
             },
             {
-                "question": "What is the genre of The Godfather?",
-                "sparql": """SELECT ?genreName ?genreItem WHERE {
-  ?movieItem wdt:P31 wd:Q11424 .
-  ?movieItem rdfs:label ?movieLabel .
-  FILTER(regex(str(?movieLabel), "^The Godfather$", "i")) .
-  ?movieItem wdt:P136 ?genreItem .
-  ?genreItem rdfs:label ?genreName .
+                "question": "What movies did Christopher Nolan direct?",
+                "reasoning": "Reverse query: person → movies. Need to find movies directed by 'Christopher Nolan'.",
+                "sparql": """PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX wd: <http://www.wikidata.org/entity/>
+PREFIX wdt: <http://www.wikidata.org/prop/direct/>
+
+SELECT ?movieLabel ?movieUri WHERE {
+  ?personUri rdfs:label ?personLabel .
+  FILTER(regex(str(?personLabel), "^Christopher Nolan$", "i")) .
+  ?movieUri wdt:P31 wd:Q11424 .
+  ?movieUri wdt:P57 ?personUri .
+  ?movieUri rdfs:label ?movieLabel .
+  FILTER(LANG(?movieLabel) = "en" || LANG(?movieLabel) = "")
+}
+ORDER BY ?movieLabel"""
+            },
+            {
+                "question": "What is the genre of Inception?",
+                "reasoning": "Forward query: movie → genre. Need to find genre of 'Inception'.",
+                "sparql": """PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX wd: <http://www.wikidata.org/entity/>
+PREFIX wdt: <http://www.wikidata.org/prop/direct/>
+
+SELECT ?genreName ?genreUri WHERE {
+  ?movieUri wdt:P31 wd:Q11424 .
+  ?movieUri rdfs:label ?movieLabel .
+  FILTER(regex(str(?movieLabel), "^Inception$", "i")) .
+  ?movieUri wdt:P136 ?genreUri .
+  ?genreUri rdfs:label ?genreName .
+  FILTER(LANG(?genreName) = "en" || LANG(?genreName) = "")
+}"""
+            },
+            {
+                "question": "Did Christopher Nolan direct Inception?",
+                "reasoning": "Verification: check if relationship exists.",
+                "sparql": """PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX wd: <http://www.wikidata.org/entity/>
+PREFIX wdt: <http://www.wikidata.org/prop/direct/>
+
+ASK WHERE {
+  ?personUri rdfs:label ?personLabel .
+  FILTER(regex(str(?personLabel), "^Christopher Nolan$", "i")) .
+  ?movieUri wdt:P31 wd:Q11424 .
+  ?movieUri rdfs:label ?movieLabel .
+  FILTER(regex(str(?movieLabel), "^Inception$", "i")) .
+  ?movieUri wdt:P57 ?personUri .
 }"""
             }
         ]
 
-    def _setup_patterns(self):
-        """Set up rule-based patterns for common question types."""
-        self.patterns = [
-            # Director questions - improved to capture movie title
-            {
-                'pattern': r'(?:who (?:directed|is the director of)|director of)\s+(?:the\s+)?(?:movie\s+)?["\']?([^"\'?\.]+?)["\']?\s*[\?\.]*$',
-                'type': 'director',
-                'confidence': 0.9
-            },
-            # Producer questions
-            {
-                'pattern': r'(?:who (?:is|was) the producer of|producer of)\s+(?:the\s+)?(?:movie\s+)?["\']?([^"\'?\.]+?)["\']?\s*[\?\.]*$',
-                'type': 'producer',
-                'confidence': 0.9
-            },
-            # Actor questions
-            {
-                'pattern': r'(?:who (?:acted|starred|plays?) in|actors? (?:in|of)|cast of)\s+(?:the\s+)?(?:movie\s+)?["\']?([^"\'?\.]+?)["\']?\s*[\?\.]*$',
-                'type': 'actor',
-                'confidence': 0.9
-            },
-            # Screenwriter questions
-            {
-                'pattern': r'(?:who (?:wrote|is the writer|screenwriter)|screenwriter of|written by)\s+(?:the\s+)?(?:movie\s+)?["\']?([^"\'?\.]+?)["\']?\s*[\?\.]*$',
-                'type': 'screenwriter',
-                'confidence': 0.9
-            },
-            # Release date questions
-            {
-                'pattern': r'(?:when was|release date of|released)\s+(?:the\s+)?(?:movie\s+)?["\']?([^"\'?\.]+?)["\']?\s*[\?\.]*$',
-                'type': 'release_date',
-                'confidence': 0.95
-            },
-            # Genre questions - improved pattern
-            {
-                'pattern': r'(?:what (?:is the )?genre|genre (?:of|is))\s+(?:the\s+)?(?:movie\s+)?["\']?([^"\'?\.]+?)["\']?\s*[\?\.]*$',
-                'type': 'genre',
-                'confidence': 0.9
-            },
-            # Rating questions
-            {
-                'pattern': r'(?:what (?:is the )?rating|rating of|mpaa rating)\s+(?:of\s+)?(?:the\s+)?(?:movie\s+)?["\']?([^"\'?\.]+?)["\']?\s*[\?\.]*$',
-                'type': 'rating',
-                'confidence': 0.9
-            },
-        ]
-    
-    @staticmethod
-    def _is_mixed_case(text: str) -> bool:
-        """
-        Check if text has mixed case (some uppercase, some lowercase).
-        This indicates the text is already properly capitalized.
+    def _get_few_shot_examples_by_pattern(self, pattern_type: str) -> List[Dict[str, str]]:
+        """Get pattern-specific few-shot examples based on classification."""
         
-        Returns:
-            True if text has mixed case (already proper), False if all lower/upper
-        """
-        # Remove spaces and punctuation for checking
-        letters_only = ''.join(c for c in text if c.isalpha())
-        
-        if not letters_only:
-            return False
-        
-        has_upper = any(c.isupper() for c in letters_only)
-        has_lower = any(c.islower() for c in letters_only)
-        
-        # Mixed case = already proper capitalization
-        return has_upper and has_lower
-    
-    @staticmethod
-    def _normalize_proper_name(name: str) -> str:
-        """
-        Normalize any proper name using PROPER English title case rules.
-        - Remove extra quotes
-        - Strip whitespace
-        - Apply smart title casing (lowercase articles, conjunctions, prepositions)
-        
-        Examples:
-            "the bridge on the river kwai" → "The Bridge on the River Kwai"
-            "star wars: episode vi - return of the jedi" → "Star Wars: Episode VI - Return of the Jedi"
-            "lord of the rings" → "Lord of the Rings"
-        """
-        name = name.strip()
-        name = name.strip('"\'')  # Remove surrounding quotes
-        name = re.sub(r'\s+', ' ', name)  # Normalize spaces
-        
-        # Words that should be lowercase in title case (unless first/last word)
-        lowercase_words = {
-            'a', 'an', 'and', 'as', 'at', 'but', 'by', 'for', 'from', 'in', 
-            'into', 'of', 'on', 'or', 'over', 'the', 'to', 'up', 'with', 'via'
-        }
-        
-        # Split into words
-        words = name.split()
-        
-        # Apply title case rules
-        result_words = []
-        for i, word in enumerate(words):
-            word_lower = word.lower()
-            
-            # Always capitalize first and last word
-            if i == 0 or i == len(words) - 1:
-                # Capitalize first letter, keep rest lowercase
-                result_words.append(word_lower[0].upper() + word_lower[1:] if len(word_lower) > 1 else word_lower.upper())
-            # Check if word should be lowercase
-            elif word_lower in lowercase_words:
-                result_words.append(word_lower)
-            # Capitalize other words
-            else:
-                # Capitalize first letter, keep rest lowercase
-                result_words.append(word_lower[0].upper() + word_lower[1:] if len(word_lower) > 1 else word_lower.upper())
-        
-        return ' '.join(result_words)
-    
-    def _normalize_movie_title(self, title: str) -> str:
-        """
-        Normalize movie title - delegates to _normalize_proper_name.
-        Kept for backward compatibility.
-        """
-        return self._normalize_proper_name(title)
-    
-    def _escape_regex_special_chars(self, text: str) -> str:
-        """
-        Escape special regex characters for use in SPARQL FILTER regex.
-        
-        Characters that need escaping in regex: . ^ $ * + ? { } [ ] \ | ( )
-        """
-        # Escape backslashes first
-        text = text.replace('\\', '\\\\')
-        # Escape other special regex characters
-        special_chars = ['.', '^', '$', '*', '+', '?', '{', '}', '[', ']', '|', '(', ')']
-        for char in special_chars:
-            text = text.replace(char, '\\' + char)
-        return text
-    
-    def _generate_sparql_from_pattern(self, question_type: str, movie_title: str) -> str:
-        """Generate SPARQL query with case-insensitive FILTER for movie matching."""
-        # Normalize the title AND convert to Title Case for database matching
-        movie_title = self._normalize_proper_name(movie_title)
-        
-        print(f"[SPARQL Generation] Normalized title (Title Case): '{movie_title}'")
-        
-        # Escape regex special characters BEFORE escaping quotes for SPARQL
-        movie_title_regex = self._escape_regex_special_chars(movie_title)
-        
-        print(f"[SPARQL Generation] After regex escaping: '{movie_title_regex}'")
-        
-        # Then escape quotes for SPARQL string literal
-        movie_title_escaped = movie_title_regex.replace('"', '\\"')
-        
-        print(f"[SPARQL Generation] Final escaped for SPARQL: '{movie_title_escaped}'")
-        
-        # Always include prefixes with correct URIs
-        prefix_block = """PREFIX ddis: <http://ddis.ch/atai/>
+        # Map from QueryPattern types to our classification labels
+        pattern_map = {
+            'forward_director': [
+                {
+                    "question": "Who directed The Matrix?",
+                    "sparql": """PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
 PREFIX wd: <http://www.wikidata.org/entity/>
 PREFIX wdt: <http://www.wikidata.org/prop/direct/>
-PREFIX schema: <http://schema.org/>
-PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
 
-"""
-        
-        # ✅ Now we use properly capitalized title with case-insensitive fallback
-        # This ensures proper names match database format
-        
-        templates = {
-            'director': f'''{prefix_block}SELECT ?directorName ?directorItem WHERE {{
-  ?movieItem wdt:P31 wd:Q11424 .
-  ?movieItem rdfs:label ?movieLabel .
-  FILTER(regex(str(?movieLabel), "^{movie_title_escaped}$", "i")) .
-  ?movieItem wdt:P57 ?directorItem .
-  ?directorItem rdfs:label ?directorName .
-}}''',
-            'actor': f'''{prefix_block}SELECT ?actorName ?actorItem WHERE {{
-  ?movieItem wdt:P31 wd:Q11424 .
-  ?movieItem rdfs:label ?movieLabel .
-  FILTER(regex(str(?movieLabel), "^{movie_title_escaped}$", "i")) .
-  ?movieItem wdt:P161 ?actorItem .
-  ?actorItem rdfs:label ?actorName .
-}}''',
-            'screenwriter': f'''{prefix_block}SELECT ?writerName ?writerItem WHERE {{
-  ?movieItem wdt:P31 wd:Q11424 .
-  ?movieItem rdfs:label ?movieLabel .
-  FILTER(regex(str(?movieLabel), "^{movie_title_escaped}$", "i")) .
-  ?movieItem wdt:P58 ?writerItem .
-  ?writerItem rdfs:label ?writerName .
-}}''',
-            'producer': f'''{prefix_block}SELECT ?producerName ?producerItem WHERE {{
-  ?movieItem wdt:P31 wd:Q11424 .
-  ?movieItem rdfs:label ?movieLabel .
-  FILTER(regex(str(?movieLabel), "^{movie_title_escaped}$", "i")) .
-  ?movieItem wdt:P162 ?producerItem .
-  ?producerItem rdfs:label ?producerName .
-}}''',
-            'release_date': f'''{prefix_block}SELECT ?releaseDate WHERE {{
-  ?movieItem wdt:P31 wd:Q11424 .
-  ?movieItem rdfs:label ?movieLabel .
-  FILTER(regex(str(?movieLabel), "^{movie_title_escaped}$", "i")) .
-  ?movieItem wdt:P577 ?releaseDate .
-}}''',
-            'genre': f'''{prefix_block}SELECT ?genreName ?genreItem WHERE {{
-  ?movieItem wdt:P31 wd:Q11424 .
-  ?movieItem rdfs:label ?movieLabel .
-  FILTER(regex(str(?movieLabel), "^{movie_title_escaped}$", "i")) .
-  ?movieItem wdt:P136 ?genreItem .
-  ?genreItem rdfs:label ?genreName .
-}}''',
-            'rating': f'''{prefix_block}SELECT ?rating WHERE {{
-  ?movieItem wdt:P31 wd:Q11424 .
-  ?movieItem rdfs:label ?movieLabel .
-  FILTER(regex(str(?movieLabel), "^{movie_title_escaped}$", "i")) .
-  ?movieItem ddis:rating ?rating .
-}}''',
+SELECT ?directorName ?directorUri WHERE {
+  ?movieUri wdt:P31 wd:Q11424 .
+  ?movieUri rdfs:label ?movieLabel .
+  FILTER(regex(str(?movieLabel), "^The Matrix$", "i")) .
+  ?movieUri wdt:P57 ?directorUri .
+  ?directorUri rdfs:label ?directorName .
+  FILTER(LANG(?directorName) = "en" || LANG(?directorName) = "")
+}"""
+                }
+            ],
+            'forward_cast_member': [
+                {
+                    "question": "Who acted in Inception?",
+                    "sparql": """PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX wd: <http://www.wikidata.org/entity/>
+PREFIX wdt: <http://www.wikidata.org/prop/direct/>
+
+SELECT ?actorName ?actorUri WHERE {
+  ?movieUri wdt:P31 wd:Q11424 .
+  ?movieUri rdfs:label ?movieLabel .
+  FILTER(regex(str(?movieLabel), "^Inception$", "i")) .
+  ?movieUri wdt:P161 ?actorUri .
+  ?actorUri rdfs:label ?actorName .
+  FILTER(LANG(?actorName) = "en" || LANG(?actorName) = "")
+}"""
+                }
+            ],
+            'forward_genre': [
+                {
+                    "question": "What is the genre of Inception?",
+                    "sparql": """PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX wd: <http://www.wikidata.org/entity/>
+PREFIX wdt: <http://www.wikidata.org/prop/direct/>
+
+SELECT ?genreName ?genreUri WHERE {
+  ?movieUri wdt:P31 wd:Q11424 .
+  ?movieUri rdfs:label ?movieLabel .
+  FILTER(regex(str(?movieLabel), "^Inception$", "i")) .
+  ?movieUri wdt:P136 ?genreUri .
+  ?genreUri rdfs:label ?genreName .
+  FILTER(LANG(?genreName) = "en" || LANG(?genreName) = "")
+}"""
+                }
+            ],
+            'reverse_director': [
+                {
+                    "question": "What movies did Christopher Nolan direct?",
+                    "sparql": """PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX wd: <http://www.wikidata.org/entity/>
+PREFIX wdt: <http://www.wikidata.org/prop/direct/>
+
+SELECT ?movieLabel ?movieUri WHERE {
+  ?personUri rdfs:label ?personLabel .
+  FILTER(regex(str(?personLabel), "^Christopher Nolan$", "i")) .
+  ?movieUri wdt:P31 wd:Q11424 .
+  ?movieUri wdt:P57 ?personUri .
+  ?movieUri rdfs:label ?movieLabel .
+  FILTER(LANG(?movieLabel) = "en" || LANG(?movieLabel) = "")
+}
+ORDER BY ?movieLabel"""
+                }
+            ],
+            'verification_director': [
+                {
+                    "question": "Did Christopher Nolan direct Inception?",
+                    "sparql": """PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX wd: <http://www.wikidata.org/entity/>
+PREFIX wdt: <http://www.wikidata.org/prop/direct/>
+
+ASK WHERE {
+  ?personUri rdfs:label ?personLabel .
+  FILTER(regex(str(?personLabel), "^Christopher Nolan$", "i")) .
+  ?movieUri wdt:P31 wd:Q11424 .
+  ?movieUri rdfs:label ?movieLabel .
+  FILTER(regex(str(?movieLabel), "^Inception$", "i")) .
+  ?movieUri wdt:P57 ?personUri .
+}"""
+                }
+            ]
         }
         
-        query = templates.get(question_type, '')
-        
-        if query:
-            print(f"[SPARQL Generation] Generated query for '{movie_title}':")
-            print(query[:300] + "...")  # Print first 300 chars
-        
-        return query
-    
-    def _rule_based_convert(self, question: str) -> Optional[SPARQLQuery]:
-        """Convert question using rule-based pattern matching."""
-        question_lower = question.lower().strip()
-        
-        for pattern_info in self.patterns:
-            match = re.search(pattern_info['pattern'], question_lower, re.IGNORECASE)
-            if match:
-                movie_title = match.group(1).strip()
-                query = self._generate_sparql_from_pattern(
-                    pattern_info['type'], 
-                    movie_title
-                )
-                
-                if query:
-                    return SPARQLQuery(
-                        query=query,
-                        confidence=pattern_info['confidence'],
-                        explanation=f"Pattern-matched as {pattern_info['type']} question for '{movie_title}' (case-insensitive)"
-                    )
-        
-        return None
-    
-    def _nl2sparql_convert(self, question: str) -> Optional[SPARQLQuery]:
-        """
-        Convert question using T5 model with SPARQL-aware prompting.
-        Uses schema context to guide generation for movie ontology.
-        """
-        if not self.use_transformer or self.model is None:
-            return None
-        
-        try:
-            print(f"[T5-SPARQL] Generating SPARQL for: {question}")
-            
-            # Create prompt with schema context
-            prompt = self._create_nl2sparql_prompt(question)
-            
-            # Tokenize input
-            inputs = self.tokenizer(
-                prompt,
-                return_tensors="pt",
-                max_length=512,
-                truncation=True,
-                padding=True
-            ).to(self.device)
-            
-            # Generate SPARQL query
-            with torch.no_grad():
-                outputs = self.model.generate(
-                    **inputs,
-                    max_length=512,
-                    num_beams=5,  
-                    num_return_sequences=1,
-                    early_stopping=True,
-                    temperature=0.7,
-                    do_sample=False, 
-                    no_repeat_ngram_size=3 
-                )
-            
-            # Decode the output
-            generated_query = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
-            
-            print(f"[T5-SPARQL] Raw output: {generated_query[:200]}...")
-            
-            # Post-process the query
-            query = self._postprocess_sparql(generated_query)
-            
-            print(f"[T5-SPARQL] Post-processed query: {query[:200]}...")
-            
-            # Validate SPARQL structure
-            if self._is_valid_sparql_structure(query):
-                return SPARQLQuery(
-                    query=query,
-                    confidence=0.75,  # Moderate confidence for general T5 model
-                    explanation="Generated using T5 with SPARQL-aware prompting"
-                )
-            else:
-                print(f"[T5-SPARQL] ⚠️  Generated invalid SPARQL structure")
-                return None
-                
-        except Exception as e:
-            print(f"[T5-SPARQL] ❌ Conversion failed: {e}")
-            import traceback
-            traceback.print_exc()
-            return None
-    
-    def _sparql_llm_convert(self, question: str) -> Optional[SPARQLQuery]:
-        """
-        Convert question using sparql-llm library.
-        Uses few-shot learning with local model for SPARQL generation.
-        """
-        if self.sparql_llm is None:
-            return None
-        
-        try:
-            print(f"[sparql-llm] Generating SPARQL for: {question}")
-            
-            # Generate SPARQL using sparql-llm
-            result = self.sparql_llm.generate_sparql(
-                question=question,
-                prefixes=self.schema_info['prefixes']
-            )
-            
-            if result and result.get('sparql'):
-                query = result['sparql']
-                
-                print(f"[sparql-llm] Generated query: {query[:200]}...")
-                
-                # Validate structure
-                if self._is_valid_sparql_structure(query):
-                    return SPARQLQuery(
-                        query=query,
-                        confidence=0.90,  # High confidence for specialized library
-                        explanation="Generated using sparql-llm with few-shot learning"
-                    )
-                else:
-                    print(f"[sparql-llm] ⚠️  Invalid SPARQL structure")
-                    return None
-            else:
-                print(f"[sparql-llm] ⚠️  No query generated")
-                return None
-                
-        except Exception as e:
-            print(f"[sparql-llm] ❌ Conversion failed: {e}")
-            import traceback
-            traceback.print_exc()
-            return None
+        # Return examples for the specific pattern, or default to director examples
+        return pattern_map.get(pattern_type, pattern_map['forward_director'])
 
-    def _direct_llm_convert(self, question: str) -> Optional[SPARQLQuery]:
-        """Generate SPARQL using DeepSeek LLM."""
-        if self.llm is None:
-            return None
+    def _create_few_shot_prompt(self, question: str, pattern=None) -> str:
+        """Create pattern-specific few-shot prompt for 1.3B model."""
         
-        try:
-            print(f"[Direct-LLM] Generating SPARQL for: {question}")
+        # Determine pattern type from QueryPattern if provided
+        pattern_label = None
+        if pattern:
+            # Map QueryPattern to classification label
+            if pattern.pattern_type == 'forward':
+                pattern_label = f"forward_{pattern.relation}"
+            elif pattern.pattern_type == 'reverse':
+                pattern_label = f"reverse_{pattern.relation}"
+            elif pattern.pattern_type == 'verification':
+                pattern_label = f"verification_{pattern.relation}"
+        
+        # Get pattern-specific examples
+        if pattern_label:
+            examples = self._get_few_shot_examples_by_pattern(pattern_label)
+        else:
+            # Fallback to original heuristic selection
+            examples = self._get_few_shot_examples()
+            selected_examples = []
             
-            # Create few-shot prompt
-            prompt = self._create_few_shot_prompt(question)
-            
-            print(f"[Direct-LLM] Prompt length: {len(prompt)} chars")
-            
-            # Generate with llama-cpp-python with increased tokens
-            result = self.llm(
-                prompt,
-                max_tokens=NL2SPARQL_LLM_MAX_TOKENS,
-                temperature=NL2SPARQL_LLM_TEMPERATURE,
-                stop=["</s>", "Question:", "\n\n\nQuestion", "Example"],  # Better stop sequences
-                echo=False
-            )
-            
-            generated_text = result['choices'][0]['text'].strip()
-            
-            print(f"[Direct-LLM] Generated {len(generated_text)} chars")
-            print(f"[Direct-LLM] Full output:\n{generated_text}")  # Print full output for debugging
-            
-            # Extract SPARQL query from output
-            query = self._extract_sparql_from_output(generated_text)
-            
-            print(f"[Direct-LLM] Extracted query length: {len(query)} chars")
-            print(f"[Direct-LLM] Extracted query:\n{query}")
-            
-            # Post-process the query
-            query = self._postprocess_sparql(query)
-            
-            print(f"[Direct-LLM] Post-processed query:\n{query}")
-            
-            # Validate structure first (basic check)
-            if not self._is_valid_sparql_structure(query):
-                print(f"[Direct-LLM] ⚠️  Invalid SPARQL structure (basic check)")
-                print(f"[Direct-LLM] Query: {query[:200]}...")
-                return None
-            
-            # Check for complete SELECT clause
-            if query.upper().startswith('SELECT'):
-                # Verify SELECT has variables
-                select_match = re.search(r'SELECT\s+(\?[\w\s]+)', query, re.IGNORECASE)
-                if not select_match:
-                    print(f"[Direct-LLM] ⚠️  SELECT clause has no variables")
-                    return None
-                
-                # Verify WHERE clause exists and is complete
-                if 'WHERE' not in query.upper():
-                    print(f"[Direct-LLM] ⚠️  Missing WHERE clause")
-                    return None
-                
-                # Check balanced braces
-                if query.count('{') != query.count('}'):
-                    print(f"[Direct-LLM] ⚠️  Unbalanced braces: {query.count('{')} open, {query.count('}')} close")
-                    return None
-            
-            # ✅ Validate with SPARQLHandler (syntax check only, no execution)
-            validation_result = self._validate_and_secure_sparql(query)
-            # ↑ This only validates syntax, does NOT execute the query
-            
-            if validation_result['valid']:
-                print(f"[Direct-LLM] ✅ Query validated successfully")
-                return SPARQLQuery(
-                    query=validation_result['cleaned_query'],
-                    confidence=0.85,
-                    explanation=f"Generated using Deepseek-Coder"
-                )
+            question_lower = question.lower()
+            if any(word in question_lower for word in ['did', 'was', 'is', 'does', 'has']):
+                selected_examples.append(examples[3])  # Verification
+                selected_examples.append(examples[0])  # Forward
+            elif any(word in question_lower for word in ['what movies', 'which films', 'films did']):
+                selected_examples.append(examples[1])  # Reverse
+                selected_examples.append(examples[0])  # Forward
             else:
-                print(f"[Direct-LLM] ❌ Validation failed: {validation_result['message']}")
-                
-                # If validation failed due to security issues, return with low confidence
-                if validation_result.get('violation_type'):
-                    print(f"[Direct-LLM] Security violation: {validation_result['violation_type']}")
-                
-                return None
-                
-        except Exception as e:
-            print(f"[Direct-LLM] ❌ Conversion failed: {e}")
-            import traceback
-            traceback.print_exc()
-            return None
-    
-    def _create_few_shot_prompt(self, question: str) -> str:
-        """Create MINIMAL few-shot prompt for 1.3B model."""
-        examples = self._get_few_shot_examples()
+                selected_examples.append(examples[0])  # Forward director
+                selected_examples.append(examples[2])  # Forward genre
+            
+            examples = selected_examples
         
+        examples_text = "\n\n".join([
+            f"Question: {ex['question']}\nSPARQL:\n{ex['sparql']}"
+            for ex in examples
+        ])
+        
+        # FIX: Double the curly braces in the rules to escape them in f-string
         prompt = f"""Generate SPARQL for movie questions.
 
 {self._get_ontology_description()}
 
 RULES:
 1. End triple patterns with period (.)
-2. ALWAYS use FILTER for text matching: ?var rdfs:label ?varLabel . FILTER(regex(str(?varLabel), "^Text$", "i"))
+2. ALWAYS use FILTER for text matching: ?var rdfs:label ?varLabel . FILTER(regex(str(?varLabel), "^MovieTitle$", "i"))
 3. Use proper English title case: "The Bridge on the River Kwai"
 4. NEVER use exact match like: ?var rdfs:label "Text" (database is case-sensitive)
+5. For YES/NO questions, use ASK queries
+6. For reverse queries (person→movies), put person FILTER first
 
 EXAMPLES:
 
-Question: {examples[0]['question']}
-SPARQL:
-{examples[0]['sparql']}
-
-Question: {examples[1]['question']}
-SPARQL:
-{examples[1]['sparql']}
+{examples_text}
 
 Question: {question}
 SPARQL:
 """
         
         return prompt
+
+    def _direct_llm_convert(self, question: str, pattern=None) -> Optional[SPARQLQuery]:
+        """
+        Convert question to SPARQL using direct LLM generation.
+        
+        Args:
+            question: Natural language question
+            pattern: Optional QueryPattern from QueryAnalyzer
+            
+        Returns:
+            SPARQLQuery or None if generation fails
+        """
+        try:
+            # Create few-shot prompt
+            prompt = self._create_few_shot_prompt(question, pattern)
+            
+            print(f"[LLM] Generating SPARQL with DeepSeek...")
+            
+            # Generate with llama-cpp-python
+            response = self.llm(
+                prompt,
+                max_tokens=NL2SPARQL_LLM_MAX_TOKENS,
+                temperature=NL2SPARQL_LLM_TEMPERATURE,
+                stop=["Question:", "\n\n\n"],  # Stop at next question or triple newline
+            )
+            
+            # Extract text from response
+            if isinstance(response, dict):
+                output = response.get('choices', [{}])[0].get('text', '')
+            else:
+                output = str(response)
+            
+            print(f"[LLM] Generated {len(output)} characters")
+            
+            # Extract SPARQL from output
+            sparql_query = self._extract_sparql_from_output(output)
+            
+            # Post-process the query
+            sparql_query = self._postprocess_sparql(sparql_query)
+            
+            # Validate structure
+            if not self._is_valid_sparql_structure(sparql_query):
+                print(f"[LLM] ❌ Invalid SPARQL structure")
+                return None
+            
+            # Validate and secure
+            validation = self._validate_and_secure_sparql(sparql_query)
+            
+            if not validation['valid']:
+                print(f"[LLM] ❌ Validation failed: {validation['message']}")
+                return None
+            
+            print(f"[LLM] ✅ Generated valid SPARQL")
+            
+            return SPARQLQuery(
+                query=validation['cleaned_query'],
+                confidence=0.85,
+                explanation=f"Generated by DeepSeek-Coder-1.3B using few-shot prompting"
+            )
+            
+        except Exception as e:
+            print(f"[LLM] ❌ Generation error: {e}")
+            import traceback
+            traceback.print_exc()
+            return None
+
+    def _rule_based_convert(self, question: str) -> Optional[SPARQLQuery]:
+        """
+        Convert question using rule-based pattern matching.
+        
+        Args:
+            question: Natural language question
+            
+        Returns:
+            SPARQLQuery or None if no pattern matches
+        """
+        question_lower = question.lower().strip()
+        
+        for pattern_def in self.patterns:
+            match = re.search(pattern_def['pattern'], question_lower, re.IGNORECASE)
+            if match:
+                # Extract entities from match groups
+                if pattern_def['type'] == 'director_verification':
+                    person = self._normalize_proper_name(match.group(1))
+                    movie = self._normalize_proper_name(match.group(2))
+                    sparql = pattern_def['sparql_template'].format(person=person, movie=movie)
+                elif pattern_def['type'] == 'director_filmography':
+                    person = self._normalize_proper_name(match.group(1))
+                    sparql = pattern_def['sparql_template'].format(person=person)
+                else:
+                    movie = self._normalize_proper_name(match.group(1))
+                    sparql = pattern_def['sparql_template'].format(movie=movie)
+                
+                # Add prefixes
+                prefixes = """PREFIX ddis: <http://ddis.ch/atai/>
+PREFIX wd: <http://www.wikidata.org/entity/>
+PREFIX wdt: <http://www.wikidata.org/prop/direct/>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+
+"""
+                sparql = prefixes + sparql
+                
+                return SPARQLQuery(
+                    query=sparql,
+                    confidence=0.8,
+                    explanation=f"Rule-based conversion using {pattern_def['type']} pattern"
+                )
+        
+        return None
     
+    def _normalize_proper_name(self, text: str) -> str:
+        """
+        Normalize text to proper English title case.
+        Handles articles, prepositions, and special cases.
+        
+        Args:
+            text: Input text to normalize
+            
+        Returns:
+            Properly capitalized text
+        """
+        # Remove extra whitespace
+        text = ' '.join(text.split())
+        
+        # Articles and prepositions that should be lowercase (unless first/last word)
+        lowercase_words = {
+            'a', 'an', 'the', 'and', 'but', 'or', 'for', 'nor',
+            'on', 'at', 'to', 'from', 'by', 'in', 'of', 'with'
+        }
+        
+        words = text.split()
+        result = []
+        
+        for i, word in enumerate(words):
+            # Always capitalize first and last word
+            if i == 0 or i == len(words) - 1:
+                result.append(word.capitalize())
+            # Lowercase articles/prepositions in middle
+            elif word.lower() in lowercase_words:
+                result.append(word.lower())
+            # Capitalize other words
+            else:
+                result.append(word.capitalize())
+        
+        return ' '.join(result)
+    
+    def _escape_regex_special_chars(self, text: str) -> str:
+        """Escape special regex characters in text."""
+        special_chars = r'\.[]{}()*+?|^$'
+        for char in special_chars:
+            text = text.replace(char, '\\' + char)
+        return text
+
+    def convert(self, question: str, pattern=None) -> SPARQLQuery:
+        """
+        Convert a natural language question to a SPARQL query.
+        NOW ACCEPTS: Optional pattern from QueryAnalyzer for better validation.
+        
+        Args:
+            question: Natural language question
+            pattern: Optional QueryPattern from QueryAnalyzer
+        """
+        
+        # Step 1: Try DeepSeek LLM FIRST if enabled
+        if self.method == "direct-llm" and self.llm is not None:
+            print(f"[NL2SPARQL] Trying DeepSeek LLM first...")
+            llm_result = self._direct_llm_convert(question)
+            
+            # Validate against pattern if provided
+            if llm_result and pattern:
+                if self._validate_sparql_for_pattern(llm_result.query, pattern):
+                    print(f"[NL2SPARQL] ✅ DeepSeek result validated against pattern")
+                    return llm_result
+                else:
+                    print(f"[NL2SPARQL] ⚠️  DeepSeek result doesn't match expected pattern, trying fallback...")
+                    llm_result = None
+            elif llm_result:
+                # No pattern to validate against, use result as-is
+                print(f"[NL2SPARQL] ✅ Using DeepSeek result")
+                return llm_result
+            else:
+                print(f"[NL2SPARQL] ⚠️  DeepSeek failed, trying rule-based fallback...")
+        
+        # Step 2: Try rule-based approach as fallback
+        print(f"[NL2SPARQL] Trying rule-based approach...")
+        rule_result = self._rule_based_convert(question)
+        
+        if rule_result:
+            print(f"[NL2SPARQL] Validating rule-based query...")
+            validation = self._validate_and_secure_sparql(rule_result.query)
+            
+            if validation['valid']:
+                print(f"[NL2SPARQL] ✅ Using rule-based result")
+                rule_result.query = validation['cleaned_query']
+                rule_result.explanation += f" Validated: {validation['message']}"
+                return rule_result
+            else:
+                print(f"[NL2SPARQL] ❌ Rule-based validation failed: {validation['message']}")
+        
+        # Fallback - no valid query generated
+        print("[NL2SPARQL] ❌ Both DeepSeek and rule-based failed")
+        return SPARQLQuery(
+            query="# Could not generate valid query",
+            confidence=0.0,
+            explanation=f"Could not generate a valid SPARQL query for: {question}"
+        )
+
+    def validate_question(self, question: str) -> bool:
+        """
+        Validate if the question is appropriate for the movie knowledge graph.
+        Returns True if valid, False otherwise.
+        """
+        # Basic validation - check if question is non-empty and reasonable length
+        if not question or len(question.strip()) < 3:
+            return False
+        
+        # Check if it contains movie-related keywords (basic heuristic)
+        movie_keywords = [
+            'movie', 'film', 'director', 'actor', 'actress', 'release',
+            'genre', 'screenwriter', 'writer', 'star', 'cast', 'rating'
+        ]
+        
+        question_lower = question.lower()
+        
+        # Check for question words
+        question_words = ['who', 'what', 'when', 'where', 'which', 'how']
+        has_question_word = any(word in question_lower for word in question_words)
+        
+        # Check for movie-related content or patterns
+        has_movie_context = any(keyword in question_lower for keyword in movie_keywords)
+        
+        # Check if matches any pattern
+        matches_pattern = any(
+            re.search(pattern['pattern'], question_lower, re.IGNORECASE)
+            for pattern in self.patterns
+        )
+        
+        return has_question_word or has_movie_context or matches_pattern
+
     def _extract_sparql_from_output(self, output: str) -> str:
         """Extract SPARQL query from model output with multiple strategies."""
         print(f"[Extract] Full output length: {len(output)} chars")
         print(f"[Extract] First 500 chars: {output[:500]}")
         
         # Strategy 1: Try to find complete SELECT...WHERE{...} block with proper nesting
-        # Look for balanced braces
+        # Look for balanced braces (.)
         select_match = re.search(
             r'(PREFIX[^\n]*\n)*\s*SELECT\s+[^{]+WHERE\s*\{',
             output,
@@ -749,20 +801,23 @@ SPARQL:
         for line in output.split('\n'):
             line_stripped = line.strip()
             
-            # Start of query
-            if re.match(r'^(PREFIX|SELECT|ASK|CONSTRUCT|DESCRIBE)', line_stripped, re.IGNORECASE):
+            # Skip empty lines
+            if not line_stripped:
+                continue
+            
+            # Check if we're entering WHERE clause
+            if re.search(r'\bWHERE\s*\{', line_stripped, re.IGNORECASE):
                 in_query = True
             
+            # Check if we're exiting WHERE clause
+            if in_query and line_stripped.strip() == '}':
+                in_query = False
+            
+            # If we're in WHERE clause and line contains a triple pattern
             if in_query:
-                sparql_lines.append(line)
-                
-                # Count braces
-                brace_count += line.count('{') - line.count('}')
-                
-                # Check if we've closed all braces and have a WHERE clause
-                if brace_count == 0 and any(re.search(r'\bWHERE\b', l, re.IGNORECASE) for l in sparql_lines):
-                    if '}' in line:
-                        break
+                # Check if line looks like a triple pattern (has predicate)
+                if re.search(r'\s+(wdt:|rdfs:|wd:|ddis:|rdf:|schema:|a\s)', line_stripped):
+                    sparql_lines.append(line_stripped)
         
         if sparql_lines:
             extracted = '\n'.join(sparql_lines)
@@ -1064,82 +1119,57 @@ PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
         print(query[:500])
         
         return query
-
-    def convert(self, question: str) -> SPARQLQuery:
+    
+    def _validate_sparql_for_pattern(self, sparql: str, pattern) -> bool:
         """
-        Convert a natural language question to a SPARQL query.
+        Validate that generated SPARQL matches the expected pattern structure.
         
-        SIMPLIFIED Strategy:
-        1. Try DeepSeek LLM FIRST if enabled
-        2. If DeepSeek fails validation, try rule-based as fallback
-        3. Return first valid result
-        """
-        
-        # Step 1: Try DeepSeek LLM FIRST if enabled
-        if self.method == "direct-llm" and self.llm is not None:
-            print(f"[NL2SPARQL] Trying DeepSeek LLM first...")
-            llm_result = self._direct_llm_convert(question)
+        Args:
+            sparql: Generated SPARQL query
+            pattern: QueryPattern from QueryAnalyzer
             
-            # If LLM succeeded and validated, use it immediately
-            if llm_result:
-                print(f"[NL2SPARQL] ✅ Using DeepSeek result")
-                return llm_result
-            else:
-                print(f"[NL2SPARQL] ❌ DeepSeek failed, trying rule-based fallback...")
+        Returns:
+            True if structure matches expected pattern
+        """
+        sparql_upper = sparql.upper()
         
-        # Step 2: Try rule-based approach as fallback
-        print(f"[NL2SPARQL] Trying rule-based approach...")
-        rule_result = self._rule_based_convert(question)
-        
-        # Validate rule-based result if available
-        if rule_result:
-            print(f"[NL2SPARQL] Validating rule-based query...")
-            validation = self._validate_and_secure_sparql(rule_result.query)
+        # Forward queries should have movie type constraint and specific property
+        if pattern.pattern_type == 'forward':
+            has_movie_type = 'WDT:P31' in sparql_upper and 'WD:Q11424' in sparql_upper
+            has_movie_label = 'RDFS:LABEL' in sparql_upper and '?MOVIELABEL' in sparql_upper.replace(' ', '')
             
-            if validation['valid']:
-                print(f"[NL2SPARQL] ✅ Using rule-based result")
-                rule_result.query = validation['cleaned_query']
-                rule_result.explanation += f" Validated: {validation['message']}"
-                return rule_result
-            else:
-                print(f"[NL2SPARQL] ❌ Rule-based validation failed: {validation['message']}")
+            # Check for expected property based on relation
+            property_map = {
+                'director': 'P57',
+                'cast_member': 'P161',
+                'genre': 'P136',
+                'publication_date': 'P577',
+                'screenwriter': 'P58',
+                'producer': 'P162',
+                'rating': 'RATING'
+            }
+            expected_prop = property_map.get(pattern.relation, '')
+            has_property = expected_prop in sparql_upper if expected_prop else True
+            
+            if not (has_movie_type and has_movie_label and has_property):
+                print(f"[Validation] Forward query missing expected structure:")
+                print(f"  Movie type: {has_movie_type}, Label: {has_movie_label}, Property {expected_prop}: {has_property}")
+                return False
         
-        # Fallback: Could not generate valid query
-        print("[NL2SPARQL] ❌ Both DeepSeek and rule-based failed")
-        return SPARQLQuery(
-            query="# Could not generate valid query",
-            confidence=0.0,
-            explanation=f"Could not generate a valid SPARQL query for: {question}"
-        )
-
-    def validate_question(self, question: str) -> bool:
-        """
-        Validate if the question is appropriate for the movie knowledge graph.
-        Returns True if valid, False otherwise.
-        """
-        # Basic validation - check if question is non-empty and reasonable length
-        if not question or len(question.strip()) < 3:
-            return False
+        # Reverse queries should have person label and movie type
+        elif pattern.pattern_type == 'reverse':
+            has_person_label = '?PERSONLABEL' in sparql_upper.replace(' ', '')
+            has_movie_type = 'WDT:P31' in sparql_upper and 'WD:Q11424' in sparql_upper
+            
+            if not (has_person_label and has_movie_type):
+                print(f"[Validation] Reverse query missing expected structure:")
+                print(f"  Person label: {has_person_label}, Movie type: {has_movie_type}")
+                return False
         
-        # Check if it contains movie-related keywords (basic heuristic)
-        movie_keywords = [
-            'movie', 'film', 'director', 'actor', 'actress', 'release',
-            'genre', 'screenwriter', 'writer', 'star', 'cast', 'rating'
-        ]
+        # Verification queries should be ASK queries
+        elif pattern.pattern_type == 'verification':
+            if not sparql_upper.strip().startswith('PREFIX') or 'ASK' not in sparql_upper:
+                print(f"[Validation] Verification query should be ASK query")
+                return False
         
-        question_lower = question.lower()
-        
-        # Check for question words
-        question_words = ['who', 'what', 'when', 'where', 'which', 'how']
-        has_question_word = any(word in question_lower for word in question_words)
-        
-        # Check for movie-related content or patterns
-        has_movie_context = any(keyword in question_lower for keyword in movie_keywords)
-        
-        # Check if matches any pattern
-        matches_pattern = any(
-            re.search(pattern['pattern'], question_lower, re.IGNORECASE)
-            for pattern in self.patterns
-        )
-        
-        return has_question_word or has_movie_context or matches_pattern
+        return True

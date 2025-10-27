@@ -1,27 +1,64 @@
-# Core dependencies
+# ============================================================================
+# Core Dependencies
+# ============================================================================
 pydantic>=2.0.0
+python-dotenv>=1.0.0
+
+# ============================================================================
+# LangChain Ecosystem
+# ============================================================================
 langchain-core>=0.1.0
 langchain-community>=0.1.0
 langchain>=0.1.0
+
+# ============================================================================
+# Knowledge Graph & SPARQL
+# ============================================================================
 rdflib>=6.0.0
 
-# LLM support - Local GGUF models
+# ============================================================================
+# Machine Learning & Deep Learning
+# ============================================================================
+numpy>=1.24.0
+torch>=2.0.0
+scikit-learn>=1.3.0
+
+# ============================================================================
+# Transformers & NLP Models
+# ============================================================================
+transformers>=4.30.0
+sentence-transformers>=2.2.0
+
+# ============================================================================
+# LLM Support - Local GGUF Models
+# ============================================================================
 llama-cpp-python>=0.2.0
 
-# Bot dependencies
-speakeasypy
-python-dotenv
+# ============================================================================
+# spaCy for NER (Choose ONE based on your CUDA version)
+# ============================================================================
+# For CPU only (no CUDA):
+spacy>=3.7.0
+# python -m spacy download en_core_web_sm
 
-# NLP dependencies
-spacy>=3.0.0
-# Download model with: python -m spacy download en_core_web_sm
+# For CUDA 11.x (uncomment if using CUDA 11):
+# spacy[cuda11x]>=3.7.0
 
-# spaCy with CUDA support (choose one based on your CUDA version)
-spacy[cuda11x]>=3.7.0  # For CUDA 11.x
-# spacy[cuda12x]>=3.7.0  # For CUDA 12.x
-# spacy[cuda-autodetect]>=3.7.0  # Auto-detect CUDA version
+# For CUDA 12.x (uncomment if using CUDA 12):
+# spacy[cuda12x]>=3.7.0
 
-# Other dependencies
-llama-cpp-python
-langchain-community
-pydantic
+# For auto-detect CUDA version (uncomment if desired):
+# spacy[cuda-autodetect]>=3.7.0
+
+# ============================================================================
+# Optional: Jupyter/IPython for development
+# ============================================================================
+# jupyter>=1.0.0
+# ipython>=8.0.0
+
+# ============================================================================
+# Optional: Testing & Development
+# ============================================================================
+# pytest>=7.0.0
+# black>=23.0.0
+# flake8>=6.0.0

@@ -20,50 +20,45 @@ except ImportError:
     print("⚠️  langchain_ollama not available")
 
 try:
-    # Try multiple import paths for LlamaCpp
-    try:
-        from langchain_community.llms import LlamaCpp
-        LLAMACPP_AVAILABLE = True
-        print("✅ Imported LlamaCpp from langchain_community.llms")
-        LLAMACPP_DIRECT = False
-    except ImportError:
-        try:
-            from langchain.llms import LlamaCpp
-            LLAMACPP_AVAILABLE = True
-            LLAMACPP_DIRECT = False
-            print("✅ Imported LlamaCpp from langchain.llms")
-        except ImportError:
-            # Direct import as fallback
-            from llama_cpp import Llama  # noqa: F401
-            LLAMACPP_AVAILABLE = True
-            LLAMACPP_DIRECT = True
-            print("✅ Imported Llama directly from llama_cpp")
-except ImportError as e:
+    from langchain_community.llms import LlamaCpp
+    LLAMACPP_AVAILABLE = True
+except ImportError:
     LLAMACPP_AVAILABLE = False
-    LLAMACPP_DIRECT = False
-    print(f"⚠️  llama-cpp-python not available: {e}")
-    print("   Install langchain-community with: pip install langchain-community")
 
 from src.main.sparql_handler import SPARQLHandler
 from src.main.nl_to_sparql import NLToSPARQL
 from src.main.workflow import QueryWorkflow
+
+# ✅ NEW: Import transformer classifier
+try:
+    from src.main.transformer_classifier import TransformerQueryClassifier
+    TRANSFORMER_CLASSIFIER_AVAILABLE = True
+except ImportError:
+    TRANSFORMER_CLASSIFIER_AVAILABLE = False
+    print("⚠️  TransformerQueryClassifier not available")
+
 from src.config import (
     LLM_TYPE, LLM_MODEL, LLM_MODEL_PATH, LLM_TEMPERATURE,
     LLM_MAX_TOKENS, LLM_CONTEXT_LENGTH, USE_LLM_CLASSIFICATION,
-    # Optional: flip this on if you want a language guard on labels by default
-    # ADD_LABEL_LANG_FILTER, LABEL_LANG
+    GRAPH_FILE_PATH, EMBEDDINGS_DIR, USE_EMBEDDINGS,
+    EMBEDDING_QUERY_MODEL, EMBEDDING_ALIGNMENT_MATRIX_PATH,
+    TRANSFORMER_MODEL_PATH
 )
 
 class QuestionType(str, Enum):
     FACTUAL = "factual"
-    EMBEDDING = "embedding"
     MULTIMEDIA = "multimedia"
     RECOMMENDATION = "recommendation"
+    OUT_OF_SCOPE = "out_of_scope"  # ✅ NEW: For rejection
 
 class QueryClassification(BaseModel):
-    """Classification of a user query into one of four types."""
+    """Classification of a user query."""
     question_type: QuestionType = Field(
-        description="The type of question: factual, embedding, multimedia, or recommendation"
+        description="The type of question: factual, multimedia, recommendation, or out_of_scope"
+    )
+    confidence: float = Field(
+        default=1.0,
+        description="Confidence of the classification (0.0 to 1.0)"
     )
 
 # Global instance for access by workflow
@@ -72,31 +67,87 @@ orchestrator_instance = None
 class Orchestrator:
     """Routes user queries to appropriate processing nodes based on question type."""
 
-    def __init__(self, llm=None, use_workflow: bool = True):
-        """Initialize the orchestrator with a language model."""
+    def __init__(
+        self,
+        llm=None,
+        use_workflow: bool = True,
+        use_transformer_classifier: bool = True,
+        transformer_model_path: str = None  # Changed to None
+    ):
+        """
+        Initialize the orchestrator.
+        
+        Args:
+            llm: Optional LLM instance
+            use_workflow: Whether to use workflow processing
+            use_transformer_classifier: Whether to use fine-tuned transformer classifier
+            transformer_model_path: Path to fine-tuned model (defaults to config value)
+        """
         global orchestrator_instance
 
-        # Initialize LLM based on configuration (used only for classification here)
-        self.llm = llm or self._initialize_llm()
-        self.use_llm = self.llm is not None and USE_LLM_CLASSIFICATION
+        # Use config path if not specified
+        if transformer_model_path is None:
+            transformer_model_path = TRANSFORMER_MODEL_PATH
 
-        if self.use_llm:
-            self.parser = PydanticOutputParser(pydantic_object=QueryClassification)
-            self._setup_classifier()
-        else:
-            print("ℹ️  Using rule-based classification.")
+        # ✅ NEW: Initialize classifier (transformer or LLM)
+        self.use_transformer = use_transformer_classifier and TRANSFORMER_CLASSIFIER_AVAILABLE
+        self.transformer_classifier = None
+        
+        if self.use_transformer:
+            try:
+                print("\n🤖 Initializing fine-tuned transformer classifier...")
+                self.transformer_classifier = TransformerQueryClassifier(
+                    model_path=transformer_model_path,
+                    confidence_threshold=0.5
+                )
+                print("✅ Transformer classifier initialized\n")
+            except Exception as e:
+                print(f"⚠️  Failed to load transformer classifier: {e}")
+                print("   Falling back to LLM/rule-based classification\n")
+                self.use_transformer = False
+        
+        # Initialize LLM (fallback if transformer not available)
+        if not self.use_transformer:
+            self.llm = llm or self._initialize_llm()
+            self.use_llm = self.llm is not None and USE_LLM_CLASSIFICATION
 
-        # Initialize SPARQL handler ONCE
+            if self.use_llm:
+                self.parser = PydanticOutputParser(pydantic_object=QueryClassification)
+                self._setup_classifier()
+                print("ℹ️  Using LLM-based classification.")
+            else:
+                print("ℹ️  Using rule-based classification.")
+
+        # Initialize SPARQL handler
         self.sparql_handler = SPARQLHandler()
 
-        # ✅ Instantiate NL-to-SPARQL in MODEL-FIRST mode and reuse the same handler
-        #    This ensures DeepSeek (llama-cpp) is tried first, with rules as fallback.
+        # Initialize NL-to-SPARQL
         self.nl_to_sparql = NLToSPARQL(
             method="direct-llm",
             sparql_handler=self.sparql_handler
         )
 
-        # Initialize workflow system
+        # Initialize embedding processor
+        self.embedding_processor = None
+        if USE_EMBEDDINGS:
+            try:
+                print("\n🔢 Initializing embedding processor (hybrid approach)...")
+                from src.main.embedding_processor import EmbeddingQueryProcessor
+                self.embedding_processor = EmbeddingQueryProcessor(
+                    embeddings_dir=EMBEDDINGS_DIR,
+                    graph_path=GRAPH_FILE_PATH,
+                    query_model=EMBEDDING_QUERY_MODEL,
+                    alignment_matrix_path=EMBEDDING_ALIGNMENT_MATRIX_PATH,
+                    use_simple_aligner=True,
+                    sparql_handler=self.sparql_handler
+                )
+                print("✅ Embedding processor initialized (hybrid mode ready)\n")
+            except Exception as e:
+                print(f"⚠️  Failed to initialize embedding processor: {e}")
+                import traceback
+                traceback.print_exc()
+
+        # Initialize workflow
         self.use_workflow = use_workflow
         if use_workflow:
             self.workflow = QueryWorkflow(self)
@@ -104,248 +155,171 @@ class Orchestrator:
         orchestrator_instance = self
 
     def _initialize_llm(self):
-        """Initialize LLM based on configuration (for classification only)."""
+        """Initialize LLM (fallback for classification)."""
+        # ...existing LLM initialization code...
         try:
             if LLM_TYPE == "gguf" and LLAMACPP_AVAILABLE:
                 print(f"📥 Loading GGUF model: {LLM_MODEL}")
-                print(f"    Path: {LLM_MODEL_PATH}")
-
-                if not os.path.exists(LLM_MODEL_PATH):
-                    print(f"❌ Model file not found: {LLM_MODEL_PATH}")
-                    print("   Please update LLM_MODEL_PATH in src/config.py")
-                    return None
-
-                if not LLAMACPP_DIRECT:
-                    try:
-                        llm = LlamaCpp(
-                            model_path=LLM_MODEL_PATH,
-                            temperature=LLM_TEMPERATURE,
-                            max_tokens=LLM_MAX_TOKENS,
-                            n_ctx=LLM_CONTEXT_LENGTH,
-                            n_batch=512,
-                            verbose=False,
-                            n_threads=4,
+                from llama_cpp import Llama
+                
+                class LlamaCppWrapper:
+                    def __init__(self, model_path, **kwargs):
+                        self.llm = Llama(
+                            model_path=model_path,
+                            n_ctx=kwargs.get('n_ctx', LLM_CONTEXT_LENGTH),
+                            n_threads=kwargs.get('n_threads', 4),
+                            verbose=False
                         )
-                        print("✅ GGUF model loaded successfully via LangChain wrapper")
-                        return llm
-                    except Exception as e:
-                        print(f"⚠️  LangChain wrapper failed: {e}")
-                        print("   Trying direct llama-cpp-python...")
+                        self.temperature = kwargs.get('temperature', LLM_TEMPERATURE)
+                        self.max_tokens = kwargs.get('max_tokens', LLM_MAX_TOKENS)
 
-                # Fallback: thin wrapper to mimic LangChain interface
-                try:
-                    from llama_cpp import Llama
-                    class LlamaCppWrapper:
-                        def __init__(self, model_path, **kwargs):
-                            self.llm = Llama(
-                                model_path=model_path,
-                                n_ctx=kwargs.get('n_ctx', LLM_CONTEXT_LENGTH),
-                                n_threads=kwargs.get('n_threads', 4),
-                                verbose=False
-                            )
-                            self.temperature = kwargs.get('temperature', LLM_TEMPERATURE)
-                            self.max_tokens = kwargs.get('max_tokens', LLM_MAX_TOKENS)
+                    def __call__(self, prompt, **kwargs):
+                        result = self.llm(
+                            prompt,
+                            max_tokens=kwargs.get('max_tokens', self.max_tokens),
+                            temperature=kwargs.get('temperature', self.temperature),
+                            stop=kwargs.get('stop', []),
+                        )
+                        return result['choices'][0]['text']
 
-                        def __call__(self, prompt, **kwargs):
-                            result = self.llm(
-                                prompt,
-                                max_tokens=kwargs.get('max_tokens', self.max_tokens),
-                                temperature=kwargs.get('temperature', self.temperature),
-                                stop=kwargs.get('stop', []),
-                            )
-                            return result['choices'][0]['text']
+                    def invoke(self, inputs, **kwargs):
+                        prompt = inputs.get('input', str(inputs)) if isinstance(inputs, dict) else str(inputs)
+                        return self(prompt, **kwargs)
 
-                        def invoke(self, inputs, **kwargs):
-                            prompt = inputs.get('input', str(inputs)) if isinstance(inputs, dict) else str(inputs)
-                            return self(prompt, **kwargs)
-
-                    llm = LlamaCppWrapper(
-                        model_path=LLM_MODEL_PATH,
-                        temperature=LLM_TEMPERATURE,
-                        max_tokens=LLM_MAX_TOKENS,
-                        n_ctx=LLM_CONTEXT_LENGTH,
-                        n_threads=4
-                    )
-                    print("✅ GGUF model loaded successfully via direct llama-cpp-python")
-                    return llm
-
-                except Exception as e:
-                    print(f"❌ Failed to load GGUF model directly: {e}")
-                    return None
-
+                return LlamaCppWrapper(
+                    model_path=LLM_MODEL_PATH,
+                    temperature=LLM_TEMPERATURE,
+                    max_tokens=LLM_MAX_TOKENS,
+                    n_ctx=LLM_CONTEXT_LENGTH,
+                    n_threads=4
+                )
             elif LLM_TYPE == "ollama" and OLLAMA_AVAILABLE:
-                print(f"📥 Connecting to Ollama model: {LLM_MODEL}")
-                llm = ChatOllama(model=LLM_MODEL, temperature=LLM_TEMPERATURE)
-                print("✅ Ollama model connected")
-                return llm
-
-            elif LLM_TYPE == "none":
-                print("ℹ️  LLM disabled in config (LLM_TYPE='none')")
-                return None
-
+                return ChatOllama(model=LLM_MODEL, temperature=LLM_TEMPERATURE)
             else:
-                print(f"⚠️  LLM type '{LLM_TYPE}' not available or libraries not installed")
-                if LLM_TYPE == "gguf":
-                    print("   Make sure langchain-community is installed: pip install langchain-community")
                 return None
-
         except Exception as e:
             print(f"❌ Error initializing LLM: {e}")
-            print("   Falling back to rule-based classification")
-            import traceback; traceback.print_exc()
             return None
 
     def _setup_classifier(self):
-        """Set up the classification prompt and chain."""
+        """Set up LLM classification (fallback)."""
+        # ...existing LLM classifier setup...
         classification_prompt = ChatPromptTemplate.from_messages([
             ("system", """You are a query classifier for a movie information system.
-
-Classify the user's query into exactly ONE of these types:
-- factual: Questions about specific facts (who, what, when, where)
-- embedding: Semantic search or similarity questions  
-- multimedia: Questions asking to see/show images
-- recommendation: Asking for suggestions or similar items
-
-Examples:
-- "Who directed Star Wars?" → factual
-- "Find movies similar to Inception" → embedding
-- "Show me a picture of Tom Hanks" → multimedia
-- "Recommend action movies" → recommendation
-
-Respond with ONLY the classification type, nothing else."""),
+Classify into: factual, multimedia, recommendation, or out_of_scope."""),
             ("user", "{query}")
         ])
         self.classification_chain = classification_prompt | self.llm
 
     def classify_query(self, query: str) -> QueryClassification:
-        """Classify a user query into one of the four types."""
+        """
+        Classify a user query using the configured classifier.
+        
+        Priority:
+        1. Fine-tuned transformer (most accurate)
+        2. LLM-based classification (fallback)
+        3. Rule-based classification (last resort)
+        """
+        # ✅ PRIMARY: Use fine-tuned transformer
+        if self.use_transformer and self.transformer_classifier:
+            try:
+                result = self.transformer_classifier.classify(query)
+                
+                print(f"\n{'='*80}")
+                print(f"[CLASSIFICATION] Query: {query[:60]}...")
+                print(f"[CLASSIFICATION] Type: {result.question_type}")
+                print(f"[CLASSIFICATION] Confidence: {result.confidence:.2%}")
+                print(f"[CLASSIFICATION] Method: Fine-tuned Transformer")
+                print(f"{'='*80}\n")
+                
+                return QueryClassification(
+                    question_type=QuestionType(result.question_type),
+                    confidence=result.confidence
+                )
+            except Exception as e:
+                print(f"⚠️  Transformer classification failed: {e}")
+                print("   Falling back to alternative method...")
+        
+        # FALLBACK 1: LLM-based classification
         if self.use_llm:
             try:
                 raw_output = self.classification_chain.invoke({"query": query})
                 output_text = raw_output if isinstance(raw_output, str) else str(raw_output)
-                print(f"[Classification] Raw LLM output: {output_text[:100]}...")
                 
-                # Clean up the output
                 import re
-                output_text = output_text.strip()
-                output_text = re.sub(r'^(AI:|Assistant:)\s*', '', output_text, flags=re.IGNORECASE)
-                output_text = output_text.strip('"\'')
-                
-                # Extract just the classification type
-                type_match = re.search(r'\b(factual|embedding|multimedia|recommendation)\b', output_text.lower())
+                type_match = re.search(
+                    r'\b(factual|multimedia|recommendation|out_of_scope)\b',
+                    output_text.lower()
+                )
                 if type_match:
                     qt = type_match.group(1)
-                    print(f"[Classification] ✅ Parsed type: {qt}")
-                    return QueryClassification(question_type=QuestionType(qt))
-                
-                # Fallback: check for keywords in output
-                output_lower = output_text.lower()
-                if 'factual' in output_lower:
-                    return QueryClassification(question_type=QuestionType.FACTUAL)
-                elif 'embedding' in output_lower:
-                    return QueryClassification(question_type=QuestionType.EMBEDDING)
-                elif 'multimedia' in output_lower:
-                    return QueryClassification(question_type=QuestionType.MULTIMEDIA)
-                elif 'recommendation' in output_lower:
-                    return QueryClassification(question_type=QuestionType.RECOMMENDATION)
-                
-                raise ValueError(f"Could not extract classification from: {output_text}")
+                    return QueryClassification(
+                        question_type=QuestionType(qt),
+                        confidence=0.8
+                    )
             except Exception as e:
-                print(f"⚠️  LLM classification failed: {str(e)[:200]}")
-                print("ℹ️  Falling back to rule-based classification.")
-                return self._rule_based_classify(query)
-        else:
-            return self._rule_based_classify(query)
+                print(f"⚠️  LLM classification failed: {e}")
+        
+        # FALLBACK 2: Rule-based classification
+        print("ℹ️  Using rule-based classification")
+        return self._rule_based_classify(query)
 
     def _rule_based_classify(self, query: str) -> QueryClassification:
+        """Rule-based classification (last resort)."""
         q = query.lower()
-        multimedia_keywords = ['show', 'picture', 'image', 'photo', 'display', 'look like', 'see', 'view']
-        if any(k in q for k in multimedia_keywords):
-            return QueryClassification(question_type=QuestionType.MULTIMEDIA)
-        recommendation_keywords = ['recommend', 'suggest', 'similar', 'like', 'what should i watch']
+        
+        # Check for out-of-scope patterns (simple heuristics)
+        out_of_scope_keywords = [
+            'weather', 'temperature', 'forecast',
+            'calculate', 'math', 'solve',
+            'code', 'program', 'function',
+            'capital', 'population', 'president',
+            'recipe', 'cook', 'bake'
+        ]
+        if any(keyword in q for keyword in out_of_scope_keywords):
+            return QueryClassification(
+                question_type=QuestionType.OUT_OF_SCOPE,
+                confidence=0.7
+            )
+        
+        # Multimedia detection
+        multimedia_keywords = ['show', 'picture', 'image', 'photo', 'display']
+        if any(k in q for k in multimedia_keywords) and ('picture' in q or 'image' in q):
+            return QueryClassification(
+                question_type=QuestionType.MULTIMEDIA,
+                confidence=0.8
+            )
+        
+        # Recommendation detection
+        recommendation_keywords = ['recommend', 'suggest', 'what should i watch']
         if any(k in q for k in recommendation_keywords):
-            return QueryClassification(question_type=QuestionType.RECOMMENDATION)
-        factual_keywords = ['who', 'what', 'when', 'where', 'which', 'director', 'actor', 'release']
-        if any(k in q for k in factual_keywords):
-            return QueryClassification(question_type=QuestionType.FACTUAL)
-        return QueryClassification(question_type=QuestionType.FACTUAL)
+            return QueryClassification(
+                question_type=QuestionType.RECOMMENDATION,
+                confidence=0.8
+            )
+        
+        # Default: factual
+        return QueryClassification(
+            question_type=QuestionType.FACTUAL,
+            confidence=0.6
+        )
 
     def process_query(self, query: str) -> str:
-        """Process a query by routing it through the workflow or directly to handlers."""
+        """Process a query using the workflow."""
         if self.use_workflow:
             return self.workflow.run(query)
         else:
-            return self._process_query_legacy(query)
-
-    def _process_query_legacy(self, query: str) -> str:
-        classification = self.classify_query(query)
-        print(f"Query classified as: {classification.question_type.value}")
-        if classification.question_type == QuestionType.FACTUAL:
-            return self._handle_factual(query)
-        elif classification.question_type == QuestionType.EMBEDDING:
-            return self._handle_embedding(query)
-        elif classification.question_type == QuestionType.MULTIMEDIA:
-            return self._handle_multimedia(query)
-        elif classification.question_type == QuestionType.RECOMMENDATION:
-            return self._handle_recommendation(query)
-        else:
-            return "I'm not sure how to handle that question."
-
-    def _handle_factual(self, query: str) -> str:
-        """Handle factual questions using the knowledge graph."""
-        try:
-            if not self.nl_to_sparql.validate_question(query):
-                return ("I'm sorry, I couldn't understand your question. "
-                        "Please ask about movies, actors, directors, release dates, genres, or ratings.")
-
-            print("Converting natural language to SPARQL (model-first)...")
-            sparql_result = self.nl_to_sparql.convert(query)
-
-            print(f"Generated SPARQL (confidence: {getattr(sparql_result, 'confidence', 0.0)}):")
-            print(sparql_result.query)
-            if getattr(sparql_result, 'explanation', None):
-                print(f"Explanation: {sparql_result.explanation}")
-
-            # Confidence hint (optional UX)
-            if getattr(sparql_result, 'confidence', 1.0) < 0.5:
-                return (
-                    f"I'm not very confident about this query (confidence: {sparql_result.confidence:.2f}).\n\n"
-                    f"Generated query:\n{sparql_result.query}\n\n"
-                    "Would you like to rephrase your question?"
-                )
-
-            # Optionally add a language guard to labels (uncomment if needed)
-            # if ADD_LABEL_LANG_FILTER:
-            #     sparql_result.query = self.sparql_handler.add_lang_filter(
-            #         sparql_result.query, ["?movieLabel", "?personLabel"], LABEL_LANG
-            #     )
-
-            print("Executing SPARQL query...")
-            exec_result = self.sparql_handler.execute_query(sparql_result.query, validate=True)
-
-            if not exec_result.get('success'):
-                return (
-                    f"I couldn't find an answer.\n\n"
-                    f"Generated query:\n{sparql_result.query}\n\n"
-                    f"Result: {exec_result.get('error', 'Unknown error')}\n\n"
-                    "The information might not be available in the knowledge graph, or the query may need adjustment."
-                )
-
-            data = exec_result.get('data') or "No answer found in the database."
-            return data
-
-        except Exception as e:
+            return self._process_hybrid(query)
+    
+    def _process_hybrid(self, query: str) -> str:
+        """Process query with hybrid approach."""
+        if self.embedding_processor is None:
             return (
-                f"Error processing factual question: {e}\n\n"
-                f"Original question: {query}\n\n"
-                "Please try rephrasing your question."
+                "⚠️ **Hybrid processing not available**\n\n"
+                "The embedding processor is not initialized."
             )
-
-    def _handle_embedding(self, query: str) -> str:
-        return f"[EMBEDDING NODE - Not yet implemented] Processing: {query}"
-
-    def _handle_multimedia(self, query: str) -> str:
-        return f"[MULTIMEDIA NODE - Not yet implemented] Processing: {query}"
-
-    def _handle_recommendation(self, query: str) -> str:
-        return f"[RECOMMENDATION NODE - Not yet implemented] Processing: {query}"
+        
+        try:
+            return self.embedding_processor.process_hybrid_factual_query(query)
+        except Exception as e:
+            return f"⚠️ **Error in hybrid processing**: {str(e)}"
