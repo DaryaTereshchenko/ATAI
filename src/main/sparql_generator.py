@@ -24,7 +24,8 @@ class SPARQLGenerator:
         'producer': 'http://www.wikidata.org/prop/direct/P162',
         'genre': 'http://www.wikidata.org/prop/direct/P136',
         'publication_date': 'http://www.wikidata.org/prop/direct/P577',
-        'rating': 'http://ddis.ch/atai/rating'
+        'rating': 'http://ddis.ch/atai/rating',
+        'country': 'http://www.wikidata.org/prop/direct/P495',  # ✅ NEW: country of origin
     }
     
     # Type URIs
@@ -127,11 +128,37 @@ LIMIT 1"""
         if not relation_uri:
             raise ValueError(f"Unknown relation: {pattern.relation}")
         
+        # ✅ VALIDATION: Ensure we're using the correct property
+        print(f"[SPARQLGenerator] Forward query: {pattern.relation} → {relation_uri}")
+        
         # Normalize label using SPARQLHandler's snap_label
         normalized_label = self._escape_label(movie_label)
         
+        # ✅ OPTIMIZED: Special handling for country queries to avoid timeout
+        if pattern.relation == 'country':
+            sparql = f"""
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX wd: <http://www.wikidata.org/entity/>
+PREFIX wdt: <http://www.wikidata.org/prop/direct/>
+
+SELECT DISTINCT ?countryLabel WHERE {{
+    ?movieUri wdt:P31 wd:Q11424 .
+    ?movieUri rdfs:label ?movieLabel .
+    FILTER(LCASE(STR(?movieLabel)) = LCASE("{normalized_label}"))
+    
+    ?movieUri <{relation_uri}> ?countryUri .
+    ?countryUri rdfs:label ?countryLabel .
+    FILTER(LANG(?countryLabel) = "en" || LANG(?countryLabel) = "")
+}}
+LIMIT 10
+"""
+            return sparql.strip()
+        
         # Build SPARQL based on object type
         if pattern.object_type == 'person':
+            # ✅ VALIDATION: Log which property we're using
+            print(f"[SPARQLGenerator]    Person query using: {relation_uri}")
+            
             # Return person entities
             sparql = f"""
 PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>

@@ -34,6 +34,10 @@ class WorkflowState(TypedDict):
     """State object passed between workflow nodes."""
     # Input
     raw_query: str
+    
+    # ✅ NEW: Separate approach and clean question
+    requested_approach: Optional[str]  # "factual", "embedding", or "both"
+    clean_question: str  # Question WITHOUT approach prefix
 
     # Validation
     is_valid: bool
@@ -186,6 +190,57 @@ class InputValidator:
             "threats": [],
             "cleaned_query": cleaned_query,
         }
+    
+    @classmethod
+    def extract_approach_and_question(cls, query: str) -> tuple[str, str]:
+        """
+        Extract approach indicator and clean question from user input.
+        
+        CRITICAL: This must happen BEFORE any other preprocessing to avoid losing information.
+        
+        Patterns:
+        - "Please answer this question with a factual approach: <question>"
+        - "Please answer this question with an embedding approach: <question>"
+        - "<question>" (no approach indicator)
+        
+        Returns:
+            Tuple of (approach, clean_question)
+            - approach: "factual", "embedding", or "both" (if neither specified)
+            - clean_question: The actual question without the approach prefix
+        """
+        # ✅ CRITICAL: Extract BEFORE any preprocessing
+        query_stripped = query.strip()
+        
+        # Check for explicit approach indicator
+        import re
+        
+        # Pattern: "Please answer this question with an? X approach: <question>"
+        pattern = r'^[Pp]lease answer this question with an? (factual|embedding) approach:\s*(.+)$'
+        match = re.match(pattern, query_stripped, re.IGNORECASE)
+        
+        if match:
+            approach_word = match.group(1).lower()
+            clean_question = match.group(2).strip()
+            
+            if approach_word == 'factual':
+                return ('factual', clean_question)
+            elif approach_word == 'embedding':
+                return ('embedding', clean_question)
+        
+        # No explicit approach - check for keywords in the question itself
+        query_lower = query_stripped.lower()
+        words = set(re.findall(r'\b\w+\b', query_lower))
+        
+        has_factual = 'factual' in words
+        has_embedding = {'embedding', 'embeddings'} & words
+        
+        if has_factual and not has_embedding:
+            return ('factual', query_stripped)
+        elif has_embedding and not has_factual:
+            return ('embedding', query_stripped)
+        
+        # ✅ CHANGED: Default is now 'both' instead of 'factual'
+        return ('both', query_stripped)
 
 
 class QueryWorkflow:
@@ -199,21 +254,86 @@ class QueryWorkflow:
 
     # ==================== WORKFLOW NODES ====================
 
+    def validate_input(self, state: WorkflowState) -> WorkflowState:
+        """
+        Node 1: Validate user input for security and processability.
+        """
+        print(f"\n[NODE: validate_input] Validating input...")
+        
+        validation = self.validator.validate(state['raw_query'])
+        
+        state['is_valid'] = validation['is_valid']
+        state['validation_message'] = validation['message']
+        state['detected_threats'] = validation['threats']
+        state['current_node'] = 'validate_input'
+        
+        # Update cleaned query
+        if validation['is_valid']:
+            state['raw_query'] = validation['cleaned_query']
+            print(f"[NODE: validate_input] ✅ Input is valid")
+        else:
+            print(f"[NODE: validate_input] ❌ Validation failed: {validation['message']}")
+        
+        return state
+    
+    def classify_query(self, state: WorkflowState) -> WorkflowState:
+        """
+        Node 2: Classify the query type.
+        """
+        print(f"\n[NODE: classify_query] Classifying query...")
+        
+        try:
+            classification = self.orchestrator.classify_query(state['raw_query'])
+            
+            state['query_type'] = classification.question_type.value
+            state['current_node'] = 'classify_query'
+            
+            print(f"[NODE: classify_query] ✅ Type: {state['query_type']}")
+            
+        except Exception as e:
+            state['error'] = f"Classification error: {e}"
+            state['current_node'] = 'classify_query'
+            print(f"[NODE: classify_query] ❌ {state['error']}")
+        
+        return state
+
     def decide_processing_method(self, state: WorkflowState) -> WorkflowState:
         """
-        Node 3: Decide processing method.
-        All queries use HYBRID (entity extraction + relation detection + SPARQL).
+        Node 3: Decide processing method based on requested approach and classification.
         """
-        print(f"\n[NODE: decide_processing_method] Using hybrid approach for all queries...")
-
-        # All queries use hybrid approach
-        state["processing_method"] = ProcessingMethod.HYBRID
-        state["routing_reason"] = "All queries use hybrid: entity extraction → relation detection → SPARQL."
-
-        state["current_node"] = "decide_processing_method"
-        print(f"[NODE: decide_processing_method] ✅ Method: {state['processing_method'].value}")
+        print(f"\n[NODE: decide_processing_method] Routing query...")
+        
+        requested = state.get('requested_approach', 'both')  # Default to both
+        query_type = state.get('query_type', 'hybrid')  # From classification
+        
+        # ✅ Priority: requested_approach overrides query_type
+        if requested == 'embedding' or query_type == 'embedding':
+            state['processing_method'] = 'embedding'
+            state['routing_reason'] = "Embedding approach requested or detected"
+            print(f"[NODE: decide_processing_method] ✅ Method: EMBEDDING")
+        
+        elif requested == 'factual' or query_type == 'factual':
+            state['processing_method'] = ProcessingMethod.HYBRID
+            state['routing_reason'] = "Factual approach: entity extraction → SPARQL → graph query"
+            print(f"[NODE: decide_processing_method] ✅ Method: FACTUAL (hybrid SPARQL)")
+        
+        elif query_type == 'image':
+            state['processing_method'] = 'image'
+            state['routing_reason'] = "Image/multimedia query"
+            print(f"[NODE: decide_processing_method] ✅ Method: IMAGE")
+        
+        elif query_type == 'recommendation':
+            state['processing_method'] = 'recommendation'
+            state['routing_reason'] = "Recommendation query"
+            print(f"[NODE: decide_processing_method] ✅ Method: RECOMMENDATION")
+        
+        else:  # hybrid or both
+            state['processing_method'] = 'both'
+            state['routing_reason'] = "Hybrid: using both factual + embedding approaches"
+            print(f"[NODE: decide_processing_method] ✅ Method: BOTH (factual + embedding)")
+        
         print(f"[NODE: decide_processing_method] 📋 Reason: {state['routing_reason']}")
-
+        state['current_node'] = 'decide_processing_method'
         return state
 
     def run(self, query: str) -> str:
@@ -230,9 +350,17 @@ class QueryWorkflow:
         print(f"🔄 WORKFLOW EXECUTION STARTED")
         print(f"{'='*80}\n")
         
-        # Initialize state
+        # ✅ STEP 0: Extract approach and clean question FIRST
+        requested_approach, clean_question = InputValidator.extract_approach_and_question(query)
+        
+        print(f"📋 Approach detected: {requested_approach}")
+        print(f"📋 Clean question: '{clean_question}'\n")
+        
+        # Initialize state with CLEAN question
         state: WorkflowState = {
-            'raw_query': query,
+            'raw_query': clean_question,
+            'requested_approach': requested_approach,
+            'clean_question': clean_question,
             'is_valid': False,
             'validation_message': None,
             'detected_threats': [],
@@ -256,17 +384,31 @@ class QueryWorkflow:
                 state = self.format_response(state)
                 return state['formatted_response']
             
-            # Node 2: Classify query (for future routing if needed)
+            # Node 2: Classify query (keyword-based now)
             state = self.classify_query(state)
             if state.get('error'):
                 state = self.format_response(state)
                 return state['formatted_response']
             
-            # Node 3: Set hybrid processing
+            # Node 3: Route based on requested approach and classification
             state = self.decide_processing_method(state)
             
-            # Node 4: Process with hybrid approach (only path)
-            state = self.process_with_hybrid(state)
+            processing_method = state.get('processing_method')
+            
+            # Node 4: Process with selected approach
+            if processing_method == ProcessingMethod.HYBRID or processing_method == 'both':
+                state = self.process_with_hybrid(state)
+            elif processing_method == 'embedding':
+                state = self.process_with_embedding(state)
+            elif processing_method == 'image':
+                state['formatted_response'] = "ℹ️  Image queries are not yet implemented."
+                state['current_node'] = 'process_image'
+            elif processing_method == 'recommendation':
+                state['formatted_response'] = "ℹ️  Recommendation queries are not yet implemented."
+                state['current_node'] = 'process_recommendation'
+            else:
+                print(f"❌ Unexpected processing_method: {processing_method}")
+                state['error'] = f"Internal error: unexpected processing method '{processing_method}'"
             
             # Node 5: Format response
             state = self.format_response(state)
@@ -288,95 +430,14 @@ class QueryWorkflow:
             state['error'] = f"Workflow error: {str(e)}"
             state = self.format_response(state)
             return state['formatted_response']
-
-    def validate_input(self, state: WorkflowState) -> WorkflowState:
-        """
-        Node 1: Validate user input for security and processability.
-        """
-        print(f"\n[NODE: validate_input] Processing query: {state['raw_query'][:50]}...")
-
-        validation_result = self.validator.validate(state["raw_query"])
-
-        state["is_valid"] = validation_result["is_valid"]
-        state["validation_message"] = validation_result["message"]
-        state["detected_threats"] = validation_result["threats"]
-        state["current_node"] = "validate_input"
-
-        # Replace raw_query with cleaned version for downstream processing
-        if validation_result.get("cleaned_query"):
-            original_query = state["raw_query"]
-            state["raw_query"] = validation_result["cleaned_query"]
-            print(f"[NODE: validate_input] Cleaned query: {state['raw_query'][:80]}...")
-            if original_query != state["raw_query"]:
-                print(f"[NODE: validate_input] ℹ️  Query was normalized (quotes/dashes/spacing)")
-
-        if not validation_result["is_valid"]:
-            print(f"[NODE: validate_input] ❌ Validation failed: {validation_result['message']}")
-            print(f"[NODE: validate_input] Threats: {validation_result['threats']}")
-            state["error"] = validation_result["message"]
-            state["processing_method"] = ProcessingMethod.FAILED
-        else:
-            print(f"[NODE: validate_input] ✅ Validation passed")
-
-        return state
-
-
-    def classify_query(self, state: WorkflowState) -> WorkflowState:
-        """
-        Node 2: Classify the query type using the orchestrator.
-        NOW HANDLES: out_of_scope queries (rejection).
-        """
-        print(f"\n[NODE: classify_query] Classifying query...")
-
-        try:
-            classification = self.orchestrator.classify_query(state["raw_query"])
-            state["query_type"] = classification.question_type.value
-            state["current_node"] = "classify_query"
-            
-            print(f"[NODE: classify_query] Type: {state['query_type']}")
-            print(f"[NODE: classify_query] Confidence: {classification.confidence:.2%}")
-            
-            # ✅ NEW: Handle out-of-scope queries
-            if state["query_type"] == "out_of_scope":
-                state["error"] = (
-                    "I'm a movie information assistant. I can only answer questions about movies, "
-                    "actors, directors, and related topics. Please ask a movie-related question!"
-                )
-                state["processing_method"] = "failed"
-                print(f"[NODE: classify_query] ❌ Query rejected: out of scope")
-            
-        except Exception as e:
-            print(f"[NODE: classify_query] ❌ Classification error: {e}")
-            state["error"] = f"Classification failed: {str(e)}"
-            state["query_type"] = "unknown"
-
-        return state
-
-    def decide_processing_method(self, state: WorkflowState) -> WorkflowState:
-        """
-        Node 3: Decide processing method.
-        All queries use HYBRID (entity extraction + relation detection + SPARQL).
-        """
-        print(f"\n[NODE: decide_processing_method] Using hybrid approach for all queries...")
-
-        # All queries use hybrid approach
-        state["processing_method"] = ProcessingMethod.HYBRID
-        state["routing_reason"] = "All queries use hybrid: entity extraction → relation detection → SPARQL."
-
-        state["current_node"] = "decide_processing_method"
-        print(f"[NODE: decide_processing_method] ✅ Method: {state['processing_method'].value}")
-        print(f"[NODE: decide_processing_method] 📋 Reason: {state['routing_reason']}")
-
-        return state
-
+    
     def process_with_hybrid(self, state: WorkflowState) -> WorkflowState:
         """
-        Node 4: Hybrid processing - entity extraction + relation detection + SPARQL.
-        This is the ONLY processing method used.
+        Node 4A: Hybrid processing - entity extraction + SPARQL.
+        Handles both single factual and dual (factual + embedding) modes.
         """
         print(f"\n[NODE: process_with_hybrid] Processing with hybrid approach...")
         
-        # Check if embedding processor is available
         if not hasattr(self.orchestrator, 'embedding_processor') or self.orchestrator.embedding_processor is None:
             print(f"[NODE: process_with_hybrid] ❌ Embedding processor not available")
             state['error'] = "Embedding processor not initialized. Cannot process query."
@@ -384,22 +445,80 @@ class QueryWorkflow:
             return state
         
         try:
-            query = state["raw_query"]
+            # ✅ Use clean question directly - no additional cleaning needed
+            query = state['clean_question']
             
-            # ✅ Use hybrid method: entity extraction + relation detection + template-based SPARQL
-            result = self.orchestrator.embedding_processor.process_hybrid_factual_query(query)
+            print(f"[NODE: process_with_hybrid] Processing query: '{query}'")
             
-            state["raw_result"] = result
-            state["formatted_response"] = result
-            state["processing_method"] = ProcessingMethod.HYBRID
-            state["current_node"] = "process_with_hybrid"
+            # Check if we need both approaches
+            if state.get('processing_method') == 'both':
+                print(f"[NODE: process_with_hybrid] 📊 Running BOTH approaches...")
+                
+                # Run factual first
+                factual_result = self.orchestrator.embedding_processor.process_hybrid_factual_query(query)
+                
+                # Run embedding
+                embedding_result = self.orchestrator.embedding_processor.process_embedding_factual_query(query)
+                
+                # Combine results with proper formatting
+                combined = f"{factual_result}\n\n{embedding_result}"
+                
+                state['raw_result'] = combined
+                state['formatted_response'] = combined
+                print(f"[NODE: process_with_hybrid] ✅ Both approaches completed")
             
-            print(f"[NODE: process_with_hybrid] ✅ Hybrid processing successful")
+            else:
+                # Run factual only
+                result = self.orchestrator.embedding_processor.process_hybrid_factual_query(query)
+                
+                state['raw_result'] = result
+                state['formatted_response'] = result
+                print(f"[NODE: process_with_hybrid] ✅ Factual processing successful")
+            
+            state['processing_method'] = ProcessingMethod.HYBRID
+            state['current_node'] = 'process_with_hybrid'
             
         except Exception as e:
-            state["error"] = f"Hybrid processing error: {e}"
-            state["current_node"] = "process_with_hybrid"
+            state['error'] = f"Hybrid processing error: {e}"
+            state['current_node'] = 'process_with_hybrid'
             print(f"[NODE: process_with_hybrid] ❌ {state['error']}")
+            import traceback
+            traceback.print_exc()
+        
+        return state
+
+    def process_with_embedding(self, state: WorkflowState) -> WorkflowState:
+        """
+        Node 4B: Process with pure embedding approach (TransE computations).
+        """
+        print(f"\n[NODE: process_with_embedding] Processing with TransE embeddings...")
+        
+        if not hasattr(self.orchestrator, 'embedding_processor') or self.orchestrator.embedding_processor is None:
+            print(f"[NODE: process_with_embedding] ❌ Embedding processor not available")
+            state['error'] = "Embedding processor not initialized. Cannot use embedding approach."
+            state["current_node"] = "process_with_embedding"
+            return state
+        
+        try:
+            # ✅ Use clean question directly - no additional cleaning needed
+            query = state['clean_question']
+            
+            print(f"[NODE: process_with_embedding] Processing query: '{query}'")
+            
+            # Use pure embedding approach
+            result = self.orchestrator.embedding_processor.process_embedding_factual_query(query)
+            
+            state['raw_result'] = result
+            state['formatted_response'] = result
+            state['processing_method'] = 'embedding'
+            state['current_node'] = 'process_with_embedding'
+            
+            print(f"[NODE: process_with_embedding] ✅ Embedding processing successful")
+            
+        except Exception as e:
+            state['error'] = f"Embedding processing error: {e}"
+            state['current_node'] = 'process_with_embedding'
+            print(f"[NODE: process_with_embedding] ❌ {state['error']}")
             import traceback
             traceback.print_exc()
         

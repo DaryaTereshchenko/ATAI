@@ -53,20 +53,35 @@ class EntityExtractor:
         
         return cache
     
+    def _escape_regex_special_chars(self, text: str) -> str:
+        """
+        Escape special regex characters in text.
+        ✅ ENHANCED: Handle more special characters for international titles
+        """
+        # Escape regex metacharacters
+        special_chars = r'\.[]{}()*+?|^$'
+        for char in special_chars:
+            text = text.replace(char, '\\' + char)
+        
+        # ✅ NEW: Also escape parentheses and periods that might be in titles
+        # But preserve them as literal characters in the pattern
+        return text
+    
     def _normalize_title(self, title: str) -> str:
         """
         Normalize movie title to proper English title case.
+        ✅ ENHANCED: Better handling of non-English and special characters
         
         Rules:
         - First and last words always capitalized
         - Articles, conjunctions, short prepositions lowercase (unless first/last)
         - Roman numerals preserved as uppercase
         - Proper nouns capitalized
+        - Preserve special characters and accents
         
         Examples:
             "the bridge on the river kwai" → "The Bridge on the River Kwai"
-            "star wars: episode vi - return of the jedi" → "Star Wars: Episode VI - Return of the Jedi"
-            "lord of the rings" → "Lord of the Rings"
+            "aro tolbukhin. en la mente del asesino" → "Aro Tolbukhin. En la mente del asesino"
         """
         if not title:
             return title
@@ -75,43 +90,77 @@ class EntityExtractor:
         lowercase_words = {
             'a', 'an', 'and', 'as', 'at', 'but', 'by', 'for', 'from', 'in',
             'into', 'of', 'on', 'or', 'over', 'the', 'to', 'up', 'with', 'via',
-            'vs', 'vs.', 'v.', 'v'
+            'vs', 'vs.', 'v.', 'v',
+            # ✅ NEW: Spanish/international articles and prepositions
+            'el', 'la', 'los', 'las', 'de', 'del', 'en', 'y', 'con'
         }
         
         # Roman numerals should stay uppercase
         roman_numerals = {'i', 'ii', 'iii', 'iv', 'v', 'vi', 'vii', 'viii', 'ix', 'x'}
         
-        words = title.split()
-        result_words = []
+        # ✅ NEW: Split on spaces AND periods (for titles like "Aro Tolbukhin. En la mente...")
+        # But preserve the periods in the output
+        segments = []
+        current_segment = []
         
-        for i, word in enumerate(words):
-            # Preserve existing punctuation
-            # Split word and punctuation
-            match = re.match(r'^([^\w]*)(\w+)([^\w]*)$', word)
-            if not match:
-                # Word is all punctuation or empty
-                result_words.append(word)
-                continue
-            
-            prefix, core, suffix = match.groups()
-            core_lower = core.lower()
-            
-            # Check if it's a Roman numeral
-            if core_lower in roman_numerals:
-                result_words.append(prefix + core.upper() + suffix)
-                continue
-            
-            # Always capitalize first and last word
-            if i == 0 or i == len(words) - 1:
-                result_words.append(prefix + core_lower.capitalize() + suffix)
-            # Check if word should be lowercase
-            elif core_lower in lowercase_words:
-                result_words.append(prefix + core_lower + suffix)
-            # Capitalize other words
+        for char in title:
+            if char in '.!?;:':
+                # Process accumulated words
+                if current_segment:
+                    segments.append((''.join(current_segment), False))
+                    current_segment = []
+                # Add punctuation as separate segment
+                segments.append((char, True))
             else:
-                result_words.append(prefix + core_lower.capitalize() + suffix)
+                current_segment.append(char)
         
-        return ' '.join(result_words)
+        # Add remaining segment
+        if current_segment:
+            segments.append((''.join(current_segment), False))
+        
+        result_parts = []
+        word_position = 0  # Track position across all segments
+        total_words = sum(len(seg.split()) for seg, is_punct in segments if not is_punct)
+        
+        for segment, is_punctuation in segments:
+            if is_punctuation:
+                result_parts.append(segment)
+                continue
+            
+            words = segment.split()
+            result_words = []
+            
+            for i, word in enumerate(words):
+                # Preserve existing punctuation
+                match = re.match(r'^([^\w]*)(\w+)([^\w]*)$', word)
+                if not match:
+                    result_words.append(word)
+                    continue
+                
+                prefix, core, suffix = match.groups()
+                core_lower = core.lower()
+                
+                # Check if it's a Roman numeral
+                if core_lower in roman_numerals:
+                    result_words.append(prefix + core.upper() + suffix)
+                    word_position += 1
+                    continue
+                
+                # Always capitalize first and last word
+                if word_position == 0 or word_position == total_words - 1:
+                    result_words.append(prefix + core_lower.capitalize() + suffix)
+                # Check if word should be lowercase
+                elif core_lower in lowercase_words:
+                    result_words.append(prefix + core_lower + suffix)
+                # Capitalize other words
+                else:
+                    result_words.append(prefix + core_lower.capitalize() + suffix)
+                
+                word_position += 1
+            
+            result_parts.append(' '.join(result_words))
+        
+        return ''.join(result_parts)
     
     def _extract_quoted_text(self, query: str) -> List[str]:
         """
@@ -345,21 +394,17 @@ class EntityExtractor:
     ) -> List[Tuple[str, str, int]]:
         """
         Fallback: Extract entities using whole-word matching.
-        
-        Strategy:
-        - Sort labels by length (longest first) to prefer complete multi-word names
-        - Use word boundary matching to avoid partial matches
-        - Skip very short labels to reduce false positives
+        ✅ ENHANCED: Better handling of special characters in entity labels
         """
         matches = []
         query_original = query.strip()
         query_lower = query_original.lower()
         
-        # Remove common question words and verbs for better matching
+        # ✅ CRITICAL: Minimal stop words
         stop_words = [
             'who', 'what', 'when', 'where', 'which', 'how', 'is', 'was', 'are', 'were',
-            'show', 'find', 'list', 'get', 'tell', 'give', 'directed', 'director',
-            'screenwriter', 'actor', 'released', 'the', 'of', 'in', 'for', 'about', 'did'
+            'show', 'find', 'list', 'get', 'tell', 'give', 'the', 'of', 'in', 'for',
+            'about', 'did', 'does', 'has', 'have', 'to', 'a', 'an'
         ]
         
         query_cleaned = query_lower
@@ -368,6 +413,7 @@ class EntityExtractor:
         query_cleaned = re.sub(r'\s+', ' ', query_cleaned).strip()
         
         print(f"[EntityExtractor] 🔍 Pattern matching on: '{query_cleaned}'")
+        print(f"[EntityExtractor]    Original: '{query_lower}'")
         
         try:
             # Sort labels by length (longest first) to prefer multi-word matches
@@ -380,21 +426,28 @@ class EntityExtractor:
             found_labels = []
             
             for label_lower in labels_sorted:
+                # ✅ ENHANCED: Escape special regex characters in label for safe matching
+                escaped_label = re.escape(label_lower)
+                
                 # Use word boundary matching to avoid partial matches
                 # Match in both original and cleaned query
-                if (re.search(rf'\b{re.escape(label_lower)}\b', query_lower) or
-                    re.search(rf'\b{re.escape(label_lower)}\b', query_cleaned)):
-                    
-                    for uri in self.entity_cache[label_lower]:
-                        if entity_type is None or self._has_type(uri, entity_type):
-                            original_label = self.get_entity_label(uri)
-                            matches.append((uri, original_label, 90))
-                            found_labels.append(label_lower)
-                            # Once we find a match for this label, stop checking URIs
-                            break
+                try:
+                    if (re.search(rf'\b{escaped_label}\b', query_lower, re.IGNORECASE) or
+                        re.search(rf'\b{escaped_label}\b', query_cleaned, re.IGNORECASE)):
+                        
+                        for uri in self.entity_cache[label_lower]:
+                            if entity_type is None or self._has_type(uri, entity_type):
+                                original_label = self.get_entity_label(uri)
+                                matches.append((uri, original_label, 90))
+                                found_labels.append(label_lower)
+                                # Once we find a match for this label, stop checking URIs
+                                break
+                except re.error:
+                    # Skip labels that cause regex errors
+                    continue
             
             if found_labels:
-                print(f"[EntityExtractor] ✅ Pattern found: {found_labels[:5]}")  # Show first 5
+                print(f"[EntityExtractor] ✅ Pattern found: {found_labels[:5]}")
             else:
                 print(f"[EntityExtractor] ❌ No pattern matches found")
                 

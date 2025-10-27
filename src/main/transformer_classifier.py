@@ -11,6 +11,9 @@ import os
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.insert(0, project_root)
 
+# ✅ Import config constants
+from src.config import TRANSFORMER_MODEL_PATH
+
 
 class ClassificationResult:
     """Result from transformer classification."""
@@ -23,18 +26,21 @@ class TransformerQueryClassifier:
     
     def __init__(
         self,
-        model_path: str,
-        confidence_threshold: float = 0.75
+        model_path: str = TRANSFORMER_MODEL_PATH,
+        num_labels: int = 17,  # ✅ UPDATED: 17 classes (was 16)
+        device: str = None
     ):
         """
         Initialize the transformer classifier.
         
         Args:
-            model_path: Path to fine-tuned model directory
-            confidence_threshold: Minimum confidence for classification
+            model_path: Path to the fine-tuned model
+            num_labels: Number of output classes (17: forward/reverse/verification × 8 relations + unknown)
+            device: Device to use ('cuda', 'cpu', or None for auto-detect)
         """
         self.model_path = model_path
-        self.confidence_threshold = confidence_threshold
+        self.num_labels = num_labels
+        self.device = device
         
         # Verify the path exists
         if not os.path.exists(model_path):
@@ -50,7 +56,7 @@ class TransformerQueryClassifier:
             raise FileNotFoundError(f"Missing required files: {missing_files}")
         
         # Set device
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.device = device if device else torch.device("cuda" if torch.cuda.is_available() else "cpu")
         print(f"   Device: {self.device}")
         
         try:

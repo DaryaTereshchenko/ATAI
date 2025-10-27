@@ -81,6 +81,21 @@ class SPARQLClassifierTrainer:
         print(f"✅ Loaded {len(datasets['train'])} train / {len(datasets['validation'])} val samples")
         print(f"   Number of classes: {self.num_labels}")
         
+        # Load metadata
+        metadata = data['metadata']
+        num_classes = metadata['num_classes']  # ✅ Should be 17 now
+        label2id = metadata['label2id']
+        id2label = metadata['id2label']
+        
+        print(f"\n📊 Dataset Statistics:")
+        print(f"   Classes: {num_classes}")  # ✅ Will print 17
+        print(f"   Training samples: {metadata['train_size']}")
+        print(f"   Validation samples: {metadata['val_size']}")
+        
+        print(f"\n🏷️  Label Mapping (Total: {num_classes} classes):")
+        for label in sorted(label2id.keys()):
+            print(f"   {label2id[label]:2d}: {label}")
+        
         return datasets
     
     def preprocess_function(self, examples):

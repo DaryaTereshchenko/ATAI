@@ -38,9 +38,6 @@ class AnswerFormatter:
         "The database search didn't return any results.",
     ]
     
-    # Prefix for all responses to indicate data source
-    DB_PREFIX = "🔍 **Database Query Result**\n\n"
-    
     @classmethod
     def _clean_result_line(cls, line: str) -> str:
         """
@@ -70,21 +67,30 @@ class AnswerFormatter:
         return re.sub(r'\s+', ' ', line.strip())
     
     @classmethod
-    def format(cls, raw_result: str, query_explanation: Optional[str] = None) -> str:
+    def format(cls, raw_result: str, query_explanation: Optional[str] = None, approach: str = "factual") -> str:
         """
         Format a SPARQL query result into a human-friendly response.
         
         Args:
             raw_result: The raw result string from SPARQL execution
             query_explanation: Optional explanation (ignored to hide technical details)
+            approach: The approach used - "factual" (SPARQL) or "embedding" (TransE)
             
         Returns:
             Formatted, human-friendly response string
         """
+        # Determine prefix based on approach
+        if approach == "embedding":
+            prefix = "🔢 **Embedding-Based Answer**\n\n"
+        elif approach == "both":
+            prefix = "📊 **Hybrid Answer (Factual + Embeddings)**\n\n"
+        else:  # factual
+            prefix = "✅ **Factual Answer (SPARQL Query)**\n\n"
+        
         # Check if no results
         if not raw_result or "No answer found" in raw_result or "No results" in raw_result:
             template = random.choice(cls.NO_RESULTS_TEMPLATES)
-            response = cls.DB_PREFIX + template
+            response = prefix + template
             
             # Add helpful hint
             response += "\n\n💡 *Tip: Try rephrasing your question or check the movie title spelling.*"
@@ -96,13 +102,13 @@ class AnswerFormatter:
         if len(lines) == 0:
             # Empty result
             template = random.choice(cls.NO_RESULTS_TEMPLATES)
-            return cls.DB_PREFIX + template
+            return prefix + template
         
         elif len(lines) == 1:
             # Single result
             template = random.choice(cls.SINGLE_RESULT_TEMPLATES)
             answer = lines[0]
-            response = cls.DB_PREFIX + template.format(answer=answer)
+            response = prefix + template.format(answer=answer)
             
         else:
             # Multiple results
@@ -114,12 +120,10 @@ class AnswerFormatter:
             if len(lines) > 10:
                 formatted_answers += f"\n• ... and {len(lines) - 10} more"
             
-            response = cls.DB_PREFIX + template.format(
+            response = prefix + template.format(
                 count=min(len(lines), 10),
                 answers=formatted_answers
             )
-        
-        # Do not add any technical explanation
         
         return response
     

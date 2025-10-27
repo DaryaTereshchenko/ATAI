@@ -13,6 +13,7 @@ Orchestrates the complete embedding-based query answering pipeline:
 import sys
 import os
 import traceback
+import numpy as np  
 from typing import List, Tuple, Optional, Dict
 from rdflib import Graph, URIRef, RDFS
 
@@ -96,7 +97,7 @@ class EmbeddingQueryProcessor:
         print("   🧠 Initializing query analysis components...")
         from src.config import SPARQL_CLASSIFIER_MODEL_PATH
         self.query_analyzer = QueryAnalyzer(
-            use_transformer=True,
+            use_transformer_classifier=True,  # ✅ FIXED: Changed from use_transformer
             transformer_model_path=SPARQL_CLASSIFIER_MODEL_PATH  # Use SPARQL classifier, not question classifier
         )
         self.sparql_generator = SPARQLGenerator(self.sparql_handler)
@@ -127,7 +128,29 @@ class EmbeddingQueryProcessor:
         print(f"\n{'='*80}")
         print(f"🔍 PROCESSING HYBRID FACTUAL QUERY")
         print(f"{'='*80}\n")
-        print(f"Query: {query}\n")
+        print(f"Query: '{query}'")
+        print(f"Query length: {len(query)} characters")
+        
+        # ✅ CRITICAL: Enhanced validation for query completeness
+        if not query or len(query.strip()) < 15:  # Increased from 10
+            print(f"❌ Query is too short or empty!")
+            return "❌ The query appears to be incomplete or empty. Please provide a complete question."
+        
+        # ✅ Check for truncation indicators
+        if query.endswith('...') or query.endswith('..'):
+            print(f"⚠️  Query appears to be truncated (ends with ellipsis)")
+            return "❌ The query appears to be truncated. Please provide the complete question."
+        
+        # ✅ NEW: Check if query has proper structure (question word + content)
+        question_words = ['who', 'what', 'when', 'where', 'which', 'how', 'is', 'did', 'does', 'was', 'from']
+        has_question_word = any(word in query.lower().split() for word in question_words)
+        word_count = len(query.split())
+        
+        if not has_question_word or word_count < 5:
+            print(f"⚠️  Query structure incomplete:")
+            print(f"   Has question word: {has_question_word}")
+            print(f"   Word count: {word_count}")
+            print(f"   Consider if query was truncated during processing")
         
         try:
             # ==================== STEP 1: ANALYZE QUERY PATTERN ====================
@@ -136,6 +159,15 @@ class EmbeddingQueryProcessor:
             
             if not pattern:
                 print("❌ No pattern detected - query structure not recognized\n")
+                print(f"   Query length: {len(query)}")
+                print(f"   Word count: {word_count}")
+                print(f"   First 100 chars: '{query[:100]}'")
+                print(f"   Last 30 chars: '{query[-30:]}'")
+                print(f"   Has question word: {has_question_word}")
+                print(f"\n   Possible reasons:")
+                print(f"   • Query may be truncated or incomplete")
+                print(f"   • Question structure not recognized")
+                print(f"   • Missing key entities or relation words")
                 return self._handle_unrecognized_query(query)
             
             print(f"✅ Pattern detected:")
@@ -605,6 +637,12 @@ LIMIT 1"""
         """
         try:
             result = self.sparql_handler.execute_query(sparql, validate=True)
+            
+            # ✅ NEW: Special handling for timeout errors
+            if not result['success'] and 'timeout' in result.get('error', '').lower():
+                print(f"❌ SPARQL timeout - query may be too complex")
+                print(f"   Consider simplifying the query or optimizing the graph structure")
+            
             return result
         except Exception as e:
             print(f"❌ SPARQL execution error: {e}")
@@ -622,14 +660,7 @@ LIMIT 1"""
     ) -> str:
         """
         Format response for forward queries.
-        
-        Args:
-            pattern: Query pattern
-            movie_label: Movie name
-            data: Query results (plain text from SPARQLHandler, NOT JSON)
-            
-        Returns:
-            Formatted natural language response
+        NOW INCLUDES: Factual approach indicator.
         """
         try:
             # SPARQLHandler returns plain text, not JSON
@@ -637,7 +668,6 @@ LIMIT 1"""
             if not data or data == "No answer found in the database.":
                 return f"❌ I couldn't find any {pattern.relation.replace('_', ' ')} information for '{movie_label}' in the knowledge graph."
             
-            # Parse plain text results
             lines = [line.strip() for line in data.strip().split('\n') if line.strip()]
             
             if not lines:
@@ -645,10 +675,8 @@ LIMIT 1"""
             
             # Handle different object types
             if pattern.object_type == 'person':
-                # Extract person names
                 names = []
                 for line in lines:
-                    # Line format: "name, uri" or just "name"
                     parts = line.split(',')
                     name = parts[0].strip()
                     if name and name not in names:
@@ -657,7 +685,6 @@ LIMIT 1"""
                 if not names:
                     return f"❌ Found {pattern.relation} data but couldn't extract names."
                 
-                # Format based on relation
                 relation_text = {
                     'director': 'directed by',
                     'cast_member': 'starring',
@@ -666,23 +693,21 @@ LIMIT 1"""
                 }.get(pattern.relation, pattern.relation.replace('_', ' '))
                 
                 if len(names) == 1:
-                    return f"✅ **'{movie_label}'** was {relation_text} **{names[0]}**."
+                    # ✅ Format as "The factual answer is: X"
+                    return f"The factual answer is: {names[0]}"
                 else:
-                    names_str = ", ".join(names[:-1]) + f", and {names[-1]}"
-                    return f"✅ **'{movie_label}'** was {relation_text}:\n\n{names_str}"
+                    # ✅ Format as "The factual answer is: X and Y"
+                    names_str = " and ".join(names)
+                    return f"The factual answer is: {names_str}"
             
             elif pattern.object_type == 'date':
-                # Extract date (first line)
                 date_value = lines[0].split(',')[0].strip()
-                # Extract year from date
-                year = date_value.split('-')[0] if '-' in date_value else date_value
-                return f"✅ **'{movie_label}'** was released in **{year}**."
+                # ✅ Keep full date format as in examples
+                return f"The factual answer is: {date_value}"
             
             elif pattern.object_type == 'string':
-                # Extract string values (genre, rating)
                 values = []
                 for line in lines:
-                    # Line format: "value, uri" or just "value"
                     parts = line.split(',')
                     val = parts[0].strip()
                     if val and val not in values:
@@ -692,18 +717,20 @@ LIMIT 1"""
                     return f"❌ Found {pattern.relation} data but couldn't extract values."
                 
                 if len(values) == 1:
-                    return f"✅ **'{movie_label}'** {pattern.relation.replace('_', ' ')}: **{values[0]}**"
+                    # ✅ Format as "The factual answer is: X"
+                    return f"The factual answer is: {values[0]}"
                 else:
-                    values_str = ", ".join(values)
-                    return f"✅ **'{movie_label}'** {pattern.relation.replace('_', ' ')}:\n\n{values_str}"
+                    # ✅ Format as "The factual answer is: X and Y and Z"
+                    values_str = " and ".join(values)
+                    return f"The factual answer is: {values_str}"
             
             # Default fallback
-            return f"✅ Found {len(lines)} result(s) for '{movie_label}':\n\n{data}"
+            return f"The factual answer is: {data}"
             
         except Exception as e:
             print(f"❌ Error formatting forward response: {e}")
             traceback.print_exc()
-            return f"✅ Query executed successfully. Results:\n\n{data}"
+            return f"The factual answer is: {data}"
     
     def _format_reverse_response(
         self,
@@ -711,32 +738,18 @@ LIMIT 1"""
         person_label: str,
         data: str
     ) -> str:
-        """
-        Format response for reverse queries.
-        
-        Args:
-            pattern: Query pattern
-            person_label: Person name
-            data: Query results (plain text from SPARQLHandler, NOT JSON)
-            
-        Returns:
-            Formatted natural language response
-        """
+        """Format response for reverse queries with factual indicator."""
         try:
-            # SPARQLHandler returns plain text, not JSON
             if not data or data == "No answer found in the database.":
                 return f"❌ I couldn't find any films where **{person_label}** was the {pattern.relation.replace('_', ' ')} in the knowledge graph."
             
-            # Parse plain text results
             lines = [line.strip() for line in data.strip().split('\n') if line.strip()]
             
             if not lines:
                 return f"❌ I couldn't find any films where **{person_label}** was the {pattern.relation.replace('_', ' ')} in the knowledge graph."
             
-            # Extract movie names
             movies = []
             for line in lines:
-                # Line format: "movie, uri" or just "movie"
                 parts = line.split(',')
                 movie = parts[0].strip()
                 if movie and movie not in movies:
@@ -745,24 +758,17 @@ LIMIT 1"""
             if not movies:
                 return f"❌ Found data but couldn't extract movie names."
             
-            # Format response based on relation
-            relation_text = {
-                'director': 'directed',
-                'cast_member': 'starred in',
-                'screenwriter': 'wrote',
-                'producer': 'produced'
-            }.get(pattern.relation, pattern.relation.replace('_', ' '))
-            
+            # ✅ Format with "The factual answer is:" prefix
             if len(movies) == 1:
-                return f"✅ **{person_label}** {relation_text} **{movies[0]}**."
+                return f"The factual answer is: {movies[0]}"
             else:
-                movies_list = "\n".join([f"• {movie}" for movie in movies])
-                return f"✅ **{person_label}** {relation_text} **{len(movies)} films**:\n\n{movies_list}"
+                movies_str = " and ".join(movies)
+                return f"The factual answer is: {movies_str}"
             
         except Exception as e:
             print(f"❌ Error formatting reverse response: {e}")
             traceback.print_exc()
-            return f"✅ Query executed successfully. Results:\n\n{data}"
+            return f"The factual answer is: {data}"
     
     def _format_verification_response(
         self,
@@ -771,25 +777,11 @@ LIMIT 1"""
         movie_label: str,
         data: str
     ) -> str:
-        """
-        Format response for verification queries.
-        
-        Args:
-            pattern: Query pattern
-            person_label: Person name
-            movie_label: Movie name
-            data: Query results (plain text from SPARQLHandler, NOT JSON)
-            
-        Returns:
-            Yes/No natural language response
-        """
+        """Format response for verification queries with factual indicator."""
         try:
-            # For ASK queries, SPARQLHandler should return "true" or "false" or boolean result
-            # Check if data contains affirmative indicators
             data_lower = data.lower().strip()
             is_true = data_lower in ['true', 'yes', '1'] or data_lower.startswith('true')
             
-            # Format based on relation
             relation_text = {
                 'director': 'directed',
                 'cast_member': 'starred in',
@@ -797,10 +789,10 @@ LIMIT 1"""
                 'producer': 'produced'
             }.get(pattern.relation, pattern.relation.replace('_', ' '))
             
+            # ✅ Format with "The factual answer is:" prefix
             if is_true:
-                return f"✅ **Yes**, **{person_label}** {relation_text} **'{movie_label}'**."
+                return f"The factual answer is: Yes, {person_label} {relation_text} '{movie_label}'."
             else:
-                # Convert past tense to present for "did not" phrasing
                 relation_negative = {
                     'directed': 'direct',
                     'starred in': 'star in',
@@ -808,13 +800,13 @@ LIMIT 1"""
                     'produced': 'produce'
                 }.get(relation_text, relation_text)
                 
-                return f"❌ **No**, **{person_label}** did not {relation_negative} **'{movie_label}'**."
+                return f"The factual answer is: No, {person_label} did not {relation_negative} '{movie_label}'."
             
         except Exception as e:
             print(f"❌ Error formatting verification response: {e}")
             traceback.print_exc()
-            return f"✅ Query executed. Result: {data}"
-
+            return f"The factual answer is: {data}"
+    
     def _handle_unrecognized_query(self, query: str) -> str:
         """
         Handle queries that don't match any known pattern.
@@ -1007,3 +999,302 @@ LIMIT 10"""
         else:
             movies_list = "\n".join([f"• {movie}" for movie in movies])
             return f"✅ Found **{len(movies)} movies** matching {constraint_desc}:\n\n{movies_list}"
+    
+    def process_embedding_factual_query(self, query: str) -> str:
+        """
+        Process factual query using PURE EMBEDDING APPROACH (TransE computations).
+        
+        This uses TransE embeddings in hyper-dimensional space:
+        - Extract entity from query
+        - Extract relation from query (using embeddings)
+        - Compute: head + relation ≈ tail (or reverse)
+        - Find nearest entity in embedding space
+        
+        Args:
+            query: Natural language query
+            
+        Returns:
+            Natural language response with entity type
+        """
+        print(f"\n{'='*80}")
+        print(f"🔢 PROCESSING PURE EMBEDDING QUERY (TransE)")
+        print(f"{'='*80}\n")
+        print(f"Query: {query}\n")
+        
+        try:
+            # Step 1: Analyze pattern (forward/reverse)
+            print("📝 Step 1: Analyzing query pattern...")
+            pattern = self.query_analyzer.analyze(query)
+            
+            if not pattern:
+                print("❌ No pattern detected\n")
+                return "❌ I couldn't understand the structure of your question for embedding-based answering."
+            
+            print(f"✅ Pattern: {pattern.pattern_type} + {pattern.relation}")
+            print(f"   Confidence: {pattern.confidence:.2%}\n")
+            
+            # Step 2: Extract known entity
+            print("📝 Step 2: Extracting entity from query...")
+            
+            if pattern.pattern_type == 'forward':
+                # Forward: Movie → Property (extract movie)
+                movie_entities = self.entity_extractor.extract_entities(
+                    query,
+                    entity_type="http://www.wikidata.org/entity/Q11424",
+                    threshold=75
+                )
+                
+                if not movie_entities:
+                    print("❌ No movie entity found\n")
+                    return "❌ I couldn't identify the movie in your question."
+                
+                movie_uri, movie_text, score = movie_entities[0]
+                movie_label = self.entity_extractor.get_entity_label(movie_uri)
+                print(f"✅ Movie: '{movie_label}' (confidence: {score}%)\n")
+                
+                # Get movie embedding
+                movie_emb = self.embedding_handler.get_entity_embedding(movie_uri)
+                if movie_emb is None:
+                    return f"❌ No embedding found for '{movie_label}' in TransE space."
+                
+                return self._compute_forward_embedding(query, pattern, movie_uri, movie_label, movie_emb)
+            
+            elif pattern.pattern_type == 'reverse':
+                # Reverse: Person → Movies (extract person)
+                person_entities = self.entity_extractor.extract_entities(
+                    query,
+                    entity_type="http://www.wikidata.org/entity/Q5",
+                    threshold=75
+                )
+                
+                if not person_entities:
+                    print("❌ No person entity found\n")
+                    return "❌ I couldn't identify the person in your question."
+                
+                person_uri, person_text, score = person_entities[0]
+                person_label = self.entity_extractor.get_entity_label(person_uri)
+                print(f"✅ Person: '{person_label}' (confidence: {score}%)\n")
+                
+                # Get person embedding
+                person_emb = self.embedding_handler.get_entity_embedding(person_uri)
+                if person_emb is None:
+                    return f"❌ No embedding found for '{person_label}' in TransE space."
+                
+                return self._compute_reverse_embedding(query, pattern, person_uri, person_label, person_emb)
+            
+            else:
+                return "❌ Embedding approach only supports forward and reverse queries (not verification)."
+        
+        except Exception as e:
+            print(f"❌ Error in embedding processing: {e}")
+            traceback.print_exc()
+            return f"❌ An error occurred in embedding-based processing: {str(e)}"
+    
+    def _compute_forward_embedding(
+        self,
+        query: str,
+        pattern: QueryPattern,
+        entity_uri: str,
+        entity_label: str,
+        entity_emb: np.ndarray
+    ) -> str:
+        """
+        Compute answer using forward TransE: head + relation ≈ tail
+        
+        Args:
+            query: Original query
+            pattern: Query pattern
+            entity_uri: Entity URI (head)
+            entity_label: Entity label (head)
+            entity_emb: Entity embedding (head)
+            
+        Returns:
+            Natural language response with entity type
+        """
+        print("📝 Step 3: Computing in TransE space (forward)...")
+        
+        # Map relation to URI
+        relation_uris = {
+            'director': 'http://www.wikidata.org/prop/direct/P57',
+            'cast_member': 'http://www.wikidata.org/prop/direct/P161',
+            'screenwriter': 'http://www.wikidata.org/prop/direct/P58',
+            'producer': 'http://www.wikidata.org/prop/direct/P162',
+            'genre': 'http://www.wikidata.org/prop/direct/P136',
+        }
+        
+        relation_uri = relation_uris.get(pattern.relation)
+        if not relation_uri:
+            return f"❌ Relation '{pattern.relation}' not supported in embedding approach."
+        
+        # Get relation embedding
+        relation_emb = self.embedding_handler.get_relation_embedding(relation_uri)
+        if relation_emb is None:
+            return f"❌ No embedding found for relation '{pattern.relation}' in TransE space."
+        
+        print(f"   Head: {entity_label}")
+        print(f"   Relation: {pattern.relation}")
+        print(f"   Computing: head + relation ≈ tail\n")
+        
+        # TransE: tail ≈ head + relation
+        target_emb = entity_emb + relation_emb
+        
+        # Find nearest entities (filter by expected type)
+        print("📝 Step 4: Finding nearest entity in embedding space...")
+        
+        # Get all entities of expected type
+        type_uris = {
+            'person': 'http://www.wikidata.org/entity/Q5',
+            'movie': 'http://www.wikidata.org/entity/Q11424',
+            'string': None  # Genre entities
+        }
+        
+        expected_type = type_uris.get(pattern.object_type)
+        
+        if expected_type:
+            # Filter by type
+            candidate_uris = self.embedding_handler.get_entities_by_type(
+                expected_type,
+                self.sparql_handler.graph
+            )
+            nearest = self.embedding_handler.find_nearest_entities(
+                target_emb,
+                top_k=1,
+                filter_uris=candidate_uris
+            )
+        else:
+            # No filtering (for genres, etc.)
+            nearest = self.embedding_handler.find_nearest_entities(
+                target_emb,
+                top_k=1
+            )
+        
+        if not nearest:
+            return f"❌ No matching entities found in embedding space."
+        
+        answer_uri, similarity = nearest[0]
+        answer_label = self.entity_extractor.get_entity_label(answer_uri)
+        
+        print(f"✅ Nearest entity: '{answer_label}' (similarity: {similarity:.4f})")
+        
+        # Get entity type for answer
+        entity_type = self._get_entity_type_label(answer_uri)
+        
+        print(f"   Type: {entity_type}\n")
+        print("="*80)
+        
+        # Format response
+        relation_text = {
+            'director': 'director',
+            'cast_member': 'cast member',
+            'screenwriter': 'screenwriter',
+            'producer': 'producer',
+            'genre': 'genre'
+        }.get(pattern.relation, pattern.relation)
+        
+        return f"The answer suggested by embeddings is: **{answer_label}** (type: {entity_type})"
+    
+    def _compute_reverse_embedding(
+        self,
+        query: str,
+        pattern: QueryPattern,
+        entity_uri: str,
+        entity_label: str,
+        entity_emb: np.ndarray
+    ) -> str:
+        """
+        Compute answer using reverse TransE: tail - relation ≈ head
+        
+        Args:
+            query: Original query
+            pattern: Query pattern
+            entity_uri: Entity URI (tail)
+            entity_label: Entity label (tail)
+            entity_emb: Entity embedding (tail)
+            
+        Returns:
+            Natural language response with entity type
+        """
+        print("📝 Step 3: Computing in TransE space (reverse)...")
+        
+        # Map relation to URI
+        relation_uris = {
+            'director': 'http://www.wikidata.org/prop/direct/P57',
+            'cast_member': 'http://www.wikidata.org/prop/direct/P161',
+            'screenwriter': 'http://www.wikidata.org/prop/direct/P58',
+            'producer': 'http://www.wikidata.org/prop/direct/P162',
+        }
+        
+        relation_uri = relation_uris.get(pattern.relation)
+        if not relation_uri:
+            return f"❌ Relation '{pattern.relation}' not supported in embedding approach."
+        
+        # Get relation embedding
+        relation_emb = self.embedding_handler.get_relation_embedding(relation_uri)
+        if relation_emb is None:
+            return f"❌ No embedding found for relation '{pattern.relation}' in TransE space."
+        
+        print(f"   Tail: {entity_label}")
+        print(f"   Relation: {pattern.relation}")
+        print(f"   Computing: tail - relation ≈ head\n")
+        
+        # TransE reverse: head ≈ tail - relation
+        target_emb = entity_emb - relation_emb
+        
+        # Find nearest movie entities
+        print("📝 Step 4: Finding nearest movie in embedding space...")
+        
+        movie_type_uri = 'http://www.wikidata.org/entity/Q11424'
+        candidate_uris = self.embedding_handler.get_entities_by_type(
+            movie_type_uri,
+            self.sparql_handler.graph
+        )
+        
+        nearest = self.embedding_handler.find_nearest_entities(
+            target_emb,
+            top_k=1,
+            filter_uris=candidate_uris
+        )
+        
+        if not nearest:
+            return f"❌ No matching movies found in embedding space."
+        
+        answer_uri, similarity = nearest[0]
+        answer_label = self.entity_extractor.get_entity_label(answer_uri)
+        
+        print(f"✅ Nearest movie: '{answer_label}' (similarity: {similarity:.4f})")
+        
+        # Get entity type
+        entity_type = self._get_entity_type_label(answer_uri)
+        
+        print(f"   Type: {entity_type}\n")
+        print("="*80)
+        
+        return f"The answer suggested by embeddings is: **{answer_label}** (type: {entity_type})"
+    
+    def _get_entity_type_label(self, entity_uri: str) -> str:
+        """
+        Get Wikidata type code for an entity (e.g., Q5, Q11424).
+        
+        Args:
+            entity_uri: Entity URI
+            
+        Returns:
+            Type label (e.g., "Q5", "Q11424", "Q201658")
+        """
+        from rdflib import URIRef
+        
+        P31 = URIRef("http://www.wikidata.org/prop/direct/P31")
+        entity_ref = URIRef(entity_uri)
+        
+        # Get wdt:P31 (instance of)
+        for type_uri in self.sparql_handler.graph.objects(entity_ref, P31):
+            type_str = str(type_uri)
+            # Extract Qxxx code
+            if 'wikidata.org/entity/' in type_str:
+                return type_str.split('/')[-1]
+        
+        # Fallback: check if it's a known type
+        if '/entity/Q' in entity_uri:
+            return entity_uri.split('/')[-1]
+        
+        return "unknown"

@@ -30,58 +30,48 @@ class QueryPattern:
 
 
 class QueryAnalyzer:
-    """
-    Analyzes queries to understand intent and structure.
-    Uses fine-tuned transformer model OR falls back to rule-based patterns.
-    """
+    """Analyzes natural language queries to extract patterns and entities."""
     
-    def __init__(
-        self,
-        use_transformer: bool = True,
-        transformer_model_path: str = None
-    ):
+    def __init__(self, use_transformer_classifier: bool = True, transformer_model_path: str = None):
         """
-        Initialize query analyzer.
+        Initialize the query analyzer.
         
         Args:
-            use_transformer: Whether to use transformer classifier
-            transformer_model_path: Path to fine-tuned SPARQL pattern classifier model (defaults to config value)
+            use_transformer_classifier: Whether to use transformer-based classification
+            transformer_model_path: Path to the transformer model
         """
-        # Use config path if not specified
-        if transformer_model_path is None:
-            from src.config import SPARQL_CLASSIFIER_MODEL_PATH
-            transformer_model_path = SPARQL_CLASSIFIER_MODEL_PATH
+        self.use_transformer = use_transformer_classifier
         
-        self.use_transformer = use_transformer and TRANSFORMER_AVAILABLE
-        self.transformer_classifier = None
-        
+        # Initialize transformer classifier if requested
         if self.use_transformer:
-            try:
-                import os
-                if os.path.exists(transformer_model_path):
-                    print(f"🤖 Loading transformer SPARQL pattern classifier...")
-                    self.transformer_classifier = TransformerSPARQLClassifier(
-                        model_path=transformer_model_path,
-                        confidence_threshold=0.6
-                    )
-                    print(f"✅ SPARQL pattern classifier loaded from {transformer_model_path}\n")
-                else:
-                    print(f"⚠️  SPARQL classifier model not found: {transformer_model_path}")
-                    print("   Falling back to rule-based pattern analysis\n")
-                    self.use_transformer = False
-            except Exception as e:
-                print(f"⚠️  Failed to load SPARQL pattern classifier: {e}")
-                print("   Falling back to rule-based pattern analysis\n")
-                import traceback
-                traceback.print_exc()
-                self.use_transformer = False
+            if transformer_model_path is None:
+                from src.config import SPARQL_CLASSIFIER_MODEL_PATH
+                transformer_model_path = SPARQL_CLASSIFIER_MODEL_PATH
+            
+            self.transformer_classifier = TransformerSPARQLClassifier(
+                model_path=transformer_model_path,
+                # ✅ REMOVED: num_labels parameter - not accepted by TransformerSPARQLClassifier
+                confidence_threshold=0.6
+            )
+        else:
+            self.transformer_classifier = None
         
-        # Always initialize rule-based patterns as fallback
-        self._setup_patterns()
+        # Define supported relations
+        self.supported_relations = [
+            'director',
+            'cast_member',
+            'genre',
+            'publication_date',
+            'screenwriter',
+            'producer',
+            'rating',
+            'country',  # ✅ NEW: added country
+        ]
+        
+        # Only keep minimal entity hint patterns and type mappings
         self._setup_entity_hints()
-        
-        # Mapping for subject/object types
         self._setup_type_mappings()
+
     
     def _setup_type_mappings(self):
         """Map relations to subject/object types."""
@@ -93,6 +83,7 @@ class QueryAnalyzer:
             'genre': {'subject': 'movie', 'object': 'string'},
             'publication_date': {'subject': 'movie', 'object': 'date'},
             'rating': {'subject': 'movie', 'object': 'string'},
+            'country': {'subject': 'movie', 'object': 'string'},  # ✅ NEW
         }
     
     def _setup_entity_hints(self):
@@ -105,363 +96,28 @@ class QueryAnalyzer:
             'person_context': r'(?:did|by|with)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\s+(?:direct|star|write|produce)',
         }
     
-    def _setup_patterns(self):
-        """Define comprehensive query patterns for all supported query types."""
-        
-        # ==================== FORWARD PATTERNS ====================
-        # Movie/Entity → Property (e.g., "Who directed The Matrix?")
-        self.forward_patterns = [
-            # Director queries
-            {
-                'regex': r'\b(?:who|what)\s+(?:is|was|are|were)?\s*(?:the)?\s*director[s]?\s+(?:of|for)\s+',
-                'relation': 'director',
-                'subject': 'movie',
-                'object': 'person',
-                'confidence': 0.95
-            },
-            {
-                'regex': r'\b(?:who)\s+directed\s+',
-                'relation': 'director',
-                'subject': 'movie',
-                'object': 'person',
-                'confidence': 0.98
-            },
-            {
-                'regex': r'\bdirector\s+of\s+',
-                'relation': 'director',
-                'subject': 'movie',
-                'object': 'person',
-                'confidence': 0.90
-            },
-            
-            # Cast/Actor queries
-            {
-                'regex': r'\b(?:who|what)\s+(?:is|was|are|were)?\s*(?:the)?\s*(?:cast|actors?|stars?|actresses?)\s+(?:of|in|for)\s+',
-                'relation': 'cast_member',
-                'subject': 'movie',
-                'object': 'person',
-                'confidence': 0.95
-            },
-            {
-                'regex': r'\b(?:who)\s+(?:acted|starred|plays?|appear(?:ed|s)?)\s+(?:in|on)\s+',
-                'relation': 'cast_member',
-                'subject': 'movie',
-                'object': 'person',
-                'confidence': 0.95
-            },
-            {
-                'regex': r'\bcast\s+(?:of|in|for)\s+',
-                'relation': 'cast_member',
-                'subject': 'movie',
-                'object': 'person',
-                'confidence': 0.90
-            },
-            {
-                'regex': r'\b(?:actors?|stars?)\s+(?:of|in)\s+',
-                'relation': 'cast_member',
-                'subject': 'movie',
-                'object': 'person',
-                'confidence': 0.90
-            },
-            
-            # Genre queries
-            {
-                'regex': r'\b(?:what)\s+(?:is|was|are|were)?\s*(?:the)?\s*genre[s]?\s+(?:of|for|is)\s+',
-                'relation': 'genre',
-                'subject': 'movie',
-                'object': 'string',
-                'confidence': 0.95
-            },
-            {
-                'regex': r'\bgenre[s]?\s+(?:of|for)\s+',
-                'relation': 'genre',
-                'subject': 'movie',
-                'object': 'string',
-                'confidence': 0.90
-            },
-            {
-                'regex': r'\b(?:what)\s+(?:kind|type)\s+of\s+(?:movie|film)\s+is\s+',
-                'relation': 'genre',
-                'subject': 'movie',
-                'object': 'string',
-                'confidence': 0.85
-            },
-            
-            # Release date queries
-            {
-                'regex': r'\b(?:when)\s+(?:was|is|did)\s+.*?\s+(?:released?|come\s+out|premiere[d]?)\b',
-                'relation': 'publication_date',
-                'subject': 'movie',
-                'object': 'date',
-                'confidence': 0.98
-            },
-            {
-                'regex': r'\brelease\s+date\s+(?:of|for)\s+',
-                'relation': 'publication_date',
-                'subject': 'movie',
-                'object': 'date',
-                'confidence': 0.95
-            },
-            {
-                'regex': r'\b(?:what)\s+year\s+(?:was|is|did)\s+.*?\s+(?:released?|come\s+out)\b',
-                'relation': 'publication_date',
-                'subject': 'movie',
-                'object': 'date',
-                'confidence': 0.95
-            },
-            
-            # Screenwriter queries
-            {
-                'regex': r'\b(?:who)\s+(?:wrote|is\s+the\s+(?:screen)?writer)\s+',
-                'relation': 'screenwriter',
-                'subject': 'movie',
-                'object': 'person',
-                'confidence': 0.95
-            },
-            {
-                'regex': r'\b(?:who)\s+(?:is|was|are|were)?\s*(?:the)?\s*(?:screen)?writer[s]?\s+(?:of|for)\s+',
-                'relation': 'screenwriter',
-                'subject': 'movie',
-                'object': 'person',
-                'confidence': 0.95
-            },
-            {
-                'regex': r'\bscreenwriter[s]?\s+(?:of|for)\s+',
-                'relation': 'screenwriter',
-                'subject': 'movie',
-                'object': 'person',
-                'confidence': 0.90
-            },
-            
-            # Producer queries
-            {
-                'regex': r'\b(?:who)\s+(?:produced|is\s+the\s+producer)\s+',
-                'relation': 'producer',
-                'subject': 'movie',
-                'object': 'person',
-                'confidence': 0.95
-            },
-            {
-                'regex': r'\b(?:who)\s+(?:is|was|are|were)?\s*(?:the)?\s*producer[s]?\s+(?:of|for)\s+',
-                'relation': 'producer',
-                'subject': 'movie',
-                'object': 'person',
-                'confidence': 0.95
-            },
-            
-            # Rating queries
-            {
-                'regex': r'\b(?:what)\s+(?:is|was)?\s*(?:the)?\s*rating\s+(?:of|for)\s+',
-                'relation': 'rating',
-                'subject': 'movie',
-                'object': 'string',
-                'confidence': 0.95
-            },
-            {
-                'regex': r'\brating\s+(?:of|for)\s+',
-                'relation': 'rating',
-                'subject': 'movie',
-                'object': 'string',
-                'confidence': 0.90
-            }
-        ]
-        
-        # ==================== REVERSE PATTERNS ====================
-        # Person → Movies (e.g., "What films did Christopher Nolan direct?")
-        self.reverse_patterns = [
-            # Director filmography
-            {
-                'regex': r'\b(?:what|which)\s+(?:films?|movies?)\s+(?:did|has|have)\s+.*?\s+direct(?:ed)?\b',
-                'relation': 'director',
-                'subject': 'person',
-                'object': 'movie',
-                'confidence': 0.98
-            },
-            {
-                'regex': r'\b(?:films?|movies?)\s+directed\s+by\b',
-                'relation': 'director',
-                'subject': 'person',
-                'object': 'movie',
-                'confidence': 0.95
-            },
-            {
-                'regex': r'\b(?:list|show|find|give\s+me)\s+.*?\s+(?:films?|movies?)\s+.*?\s+directed\b',
-                'relation': 'director',
-                'subject': 'person',
-                'object': 'movie',
-                'confidence': 0.90
-            },
-            {
-                'regex': r'\b(?:films?|movies?)\s+by\s+(?:director)\b',
-                'relation': 'director',
-                'subject': 'person',
-                'object': 'movie',
-                'confidence': 0.85
-            },
-            {
-                'regex': r'\b.*?\s+(?:directed|directs)\s+(?:which|what)\s+(?:films?|movies?)\b',
-                'relation': 'director',
-                'subject': 'person',
-                'object': 'movie',
-                'confidence': 0.90
-            },
-            
-            # Actor filmography
-            {
-                'regex': r'\b(?:what|which)\s+(?:films?|movies?)\s+(?:did|has|have)\s+.*?\s+(?:star(?:red)?|act(?:ed)?)\s+(?:in|on)\b',
-                'relation': 'cast_member',
-                'subject': 'person',
-                'object': 'movie',
-                'confidence': 0.98
-            },
-            {
-                'regex': r'\b(?:films?|movies?)\s+(?:starring|featuring|with)\b',
-                'relation': 'cast_member',
-                'subject': 'person',
-                'object': 'movie',
-                'confidence': 0.90
-            },
-            {
-                'regex': r'\b(?:list|show|find)\s+.*?\s+(?:films?|movies?)\s+.*?\s+(?:starred?|acted?)\b',
-                'relation': 'cast_member',
-                'subject': 'person',
-                'object': 'movie',
-                'confidence': 0.90
-            },
-            {
-                'regex': r'\b.*?\s+(?:starred?|acted?)\s+(?:in\s+)?(?:which|what)\s+(?:films?|movies?)\b',
-                'relation': 'cast_member',
-                'subject': 'person',
-                'object': 'movie',
-                'confidence': 0.90
-            },
-            
-            # Screenwriter filmography
-            {
-                'regex': r'\b(?:what|which)\s+(?:films?|movies?)\s+(?:did|has|have)\s+.*?\s+(?:writ(?:e|ten)|screenplay)\b',
-                'relation': 'screenwriter',
-                'subject': 'person',
-                'object': 'movie',
-                'confidence': 0.95
-            },
-            {
-                'regex': r'\b(?:films?|movies?)\s+written\s+by\b',
-                'relation': 'screenwriter',
-                'subject': 'person',
-                'object': 'movie',
-                'confidence': 0.95
-            },
-            
-            # Producer filmography
-            {
-                'regex': r'\b(?:what|which)\s+(?:films?|movies?)\s+(?:did|has|have)\s+.*?\s+produce[d]?\b',
-                'relation': 'producer',
-                'subject': 'person',
-                'object': 'movie',
-                'confidence': 0.95
-            },
-            {
-                'regex': r'\b(?:films?|movies?)\s+produced\s+by\b',
-                'relation': 'producer',
-                'subject': 'person',
-                'object': 'movie',
-                'confidence': 0.95
-            }
-        ]
-        
-        # ==================== VERIFICATION PATTERNS ====================
-        # Does X have relation Y? (e.g., "Did Christopher Nolan direct Inception?")
-        self.verification_patterns = [
-            {
-                'regex': r'\b(?:did|is|was)\s+(\w+(?:\s+\w+)*?)\s+(?:the\s+)?(direct(?:or)?|star|act(?:or)?|writ(?:e|er)|produc(?:e|er))\s+(?:of|in|for)\s+[\'""]?([^\'"",?]+)[\'""]?',
-                'relation_map': {
-                    'direct': 'director',
-                    'director': 'director',
-                    'star': 'cast_member',
-                    'act': 'cast_member',
-                    'actor': 'cast_member',
-                    'write': 'screenwriter',
-                    'writer': 'screenwriter',
-                    'produce': 'producer',
-                    'producer': 'producer'
-                },
-                'confidence': 0.95
-            },
-            {
-                'regex': r'\b(?:is|was)\s+(\w+(?:\s+\w+)*?)\s+(?:in|a\s+cast\s+member\s+of)\s+[\'""]?([^\'"",?]+)[\'""]?',
-                'relation': 'cast_member',
-                'confidence': 0.95
-            },
-            {
-                'regex': r'\b(?:did)\s+[\'""]?([^\'"",?]+)[\'""]?\s+(?:star|feature)\s+(\w+(?:\s+\w+)*?)',
-                'relation': 'cast_member',
-                'reverse': True,
-                'confidence': 0.90
-            }
-        ]
-        
-        # ==================== COMPLEX/MULTI-CONSTRAINT PATTERNS ====================
-        # Queries with multiple filters (country + award, genre + year, etc.)
-        self.complex_patterns = [
-            {
-                'regex': r'(?:which|what)\s+movie.*?(?:from|of)\s+(?:the\s+)?country.*?(?:received?|won|got)\s+(?:the\s+)?award',
-                'constraints': ['country', 'award'],
-                'subject': 'movie',
-                'confidence': 0.92
-            },
-            {
-                'regex': r'(?:which|what)\s+(?:film|movie).*?award.*?country',
-                'constraints': ['award', 'country'],
-                'subject': 'movie',
-                'confidence': 0.90
-            }
-        ]
-    
     def analyze(self, query: str) -> Optional[QueryPattern]:
         """
         Analyze query to detect pattern and intent.
-        Uses transformer model if available, otherwise rule-based.
+        Uses transformer model PRIMARILY, minimal rule-based fallback.
         """
         query_lower = query.lower()
         entity_hints = self._extract_entity_hints(query)
         
-        # Check complex patterns first (most specific)
-        pattern = self._check_complex_patterns(query_lower, entity_hints)
-        if pattern:
-            print(f"[Analyzer] ✅ Detected complex pattern (pre-transformer check)")
-            return pattern
-        
-        # PRIMARY: Try transformer classification for standard patterns
+        # PRIMARY: Try transformer classification
         if self.use_transformer and self.transformer_classifier:
             pattern = self._transformer_classify(query, entity_hints)
             if pattern and pattern.confidence > 0.6:
-                # ✅ Check if this is a superlative variant of forward query
+                # ✅ Check if this is a superlative variant
                 if pattern.pattern_type == 'forward' and self._is_superlative_query(query_lower):
                     print(f"[Analyzer] ✅ Detected superlative modifier on forward query")
                     pattern.extracted_entities = pattern.extracted_entities or {}
                     pattern.extracted_entities['superlative'] = self._extract_superlative_type(query_lower)
                 return pattern
         
-        # FALLBACK: Rule-based classification
-        
-        pattern = self._check_verification_patterns(query_lower, entity_hints)
-        if pattern:
-            return pattern
-        
-        pattern = self._check_reverse_patterns(query_lower, entity_hints)
-        if pattern:
-            return pattern
-        
-        pattern = self._check_forward_patterns(query_lower, entity_hints)
-        if pattern:
-            # ✅ Check if this is a superlative variant
-            if self._is_superlative_query(query_lower):
-                print(f"[Analyzer] ✅ Detected superlative modifier on forward query")
-                pattern.extracted_entities = pattern.extracted_entities or {}
-                pattern.extracted_entities['superlative'] = self._extract_superlative_type(query_lower)
-            return pattern
-        
-        return None
+        # FALLBACK: Minimal rule-based classification for catastrophic failure
+        print("[Analyzer] ⚠️  Transformer failed, using minimal fallback rules...")
+        return self._minimal_fallback_classify(query, entity_hints)
     
     def _is_superlative_query(self, query: str) -> bool:
         """Check if query contains superlative modifiers (highest/lowest/best/worst)."""
@@ -584,138 +240,109 @@ class QueryAnalyzer:
         
         return hints
     
-    def _check_forward_patterns(self, query: str, entity_hints: dict) -> Optional[QueryPattern]:
+    def _minimal_fallback_classify(self, query: str, entity_hints: dict) -> Optional[QueryPattern]:
         """
-        Check if query matches forward query patterns.
-        Enhanced with entity hints for better confidence scoring.
+        Minimal rule-based fallback when transformer completely fails.
+        Only handles most basic patterns with high confidence requirements.
         """
-        for pattern in self.forward_patterns:
-            if re.search(pattern['regex'], query, re.IGNORECASE):
-                # Boost confidence if we have entity hints
-                confidence = pattern['confidence']
-                if entity_hints['quoted'] or entity_hints['capitalized']:
-                    confidence = min(0.99, confidence + 0.05)
-                
+        q = query.lower()
+        
+        # ✅ NEW: Check for country queries (forward query about movie country)
+        if any(word in q for word in ['country', 'from what country', 'which country']):
+            print("[Analyzer] Detected country query pattern")
+            return QueryPattern(
+                pattern_type='forward',
+                relation='country',
+                subject_type='movie',
+                object_type='string',
+                confidence=0.75,
+                extracted_entities=entity_hints
+            )
+        
+        # Check for verification questions (yes/no)
+        if any(word in q[:10] for word in ['did', 'is', 'was', 'does', 'has']):
+            # Very basic verification detection
+            if 'direct' in q:
                 return QueryPattern(
-                    pattern_type='forward',
-                    relation=pattern['relation'],
-                    subject_type=pattern['subject'],
-                    object_type=pattern['object'],
-                    confidence=confidence,
+                    pattern_type='verification',
+                    relation='director',
+                    subject_type='mixed',
+                    object_type='mixed',
+                    confidence=0.7,
                     extracted_entities=entity_hints
                 )
-        return None
-    
-    def _check_reverse_patterns(self, query: str, entity_hints: dict) -> Optional[QueryPattern]:
-        """Check if query matches reverse query patterns with entity hints."""
-        for pattern in self.reverse_patterns:
-            if re.search(pattern['regex'], query, re.IGNORECASE):
-                confidence = pattern['confidence']
-                if entity_hints['quoted'] or entity_hints['capitalized']:
-                    confidence = min(0.99, confidence + 0.05)
-                
+        
+        # Check for reverse queries (person → movies)
+        if any(phrase in q for phrase in ['what movies', 'what films', 'which movies', 'which films']):
+            if 'direct' in q:
                 return QueryPattern(
                     pattern_type='reverse',
-                    relation=pattern['relation'],
-                    subject_type=pattern['subject'],
-                    object_type=pattern['object'],
-                    confidence=confidence,
+                    relation='director',
+                    subject_type='person',
+                    object_type='movie',
+                    confidence=0.7,
                     extracted_entities=entity_hints
                 )
-        return None
-    
-    def _check_verification_patterns(self, query: str, entity_hints: dict) -> Optional[QueryPattern]:
-        """Check if query matches verification query patterns with entity hints."""
-        for pattern in self.verification_patterns:
-            match = re.search(pattern['regex'], query, re.IGNORECASE)
-            if match:
-                relation = pattern.get('relation')
-                
-                if not relation and 'relation_map' in pattern:
-                    groups = match.groups()
-                    if len(groups) >= 2:
-                        verb = groups[1].lower()
-                        verb_clean = re.sub(r'(or|er)$', '', verb)
-                        relation = pattern['relation_map'].get(verb_clean) or pattern['relation_map'].get(verb)
-                
-                if relation:
-                    confidence = pattern['confidence']
-                    # Boost if we have two entities (movie + person)
-                    if len(entity_hints['quoted']) >= 2 or len(entity_hints['capitalized']) >= 2:
-                        confidence = min(0.99, confidence + 0.05)
-                    
-                    return QueryPattern(
-                        pattern_type='verification',
-                        relation=relation,
-                        subject_type='mixed',
-                        object_type='mixed',
-                        confidence=confidence,
-                        extracted_entities=entity_hints
-                    )
-        return None
-    
-    def _check_complex_patterns(self, query: str, entity_hints: dict) -> Optional[QueryPattern]:
-        """
-        Check if query matches complex multi-constraint patterns.
-        These require special handling with multiple filters.
-        """
-        for pattern in self.complex_patterns:
-            if re.search(pattern['regex'], query, re.IGNORECASE):
+            elif any(word in q for word in ['star', 'act']):
                 return QueryPattern(
-                    pattern_type='complex',  # Special type
-                    relation='multi_constraint',
-                    subject_type=pattern['subject'],
-                    object_type='mixed',
-                    confidence=pattern['confidence'],
-                    extracted_entities={
-                        'constraints': pattern['constraints'],
-                        'quoted': entity_hints.get('quoted', [])
-                    }
+                    pattern_type='reverse',
+                    relation='cast_member',
+                    subject_type='person',
+                    object_type='movie',
+                    confidence=0.7,
+                    extracted_entities=entity_hints
                 )
+        
+        # Default: forward query about director
+        if 'who' in q[:10] and 'direct' in q:
+            return QueryPattern(
+                pattern_type='forward',
+                relation='director',
+                subject_type='movie',
+                object_type='person',
+                confidence=0.6,
+                extracted_entities=entity_hints
+            )
+        
+        # If nothing matches, return None
+        print("[Analyzer] ❌ No pattern detected even with fallback rules")
         return None
-    
+
     def get_supported_relations(self) -> list:
         """
-        Get list of all supported relations.
+        Get list of all supported relations from transformer classifier.
         
         Returns:
             List of relation names
         """
-        relations = set()
-        for pattern in self.forward_patterns:
-            relations.add(pattern['relation'])
-        for pattern in self.reverse_patterns:
-            relations.add(pattern['relation'])
-        return sorted(list(relations))
+        # Extract from type mappings (shared knowledge)
+        return sorted(list(self.type_mappings.keys()))
     
     def get_pattern_info(self, pattern_type: str) -> dict:
         """
         Get information about patterns of a specific type.
+        Now returns info based on transformer classifier capabilities.
         
         Args:
             pattern_type: 'forward', 'reverse', or 'verification'
-            
+        
         Returns:
             Dictionary with pattern statistics
         """
-        if pattern_type == 'forward':
-            patterns = self.forward_patterns
-        elif pattern_type == 'reverse':
-            patterns = self.reverse_patterns
-        elif pattern_type == 'verification':
-            patterns = self.verification_patterns
+        if self.use_transformer and self.transformer_classifier:
+            # Get info from transformer classifier
+            relations = list(self.type_mappings.keys())
+            
+            return {
+                'total_patterns': len(relations),
+                'relations': {rel: 1 for rel in relations},
+                'avg_confidence': 0.85,  # Typical transformer confidence
+                'method': 'transformer'
+            }
         else:
-            return {}
-        
-        relations = {}
-        for pattern in patterns:
-            rel = pattern.get('relation', 'unknown')
-            if rel not in relations:
-                relations[rel] = 0
-            relations[rel] += 1
-        
-        return {
-            'total_patterns': len(patterns),
-            'relations': relations,
-            'avg_confidence': sum(p['confidence'] for p in patterns) / len(patterns) if patterns else 0.0
-        }
+            return {
+                'total_patterns': 0,
+                'relations': {},
+                'avg_confidence': 0.0,
+                'method': 'none'
+            }

@@ -255,7 +255,14 @@ class SPARQLHandler:
             with self._timeout_handler(self.QUERY_TIMEOUT_SECONDS):
                 results_list = self._run_query_cached(query)
         except TimeoutError as te:
-            return {'success': False, 'error': str(te)}
+            # ✅ IMPROVED: Better timeout error message
+            print(f"⏱️  Query timeout after {self.QUERY_TIMEOUT_SECONDS}s")
+            print("   Query preview:")
+            print("   " + query[:200].replace('\n', '\n   '))
+            return {
+                'success': False,
+                'error': f"Query execution exceeded {self.QUERY_TIMEOUT_SECONDS}s timeout. The query may be too complex or contain inefficient patterns."
+            }
         except Exception as e:
             return {'success': False, 'error': f"Execution error: {e}"}
 

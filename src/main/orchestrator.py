@@ -10,6 +10,7 @@ from typing import Optional
 from pydantic import BaseModel, Field
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import PydanticOutputParser
+import re  # ✅ Add missing import
 
 # Try to import LLM libraries
 try:
@@ -47,9 +48,10 @@ from src.config import (
 
 class QuestionType(str, Enum):
     FACTUAL = "factual"
-    MULTIMEDIA = "multimedia"
+    EMBEDDING = "embedding"
+    HYBRID = "hybrid"  # ✅ NEW: both factual + embedding
+    IMAGE = "image"     # ✅ NEW: renamed from multimedia
     RECOMMENDATION = "recommendation"
-    OUT_OF_SCOPE = "out_of_scope"  # ✅ NEW: For rejection
 
 class QueryClassification(BaseModel):
     """Classification of a user query."""
@@ -71,8 +73,8 @@ class Orchestrator:
         self,
         llm=None,
         use_workflow: bool = True,
-        use_transformer_classifier: bool = True,
-        transformer_model_path: str = None  # Changed to None
+        use_transformer_classifier: bool = False,  # ✅ CHANGED: Default to False
+        transformer_model_path: str = None
     ):
         """
         Initialize the orchestrator.
@@ -80,44 +82,14 @@ class Orchestrator:
         Args:
             llm: Optional LLM instance
             use_workflow: Whether to use workflow processing
-            use_transformer_classifier: Whether to use fine-tuned transformer classifier
-            transformer_model_path: Path to fine-tuned model (defaults to config value)
+            use_transformer_classifier: Whether to use fine-tuned transformer classifier (deprecated)
+            transformer_model_path: Path to fine-tuned model (deprecated)
         """
         global orchestrator_instance
 
-        # Use config path if not specified
-        if transformer_model_path is None:
-            transformer_model_path = TRANSFORMER_MODEL_PATH
-
-        # ✅ NEW: Initialize classifier (transformer or LLM)
-        self.use_transformer = use_transformer_classifier and TRANSFORMER_CLASSIFIER_AVAILABLE
-        self.transformer_classifier = None
+        # ✅ SIMPLIFIED: No transformer classifier initialization
+        print("\n🔧 Initializing orchestrator with keyword-based classification...")
         
-        if self.use_transformer:
-            try:
-                print("\n🤖 Initializing fine-tuned transformer classifier...")
-                self.transformer_classifier = TransformerQueryClassifier(
-                    model_path=transformer_model_path,
-                    confidence_threshold=0.5
-                )
-                print("✅ Transformer classifier initialized\n")
-            except Exception as e:
-                print(f"⚠️  Failed to load transformer classifier: {e}")
-                print("   Falling back to LLM/rule-based classification\n")
-                self.use_transformer = False
-        
-        # Initialize LLM (fallback if transformer not available)
-        if not self.use_transformer:
-            self.llm = llm or self._initialize_llm()
-            self.use_llm = self.llm is not None and USE_LLM_CLASSIFICATION
-
-            if self.use_llm:
-                self.parser = PydanticOutputParser(pydantic_object=QueryClassification)
-                self._setup_classifier()
-                print("ℹ️  Using LLM-based classification.")
-            else:
-                print("ℹ️  Using rule-based classification.")
-
         # Initialize SPARQL handler
         self.sparql_handler = SPARQLHandler()
 
@@ -213,95 +185,79 @@ Classify into: factual, multimedia, recommendation, or out_of_scope."""),
 
     def classify_query(self, query: str) -> QueryClassification:
         """
-        Classify a user query using the configured classifier.
+        Classify a user query using SIMPLE KEYWORD-BASED detection.
         
-        Priority:
-        1. Fine-tuned transformer (most accurate)
-        2. LLM-based classification (fallback)
-        3. Rule-based classification (last resort)
+        5 classes:
+        - factual: word "factual" present
+        - embedding: word "embedding(s)" present
+        - image: words related to images (show, picture, image, photo, display)
+        - recommendation: words related to recommendations (recommend, suggest, "should i watch")
+        - hybrid: none of the above (default) → use BOTH factual + embedding
+        
+        Priority (first match wins):
+        1. Check for "factual" keyword
+        2. Check for "embedding(s)" keyword
+        3. Check for image keywords
+        4. Check for recommendation keywords
+        5. Default to hybrid (both approaches)
         """
-        # ✅ PRIMARY: Use fine-tuned transformer
-        if self.use_transformer and self.transformer_classifier:
-            try:
-                result = self.transformer_classifier.classify(query)
-                
-                print(f"\n{'='*80}")
-                print(f"[CLASSIFICATION] Query: {query[:60]}...")
-                print(f"[CLASSIFICATION] Type: {result.question_type}")
-                print(f"[CLASSIFICATION] Confidence: {result.confidence:.2%}")
-                print(f"[CLASSIFICATION] Method: Fine-tuned Transformer")
+        query_lower = query.lower()
+        words = set(re.findall(r'\b\w+\b', query_lower))
+        
+        print(f"\n{'='*80}")
+        print(f"[CLASSIFICATION] Query: {query[:60]}...")
+        
+        # 1. Check for "factual"
+        if 'factual' in words:
+            print(f"[CLASSIFICATION] Type: FACTUAL (keyword detected)")
+            print(f"[CLASSIFICATION] Method: Keyword-based")
+            print(f"{'='*80}\n")
+            return QueryClassification(
+                question_type=QuestionType.FACTUAL,
+                confidence=1.0
+            )
+        
+        # 2. Check for "embedding(s)"
+        if {'embedding', 'embeddings'} & words:
+            print(f"[CLASSIFICATION] Type: EMBEDDING (keyword detected)")
+            print(f"[CLASSIFICATION] Method: Keyword-based")
+            print(f"{'='*80}\n")
+            return QueryClassification(
+                question_type=QuestionType.EMBEDDING,
+                confidence=1.0
+            )
+        
+        # 3. Check for image keywords
+        image_keywords = {'show', 'picture', 'image', 'photo', 'display', 'visualize'}
+        if image_keywords & words:
+            # Additional check: must have context suggesting images
+            if any(word in query_lower for word in ['picture', 'image', 'photo']):
+                print(f"[CLASSIFICATION] Type: IMAGE (keywords detected)")
+                print(f"[CLASSIFICATION] Method: Keyword-based")
                 print(f"{'='*80}\n")
-                
                 return QueryClassification(
-                    question_type=QuestionType(result.question_type),
-                    confidence=result.confidence
+                    question_type=QuestionType.IMAGE,
+                    confidence=1.0
                 )
-            except Exception as e:
-                print(f"⚠️  Transformer classification failed: {e}")
-                print("   Falling back to alternative method...")
         
-        # FALLBACK 1: LLM-based classification
-        if self.use_llm:
-            try:
-                raw_output = self.classification_chain.invoke({"query": query})
-                output_text = raw_output if isinstance(raw_output, str) else str(raw_output)
-                
-                import re
-                type_match = re.search(
-                    r'\b(factual|multimedia|recommendation|out_of_scope)\b',
-                    output_text.lower()
-                )
-                if type_match:
-                    qt = type_match.group(1)
-                    return QueryClassification(
-                        question_type=QuestionType(qt),
-                        confidence=0.8
-                    )
-            except Exception as e:
-                print(f"⚠️  LLM classification failed: {e}")
-        
-        # FALLBACK 2: Rule-based classification
-        print("ℹ️  Using rule-based classification")
-        return self._rule_based_classify(query)
-
-    def _rule_based_classify(self, query: str) -> QueryClassification:
-        """Rule-based classification (last resort)."""
-        q = query.lower()
-        
-        # Check for out-of-scope patterns (simple heuristics)
-        out_of_scope_keywords = [
-            'weather', 'temperature', 'forecast',
-            'calculate', 'math', 'solve',
-            'code', 'program', 'function',
-            'capital', 'population', 'president',
-            'recipe', 'cook', 'bake'
-        ]
-        if any(keyword in q for keyword in out_of_scope_keywords):
-            return QueryClassification(
-                question_type=QuestionType.OUT_OF_SCOPE,
-                confidence=0.7
-            )
-        
-        # Multimedia detection
-        multimedia_keywords = ['show', 'picture', 'image', 'photo', 'display']
-        if any(k in q for k in multimedia_keywords) and ('picture' in q or 'image' in q):
-            return QueryClassification(
-                question_type=QuestionType.MULTIMEDIA,
-                confidence=0.8
-            )
-        
-        # Recommendation detection
-        recommendation_keywords = ['recommend', 'suggest', 'what should i watch']
-        if any(k in q for k in recommendation_keywords):
+        # 4. Check for recommendation keywords
+        recommendation_keywords = {'recommend', 'suggestion', 'suggest', 'should i watch', 'what to watch'}
+        if recommendation_keywords & words or any(phrase in query_lower for phrase in ['should i watch', 'what to watch']):
+            print(f"[CLASSIFICATION] Type: RECOMMENDATION (keywords detected)")
+            print(f"[CLASSIFICATION] Method: Keyword-based")
+            print(f"{'='*80}\n")
             return QueryClassification(
                 question_type=QuestionType.RECOMMENDATION,
-                confidence=0.8
+                confidence=1.0
             )
         
-        # Default: factual
+        # 5. Default: HYBRID (both factual + embedding)
+        print(f"[CLASSIFICATION] Type: HYBRID (default - will use both approaches)")
+        print(f"[CLASSIFICATION] Method: Keyword-based (no specific keyword found)")
+        print(f"{'='*80}\n")
         return QueryClassification(
-            question_type=QuestionType.FACTUAL,
-            confidence=0.6
+            question_type=QuestionType.HYBRID,
+            confidence=1.0
         )
 
     def process_query(self, query: str) -> str:
