@@ -147,6 +147,16 @@ class Orchestrator:
                 import traceback
                 traceback.print_exc()
 
+        # Initialize dual approach processor for factual/embedding routing
+        print("\n🔀 Initializing dual approach processor...")
+        from src.main.dual_approach_processor import DualApproachProcessor
+        self.dual_processor = DualApproachProcessor(
+            sparql_handler=self.sparql_handler,
+            embedding_processor=self.embedding_processor,
+            entity_extractor=None  # Will be set if embedding processor is available
+        )
+        print("✅ Dual approach processor initialized\n")
+
         # Initialize workflow
         self.use_workflow = use_workflow
         if use_workflow:
