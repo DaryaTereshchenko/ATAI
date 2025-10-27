@@ -129,6 +129,8 @@ class Orchestrator:
 
         # Initialize embedding processor
         self.embedding_processor = None
+        self.embedding_handler = None
+        self.entity_extractor = None
         if USE_EMBEDDINGS:
             try:
                 print("\n🔢 Initializing embedding processor (hybrid approach)...")
@@ -142,6 +144,13 @@ class Orchestrator:
                     sparql_handler=self.sparql_handler
                 )
                 print("✅ Embedding processor initialized (hybrid mode ready)\n")
+                
+                # Get references to embedding handler and entity extractor
+                if hasattr(self.embedding_processor, 'embedding_handler'):
+                    self.embedding_handler = self.embedding_processor.embedding_handler
+                if hasattr(self.embedding_processor, 'entity_extractor'):
+                    self.entity_extractor = self.embedding_processor.entity_extractor
+                    
             except Exception as e:
                 print(f"⚠️  Failed to initialize embedding processor: {e}")
                 import traceback
@@ -153,7 +162,8 @@ class Orchestrator:
         self.dual_processor = DualApproachProcessor(
             sparql_handler=self.sparql_handler,
             embedding_processor=self.embedding_processor,
-            entity_extractor=None  # Will be set if embedding processor is available
+            entity_extractor=self.entity_extractor,
+            embedding_handler=self.embedding_handler
         )
         print("✅ Dual approach processor initialized\n")
 

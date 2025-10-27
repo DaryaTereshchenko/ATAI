@@ -25,7 +25,8 @@ class DualApproachProcessor:
         self,
         sparql_handler=None,
         embedding_processor=None,
-        entity_extractor=None
+        entity_extractor=None,
+        embedding_handler=None
     ):
         """
         Initialize the dual approach processor.
@@ -34,13 +35,29 @@ class DualApproachProcessor:
             sparql_handler: SPARQL handler for factual approach
             embedding_processor: Embedding processor for embedding approach
             entity_extractor: Entity extractor for both approaches
+            embedding_handler: EmbeddingHandler for pure embedding approach
         """
         self.sparql_handler = sparql_handler
         self.embedding_processor = embedding_processor
         self.entity_extractor = entity_extractor
+        self.embedding_handler = embedding_handler
         
         self.detector = ApproachDetector()
         self.formatter = ResponseFormatter()
+        
+        # Initialize embedding answer finder if possible
+        self.embedding_answer_finder = None
+        if embedding_handler and entity_extractor and sparql_handler:
+            try:
+                from src.main.embedding_answer_finder import EmbeddingAnswerFinder
+                self.embedding_answer_finder = EmbeddingAnswerFinder(
+                    embedding_handler,
+                    entity_extractor,
+                    sparql_handler
+                )
+                print("✅ Embedding answer finder initialized")
+            except Exception as e:
+                print(f"⚠️  Could not initialize embedding answer finder: {e}")
     
     def process_query(self, full_query: str) -> str:
         """
@@ -205,42 +222,40 @@ class DualApproachProcessor:
     
     def _compute_embedding_answer(self, question: str) -> Tuple[str, str]:
         """
-        Compute answer using embedding similarity.
+        Compute answer using embedding similarity (TransE-based).
         
         Returns:
             Tuple of (answer, entity_type)
         """
-        # For now, use the hybrid processor and extract the top answer
-        # In a full implementation, this would use pure embedding similarity
+        # Try to use the pure embedding answer finder first
+        if self.embedding_answer_finder:
+            try:
+                answer, entity_type, confidence = self.embedding_answer_finder.find_answer_by_embeddings(question)
+                if answer and entity_type:
+                    return answer, entity_type
+            except Exception as e:
+                print(f"⚠️  Embedding answer finder failed: {e}")
+                # Fall through to SPARQL fallback
         
+        # Fallback: use SPARQL-based approach but return single answer
         if self.embedding_processor is None:
             return "Unknown", "Q35120"  # Q35120 = entity
         
-        # Use the embedding handler to find closest entity
         try:
-            # Extract entities from question
-            from src.main.entity_extractor import EntityExtractor
-            if self.entity_extractor:
-                # Try to extract subject entity
-                entities = self.entity_extractor.extract_entities(question)
-                if entities:
-                    # For embedding approach, we want to find the answer entity
-                    # using embedding similarity
-                    
-                    # This is a simplified version - full implementation would:
-                    # 1. Extract the relation from the question
-                    # 2. Get embedding for subject entity
-                    # 3. Add relation embedding
-                    # 4. Find nearest entity embedding
-                    
-                    # For now, fall back to SPARQL but return single answer
-                    result = self.embedding_processor.process_hybrid_factual_query(question)
-                    answers = self._extract_answers_from_result(result)
-                    
-                    if answers:
-                        # Return first answer with person type (Q5) as default
-                        # In practice, we'd detect the actual type
-                        entity_type = self._detect_entity_type(question, answers[0])
+            # Use SPARQL but format as embedding response
+            result = self.embedding_processor.process_hybrid_factual_query(question)
+            answers = self._extract_answers_from_result(result)
+            
+            if answers:
+                # Return first answer with detected type
+                entity_type = self._detect_entity_type(question, answers[0])
+                return answers[0], entity_type
+            
+            return "Unknown", "Q35120"
+        
+        except Exception as e:
+            print(f"⚠️ Embedding computation error: {e}")
+            return "Unknown", "Q35120"
                         return answers[0], entity_type
             
             return "Unknown", "Q35120"
