@@ -371,33 +371,54 @@ class QueryWorkflow:
 
     def process_with_hybrid(self, state: WorkflowState) -> WorkflowState:
         """
-        Node 4: Hybrid processing - entity extraction + relation detection + SPARQL.
-        This is the ONLY processing method used.
+        Node 4: Dual approach processing - routes to factual or embedding based on query.
+        Handles "factual approach", "embedding approach", or both.
         """
-        print(f"\n[NODE: process_with_hybrid] Processing with hybrid approach...")
+        print(f"\n[NODE: process_with_hybrid] Processing with dual approach routing...")
         
-        # Check if embedding processor is available
-        if not hasattr(self.orchestrator, 'embedding_processor') or self.orchestrator.embedding_processor is None:
-            print(f"[NODE: process_with_hybrid] ❌ Embedding processor not available")
-            state['error'] = "Embedding processor not initialized. Cannot process query."
-            state["current_node"] = "process_with_hybrid"
-            return state
+        # Check if dual processor is available
+        if not hasattr(self.orchestrator, 'dual_processor') or self.orchestrator.dual_processor is None:
+            print(f"[NODE: process_with_hybrid] ⚠️  Dual processor not available, falling back to embedding processor")
+            
+            # Fallback to original hybrid processing
+            if not hasattr(self.orchestrator, 'embedding_processor') or self.orchestrator.embedding_processor is None:
+                print(f"[NODE: process_with_hybrid] ❌ Embedding processor not available")
+                state['error'] = "Processing not initialized. Cannot process query."
+                state["current_node"] = "process_with_hybrid"
+                return state
+            
+            try:
+                query = state["raw_query"]
+                result = self.orchestrator.embedding_processor.process_hybrid_factual_query(query)
+                state["raw_result"] = result
+                state["formatted_response"] = result
+                state["processing_method"] = ProcessingMethod.HYBRID
+                state["current_node"] = "process_with_hybrid"
+                print(f"[NODE: process_with_hybrid] ✅ Fallback processing successful")
+                return state
+            except Exception as e:
+                state["error"] = f"Hybrid processing error: {e}"
+                state["current_node"] = "process_with_hybrid"
+                print(f"[NODE: process_with_hybrid] ❌ {state['error']}")
+                import traceback
+                traceback.print_exc()
+                return state
         
         try:
             query = state["raw_query"]
             
-            # ✅ Use hybrid method: entity extraction + relation detection + template-based SPARQL
-            result = self.orchestrator.embedding_processor.process_hybrid_factual_query(query)
+            # ✅ Use dual approach processor to handle factual/embedding routing
+            result = self.orchestrator.dual_processor.process_query(query)
             
             state["raw_result"] = result
             state["formatted_response"] = result
             state["processing_method"] = ProcessingMethod.HYBRID
             state["current_node"] = "process_with_hybrid"
             
-            print(f"[NODE: process_with_hybrid] ✅ Hybrid processing successful")
+            print(f"[NODE: process_with_hybrid] ✅ Dual approach processing successful")
             
         except Exception as e:
-            state["error"] = f"Hybrid processing error: {e}"
+            state["error"] = f"Dual approach processing error: {e}"
             state["current_node"] = "process_with_hybrid"
             print(f"[NODE: process_with_hybrid] ❌ {state['error']}")
             import traceback
