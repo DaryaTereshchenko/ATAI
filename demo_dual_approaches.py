@@ -8,8 +8,8 @@ This demonstrates the approach detection and response formatting components.
 import sys
 import os
 
-# Add project root to path
-project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+# Add project root to path (this file is at project root)
+project_root = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, project_root)
 
 from src.main.approach_detector import ApproachDetector, ApproachType
