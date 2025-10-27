@@ -107,13 +107,8 @@ class ResponseFormatter:
             question, embedding_answer, embedding_type, embedding_confidence
         )
         
-        # Remove the "The " prefix from embedding part for cleaner joining
-        embedding_part = embedding_part.replace(
-            "The answer suggested by embeddings is:",
-            "The answer suggested by embeddings is:"
-        )
-        
-        return f"{factual_part} {embedding_part}"
+        # Keep both parts as is, add period separator
+        return f"{factual_part}. {embedding_part}"
     
     @staticmethod
     def format_error(
