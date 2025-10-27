@@ -1,0 +1,181 @@
+╔═══════════════════════════════════════════════════════════════════════════════╗
+║                    DUAL APPROACH QUERY PROCESSING SYSTEM                      ║
+╚═══════════════════════════════════════════════════════════════════════════════╝
+
+                                USER QUERY
+                                    │
+                                    ▼
+    ┌───────────────────────────────────────────────────────────────────┐
+    │  "Please answer this question with a factual approach:           │
+    │   Who directed 'Fargo'?"                                         │
+    └───────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+    ┌───────────────────────────────────────────────────────────────────┐
+    │                      APPROACH DETECTOR                            │
+    │  • Detects: FACTUAL / EMBEDDING / BOTH                           │
+    │  • Extracts: "Who directed 'Fargo'?"                             │
+    └───────────────────────────────────────────────────────────────────┘
+                                    │
+                    ┌───────────────┼───────────────┐
+                    │               │               │
+                    ▼               ▼               ▼
+        ┌─────────────────┐ ┌─────────────┐ ┌─────────────────┐
+        │    FACTUAL      │ │  EMBEDDING  │ │      BOTH       │
+        │    APPROACH     │ │   APPROACH  │ │   APPROACHES    │
+        └─────────────────┘ └─────────────┘ └─────────────────┘
+                │                   │                   │
+                │                   │                   │
+                ▼                   ▼                   ▼
+
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                           FACTUAL APPROACH PATH                              ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+    Query: "Who directed 'Fargo'?"
+        │
+        ▼
+    ┌──────────────────────────────────────┐
+    │   ENTITY EXTRACTION                  │
+    │   • Movie: "Fargo"                   │
+    │   • Type: Q11424 (film)              │
+    └──────────────────────────────────────┘
+        │
+        ▼
+    ┌──────────────────────────────────────┐
+    │   PATTERN ANALYSIS                   │
+    │   • Pattern: forward_director        │
+    │   • Relation: P57 (director)         │
+    └──────────────────────────────────────┘
+        │
+        ▼
+    ┌──────────────────────────────────────┐
+    │   SPARQL GENERATION                  │
+    │   SELECT ?director WHERE {           │
+    │     ?movie label "Fargo"             │
+    │     ?movie wdt:P57 ?director         │
+    │   }                                  │
+    └──────────────────────────────────────┘
+        │
+        ▼
+    ┌──────────────────────────────────────┐
+    │   EXECUTE ON KNOWLEDGE GRAPH         │
+    │   Results: ["Ethan Coen",            │
+    │             "Joel Coen"]             │
+    └──────────────────────────────────────┘
+        │
+        ▼
+    ┌──────────────────────────────────────┐
+    │   RESPONSE FORMATTER                 │
+    │   Format: Join with "and"            │
+    └──────────────────────────────────────┘
+        │
+        ▼
+    ╔══════════════════════════════════════╗
+    ║  "The factual answer is:            ║
+    ║   Ethan Coen and Joel Coen"         ║
+    ╚══════════════════════════════════════╝
+
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                          EMBEDDING APPROACH PATH                             ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+    Query: "Who is the director of 'Apocalypse Now'?"
+        │
+        ▼
+    ┌──────────────────────────────────────┐
+    │   ENTITY EXTRACTION                  │
+    │   • Movie: "Apocalypse Now"          │
+    │   • URI: wd:Q223142                  │
+    └──────────────────────────────────────┘
+        │
+        ▼
+    ┌──────────────────────────────────────┐
+    │   RELATION DETECTION                 │
+    │   • Keywords: "director"             │
+    │   • Relation: wdt:P57                │
+    └──────────────────────────────────────┘
+        │
+        ▼
+    ┌──────────────────────────────────────┐
+    │   GET EMBEDDINGS                     │
+    │   • movie_emb = get_emb(wd:Q223142)  │
+    │   • relation_emb = get_emb(wdt:P57)  │
+    └──────────────────────────────────────┘
+        │
+        ▼
+    ┌──────────────────────────────────────┐
+    │   TRANSE COMPUTATION                 │
+    │   answer_emb = movie_emb +           │
+    │                relation_emb          │
+    └──────────────────────────────────────┘
+        │
+        ▼
+    ┌──────────────────────────────────────┐
+    │   NEAREST NEIGHBOR SEARCH            │
+    │   • Find closest entity to answer_emb│
+    │   • Result: "John Milius" (wd:Q72455)│
+    │   • Similarity: 0.87                 │
+    └──────────────────────────────────────┘
+        │
+        ▼
+    ┌──────────────────────────────────────┐
+    │   ENTITY TYPE DETECTION              │
+    │   • Check instance-of (P31)          │
+    │   • Type: Q5 (human)                 │
+    └──────────────────────────────────────┘
+        │
+        ▼
+    ┌──────────────────────────────────────┐
+    │   RESPONSE FORMATTER                 │
+    │   Format: Answer + (type: QID)       │
+    └──────────────────────────────────────┘
+        │
+        ▼
+    ╔══════════════════════════════════════╗
+    ║  "The answer suggested by           ║
+    ║   embeddings is: John Milius        ║
+    ║   (type: Q5)"                       ║
+    ╚══════════════════════════════════════╝
+
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                       ENTITY TYPE REFERENCE                                  ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+    Q5          → Human/Person (directors, actors, screenwriters)
+    Q11424      → Film/Movie
+    Q201658     → Film genre
+    Q6256       → Country
+    Q618779     → Award
+    Q35120      → Entity (generic)
+
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                         SYSTEM COMPONENTS                                    ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  NEW COMPONENTS                                                             │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  • approach_detector.py         → Detects approach from query               │
+│  • response_formatter.py        → Formats outputs per requirements          │
+│  • embedding_answer_finder.py   → TransE-based answer computation           │
+│  • dual_approach_processor.py   → Routes and processes queries              │
+│  • config.py                    → System configuration                      │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  MODIFIED COMPONENTS                                                        │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  • orchestrator.py              → Initializes dual processor                │
+│  • workflow.py                  → Uses dual approach routing                │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  EXISTING COMPONENTS (REUSED)                                               │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  • sparql_handler.py            → Executes SPARQL queries                   │
+│  • entity_extractor.py          → Extracts entities from text               │
+│  • embedding_handler.py         → Manages TransE embeddings                 │
+│  • nl_to_sparql.py              → Generates SPARQL from NL                  │
+│  • query_analyzer.py            → Analyzes query patterns                   │
+└─────────────────────────────────────────────────────────────────────────────┘
