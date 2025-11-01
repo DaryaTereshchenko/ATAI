@@ -1132,10 +1132,17 @@ LIMIT 10"""
             
             if not pattern:
                 print("❌ No pattern detected\n")
-                return self._format_embedding_error("Could not understand query structure")
+                print("   ⚠️  Falling back to direct embedding search...")
+                # Instead of failing, try direct embedding search
+                return self._embedding_direct_query(clean_query, None)
             
             print(f"✅ Pattern: {pattern.pattern_type} + {pattern.relation}")
             print(f"   Confidence: {pattern.confidence:.2%}\n")
+            
+            # ✅ ROBUSTNESS: Handle low-confidence patterns
+            if pattern.confidence < 0.3:
+                print(f"⚠️  Low confidence pattern ({pattern.confidence:.2%}), falling back to direct embedding...")
+                return self._embedding_direct_query(clean_query, pattern)
             
             # ✅ NEW: Check if this is a superlative query
             if pattern.extracted_entities and 'superlative' in pattern.extracted_entities:
@@ -1197,6 +1204,14 @@ LIMIT 10"""
         
         # Get relation embedding
         relation_uri = self._get_relation_uri(pattern.relation)
+        
+        # ✅ ROBUSTNESS: Check if relation URI was resolved
+        if relation_uri is None:
+            return self._format_embedding_error(
+                f"Could not resolve relation '{pattern.relation}'. "
+                f"This relation may not be supported in the embedding space."
+            )
+        
         relation_embedding = self.embedding_handler.get_relation_embedding(relation_uri)
         
         if relation_embedding is None:
@@ -1953,7 +1968,7 @@ LIMIT 10"""
             "Please use the factual approach for verification queries."
         )
     
-    def _embedding_direct_query(self, query: str, pattern: QueryPattern) -> str:
+    def _embedding_direct_query(self, query: str, pattern: Optional[QueryPattern]) -> str:
         """
         Process query using direct embedding similarity (fallback approach).
         
@@ -1962,7 +1977,7 @@ LIMIT 10"""
         
         Args:
             query: User query string
-            pattern: Query pattern (may have limited information)
+            pattern: Query pattern (may be None or have limited information)
             
         Returns:
             Formatted response with embedding-based results
