@@ -1208,8 +1208,7 @@ LIMIT 10"""
         # ✅ ROBUSTNESS: Check if relation URI was resolved
         if relation_uri is None:
             return self._format_embedding_error(
-                f"Could not resolve relation '{pattern.relation}'. "
-                f"This relation may not be supported in the embedding space."
+                f"Could not resolve relation '{pattern.relation}'. This relation may not be supported in the embedding space."
             )
         
         relation_embedding = self.embedding_handler.get_relation_embedding(relation_uri)
@@ -1977,12 +1976,20 @@ LIMIT 10"""
         
         Args:
             query: User query string
-            pattern: Query pattern (may be None or have limited information)
+            pattern: Query pattern (may be None when called as fallback, or have limited information)
+                    The pattern is currently not used in this method as it performs direct 
+                    embedding search without pattern-based filtering.
             
         Returns:
             Formatted response with embedding-based results
+            
+        Note:
+            The pattern parameter is accepted for API consistency but is not currently used.
+            Future enhancements could use pattern information to filter results by expected type.
         """
         print(f"   Using direct query embedding (fallback approach)")
+        if pattern is None:
+            print(f"   ⚠️  No pattern available - performing unguided search")
         
         try:
             # Embed the query using sentence transformer
