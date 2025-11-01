@@ -1,146 +1,201 @@
 """
-Template-based answer formatter for SPARQL results.
-Provides human-friendly responses without requiring an LLM.
+Answer Formatter - Formats query results into polite, human-friendly responses.
+Handles both factual SPARQL results and embedding-based results.
 """
 
-import random
-import re
-from typing import Optional
+from typing import List, Optional
 
 
 class AnswerFormatter:
-    """Formats SPARQL query results into human-friendly responses using templates."""
+    """Formats query answers into natural, polite responses."""
     
-    # Templates for successful queries (single result)
-    SINGLE_RESULT_TEMPLATES = [
-        "According to our database, the answer is: {answer}",
-        "Based on the data, I found: {answer}",
-        "The database shows: {answer}",
-        "Here's what I found: {answer}",
-        "From our movie database: {answer}",
-    ]
-    
-    # Templates for successful queries (multiple results)
-    MULTIPLE_RESULTS_TEMPLATES = [
-        "I found {count} results in our database:\n{answers}",
-        "According to the database, here are {count} results:\n{answers}",
-        "The data shows {count} matches:\n{answers}",
-        "Here's what I found ({count} results):\n{answers}",
-        "From our movie database ({count} entries):\n{answers}",
-    ]
-    
-    # Templates for no results
-    NO_RESULTS_TEMPLATES = [
-        "I couldn't find any results in our database for that query.",
-        "The database doesn't contain information matching your question.",
-        "No matching data was found in our movie database.",
-        "Sorry, I don't have that information in the database.",
-        "The database search didn't return any results.",
-    ]
-    
-    # Prefix for all responses to indicate data source
-    DB_PREFIX = "🔍 **Database Query Result**\n\n"
-    
-    @classmethod
-    def _clean_result_line(cls, line: str) -> str:
+    @staticmethod
+    def format_list(items: List[str], conjunction: str = "and") -> str:
         """
-        Clean a single result line by extracting entity IDs from Wikidata URLs.
-        Also removes extra whitespace and normalizes the output.
-        """
-        # Quick check: if line doesn't contain 'http', no cleaning needed
-        if 'http' not in line:
-            return line.strip()
+        Format a list of items with proper grammar.
         
-        # Pattern to match Wikidata entity URLs
-        wikidata_pattern = r'http://www\.wikidata\.org/entity/(Q\d+)'
-        
-        # Find Wikidata URL in the line
-        match = re.search(wikidata_pattern, line)
-        
-        if match:
-            entity_id = match.group(1)  # Extract Q12345
-            # Remove the URL from the line
-            cleaned_line = re.sub(r',?\s*http://[^\s,]+', '', line).strip()
-            # Remove extra spaces
-            cleaned_line = re.sub(r'\s+', ' ', cleaned_line)
-            # Add entity ID in parentheses
-            return f"{cleaned_line} ({entity_id})"
-        
-        # No Wikidata URL found, return as-is (but still strip and normalize whitespace)
-        return re.sub(r'\s+', ' ', line.strip())
-    
-    @classmethod
-    def format(cls, raw_result: str, query_explanation: Optional[str] = None) -> str:
-        """
-        Format a SPARQL query result into a human-friendly response.
+        Examples:
+            ["Alice"] -> "Alice"
+            ["Alice", "Bob"] -> "Alice and Bob"
+            ["Alice", "Bob", "Carol"] -> "Alice, Bob, and Carol"
         
         Args:
-            raw_result: The raw result string from SPARQL execution
-            query_explanation: Optional explanation (ignored to hide technical details)
+            items: List of items to format
+            conjunction: Conjunction to use ("and" or "or")
             
         Returns:
-            Formatted, human-friendly response string
+            Formatted string
         """
-        # Check if no results
-        if not raw_result or "No answer found" in raw_result or "No results" in raw_result:
-            template = random.choice(cls.NO_RESULTS_TEMPLATES)
-            response = cls.DB_PREFIX + template
-            
-            # Add helpful hint
-            response += "\n\n💡 *Tip: Try rephrasing your question or check the movie title spelling.*"
-            return response
+        if not items:
+            return ""
         
-        # Parse the results and clean each line
-        lines = [cls._clean_result_line(line) for line in raw_result.strip().split('\n') if line.strip()]
+        items = [str(item).strip() for item in items if item]
         
-        if len(lines) == 0:
-            # Empty result
-            template = random.choice(cls.NO_RESULTS_TEMPLATES)
-            return cls.DB_PREFIX + template
-        
-        elif len(lines) == 1:
-            # Single result
-            template = random.choice(cls.SINGLE_RESULT_TEMPLATES)
-            answer = lines[0]
-            response = cls.DB_PREFIX + template.format(answer=answer)
-            
+        if len(items) == 1:
+            return items[0]
+        elif len(items) == 2:
+            return f"{items[0]} {conjunction} {items[1]}"
         else:
-            # Multiple results
-            template = random.choice(cls.MULTIPLE_RESULTS_TEMPLATES)
-            
-            # Format multiple results as a bulleted list
-            formatted_answers = "\n".join(f"• {line}" for line in lines[:10])  # Limit to 10 results
-            
-            if len(lines) > 10:
-                formatted_answers += f"\n• ... and {len(lines) - 10} more"
-            
-            response = cls.DB_PREFIX + template.format(
-                count=min(len(lines), 10),
-                answers=formatted_answers
-            )
+            # Oxford comma style: "A, B, and C"
+            return ", ".join(items[:-1]) + f", {conjunction} {items[-1]}"
+    
+    @staticmethod
+    def format_factual_response(
+        movie_title: Optional[str] = None,
+        person_name: Optional[str] = None,
+        relation: Optional[str] = None,
+        results: List[str] = None,
+        is_verification: bool = False,
+        verification_result: bool = False
+    ) -> str:
+        """
+        Format a factual SPARQL response.
         
-        # Do not add any technical explanation
+        Args:
+            movie_title: Movie title (if applicable)
+            person_name: Person name (if applicable)
+            relation: Relation type (director, cast_member, etc.)
+            results: List of results
+            is_verification: Whether this is a yes/no question
+            verification_result: Result of verification (True/False)
+            
+        Returns:
+            Formatted natural language response
+        """
+        # Verification queries
+        if is_verification:
+            relation_text = {
+                'director': 'directed',
+                'cast_member': 'starred in',
+                'screenwriter': 'wrote',
+                'producer': 'produced'
+            }.get(relation, relation.replace('_', ' '))
+            
+            if verification_result:
+                return f"✅ Yes, **{person_name}** {relation_text} **'{movie_title}'**."
+            else:
+                relation_negative = {
+                    'directed': 'direct',
+                    'starred in': 'star in',
+                    'wrote': 'write',
+                    'produced': 'produce'
+                }.get(relation_text, relation_text)
+                return f"❌ No, **{person_name}** did not {relation_negative} **'{movie_title}'**."
+        
+        # Empty results
+        if not results:
+            if movie_title:
+                return f"❌ I couldn't find any {relation.replace('_', ' ')} information for **'{movie_title}'** in the knowledge graph."
+            elif person_name:
+                return f"❌ I couldn't find any films where **{person_name}** was the {relation.replace('_', ' ')} in the knowledge graph."
+            else:
+                return "❌ I couldn't find any matching results in the knowledge graph."
+        
+        # Format based on relation type
+        relation_map = {
+            'director': ('directed by', 'directed'),
+            'cast_member': ('starring', 'starred in'),
+            'screenwriter': ('written by', 'wrote'),
+            'producer': ('produced by', 'produced'),
+            'genre': ('genre', 'genres'),
+            'publication_date': ('released in', 'released'),
+            'country_of_origin': ('from', 'from'),
+            'original_language_of_film_or_tv_show': ('in', 'in'),
+            'language': ('in', 'in'),
+            'award_received': ('received', 'received'),
+            'rating': ('rating', 'rating')
+        }
+        
+        # Forward query (Movie → Property)
+        if movie_title:
+            forward_text, _ = relation_map.get(relation, (relation.replace('_', ' '), relation.replace('_', ' ')))
+            formatted_results = AnswerFormatter.format_list(results)
+            
+            if relation in ['director', 'cast_member', 'screenwriter', 'producer']:
+                return f"✅ **'{movie_title}'** was {forward_text} **{formatted_results}**."
+            elif relation == 'genre':
+                genre_word = 'genre is' if len(results) == 1 else 'genres are'
+                return f"✅ The {genre_word} of **'{movie_title}'**: **{formatted_results}**."
+            elif relation == 'publication_date':
+                # Extract year from date
+                year = results[0].split('-')[0] if '-' in results[0] else results[0]
+                return f"✅ **'{movie_title}'** was released in **{year}**."
+            elif relation in ['country_of_origin', 'country']:
+                return f"✅ **'{movie_title}'** is from **{formatted_results}**."
+            elif relation in ['original_language_of_film_or_tv_show', 'language', 'original_language']:
+                return f"✅ **'{movie_title}'** is in **{formatted_results}**."
+            elif relation == 'award_received':
+                award_word = 'award' if len(results) == 1 else 'awards'
+                return f"✅ **'{movie_title}'** received the following {award_word}: **{formatted_results}**."
+            elif relation == 'rating':
+                return f"✅ The rating of **'{movie_title}'** is **{formatted_results}**."
+            else:
+                return f"✅ The {relation.replace('_', ' ')} of **'{movie_title}'** is **{formatted_results}**."
+        
+        # Reverse query (Person → Movies)
+        elif person_name:
+            _, reverse_text = relation_map.get(relation, (relation.replace('_', ' '), relation.replace('_', ' ')))
+            
+            if len(results) == 1:
+                return f"✅ **{person_name}** {reverse_text} **{results[0]}**."
+            else:
+                formatted_results = AnswerFormatter.format_list(results)
+                film_word = 'film' if len(results) == 1 else 'films'
+                return f"✅ **{person_name}** {reverse_text} **{len(results)} {film_word}**: {formatted_results}."
+        
+        # Default format
+        formatted_results = AnswerFormatter.format_list(results)
+        return f"✅ **Results:** {formatted_results}"
+    
+    @staticmethod
+    def format_embedding_response(result: str, entity_type: Optional[str] = None) -> str:
+        """
+        Format an embedding-based response.
+        
+        Args:
+            result: Result from embedding search
+            entity_type: Type of entity (optional)
+            
+        Returns:
+            Formatted response indicating embedding source
+        """
+        type_suffix = f" (type: {entity_type})" if entity_type else ""
+        return f"🔢 **Embedding-based answer:** {result}{type_suffix}\n\n_Note: This answer was found using semantic similarity in the embedding space._"
+    
+    @staticmethod
+    def format_hybrid_response(factual: str, embedding: str) -> str:
+        """
+        Format a hybrid response showing both factual and embedding results.
+        
+        Args:
+            factual: Factual SPARQL result
+            embedding: Embedding-based result
+            
+        Returns:
+            Combined formatted response
+        """
+        return f"""**📊 Factual Answer (from knowledge graph):**
+{factual}
+
+**🔢 Embedding-based Answer (from semantic similarity):**
+{embedding}"""
+    
+    @staticmethod
+    def format_error(message: str, suggestions: Optional[List[str]] = None) -> str:
+        """
+        Format an error message with helpful suggestions.
+        
+        Args:
+            message: Error message
+            suggestions: Optional list of suggestions
+            
+        Returns:
+            Formatted error message
+        """
+        response = f"❌ {message}"
+        
+        if suggestions:
+            response += "\n\n**💡 Suggestions:**\n"
+            response += "\n".join([f"• {suggestion}" for suggestion in suggestions])
         
         return response
-    
-    @classmethod
-    def format_error(cls, error_message: str) -> str:
-        """
-        Format an error message in a friendly way without exposing technical details.
-        
-        Args:
-            error_message: The error message
-            
-        Returns:
-            Formatted error response
-        """
-        # Generic user-friendly error message
-        return (
-            "⚠️ **Something went wrong**\n\n"
-            "I'm having trouble processing your request right now.\n\n"
-            "Please try:\n"
-            "• Rephrasing your question\n"
-            "• Being more specific about the movie or person\n"
-            "• Asking a different question\n\n"
-            "If the problem persists, please contact support."
-        )

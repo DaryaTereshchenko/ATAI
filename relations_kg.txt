@@ -1,0 +1,866 @@
+   ✅ Extracted 496 property labels from graph
+   ✓ language_of_work_or_name (from graph label) → http://www.wikidata.org/prop/direct/P407 (5930 triples)
+   ✓ occupation (from graph label) → http://www.wikidata.org/prop/direct/P106 (251858 triples)
+   ✓ voice_actor (from graph label) → http://www.wikidata.org/prop/direct/P725 (9272 triples)
+   ✓ director_of_photography (from graph label) → http://www.wikidata.org/prop/direct/P344 (11134 triples)
+   ✓ imdb_id (from graph label) → http://www.wikidata.org/prop/direct/P345 (95907 triples)
+   ✓ award_received (from graph label) → http://www.wikidata.org/prop/direct/P166 (69870 triples)
+   ✓ place_of_birth (from graph label) → http://www.wikidata.org/prop/direct/P19 (59056 triples)
+   ✓ field_of_work (from graph label) → http://www.wikidata.org/prop/direct/P101 (18111 triples)
+   ✓ copyright_status_as_a_creator (from graph label) → http://www.wikidata.org/prop/direct/P7763 (4926 triples)
+   ✓ medierådet_rating (from graph label) → http://www.wikidata.org/prop/direct/P5970 (4035 triples)
+   ✓ cast_member (from graph label) → http://www.wikidata.org/prop/direct/P161 (167536 triples)
+   ✓ given_name (from graph label) → http://www.wikidata.org/prop/direct/P735 (80142 triples)
+   ✓ described_by_source (from graph label) → http://www.wikidata.org/prop/direct/P1343 (37894 triples)
+   ✓ production_company (from graph label) → http://www.wikidata.org/prop/direct/P272 (12911 triples)
+   ✓ allegiance (from graph label) → http://www.wikidata.org/prop/direct/P945 (479 triples)
+   ✓ genre (from graph label) → http://www.wikidata.org/prop/direct/P136 (54097 triples)
+   ✓ narrative_location (from graph label) → http://www.wikidata.org/prop/direct/P840 (13040 triples)
+   ✓ educated_at (from graph label) → http://www.wikidata.org/prop/direct/P69 (40549 triples)
+   ✓ languages_spoken_written_or_signed (from graph label) → http://www.wikidata.org/prop/direct/P1412 (67510 triples)
+   ✓ sex_or_gender (from graph label) → http://www.wikidata.org/prop/direct/P21 (92717 triples)
+   ✓ follows (from graph label) → http://www.wikidata.org/prop/direct/P155 (2259 triples)
+   ✓ winner (from graph label) → http://www.wikidata.org/prop/direct/P1346 (7117 triples)
+   ✓ continent (from graph label) → http://www.wikidata.org/prop/direct/P30 (645 triples)
+   ✓ publication_date (from graph label) → http://www.wikidata.org/prop/direct/P577 (19543 triples)
+   ✓ film_editor (from graph label) → http://www.wikidata.org/prop/direct/P1040 (9315 triples)
+   ✓ distribution_format (from graph label) → http://www.wikidata.org/prop/direct/P437 (12625 triples)
+   ✓ drug_or_therapy_used_for_treatment (from graph label) → http://www.wikidata.org/prop/direct/P2176 (130 triples)
+   ✓ main_subject (from graph label) → http://www.wikidata.org/prop/direct/P921 (11059 triples)
+   ✓ member_of (from graph label) → http://www.wikidata.org/prop/direct/P463 (12209 triples)
+   ✓ aspect_ratio_wh (from graph label) → http://www.wikidata.org/prop/direct/P2061 (2386 triples)
+   ✓ part_of (from graph label) → http://www.wikidata.org/prop/direct/P361 (5456 triples)
+   ✓ filming_location (from graph label) → http://www.wikidata.org/prop/direct/P915 (9733 triples)
+   ✓ place_of_death (from graph label) → http://www.wikidata.org/prop/direct/P20 (24135 triples)
+   ✓ place_of_burial (from graph label) → http://www.wikidata.org/prop/direct/P119 (6700 triples)
+   ✓ performer (from graph label) → http://www.wikidata.org/prop/direct/P175 (11603 triples)
+   ✓ instance_of (from graph label) → http://www.wikidata.org/prop/direct/P31 (148686 triples)
+   ✓ media_franchise (from graph label) → http://www.wikidata.org/prop/direct/P8345 (3055 triples)
+   ✓ member_of_sports_team (from graph label) → http://www.wikidata.org/prop/direct/P54 (1997 triples)
+   ✓ nominated_for (from graph label) → http://www.wikidata.org/prop/direct/P1411 (36391 triples)
+   ✓ family_name (from graph label) → http://www.wikidata.org/prop/direct/P734 (37596 triples)
+   ✓ spouse (from graph label) → http://www.wikidata.org/prop/direct/P26 (9210 triples)
+   ✓ influenced_by (from graph label) → http://www.wikidata.org/prop/direct/P737 (2570 triples)
+   ✓ lyricist (from graph label) → http://www.wikidata.org/prop/direct/P676 (852 triples)
+   ✓ candidacy_in_election (from graph label) → http://www.wikidata.org/prop/direct/P3602 (507 triples)
+   ✓ native_language (from graph label) → http://www.wikidata.org/prop/direct/P103 (21808 triples)
+   ✓ custom: tag → http://ddis.ch/atai/tag (27422 triples)
+   ✓ position_held (from graph label) → http://www.wikidata.org/prop/direct/P39 (5013 triples)
+   ✓ distributed_by (from graph label) → http://www.wikidata.org/prop/direct/P750 (20147 triples)
+   ✓ employer (from graph label) → http://www.wikidata.org/prop/direct/P108 (5771 triples)
+   ✓ choreographer (from graph label) → http://www.wikidata.org/prop/direct/P1809 (79 triples)
+   ✓ twinned_administrative_body (from graph label) → http://www.wikidata.org/prop/direct/P190 (5445 triples)
+   ✓ contributor_to_the_creative_work_or_subject (from graph label) → http://www.wikidata.org/prop/direct/P767 (2678 triples)
+   ✓ residence (from graph label) → http://www.wikidata.org/prop/direct/P551 (6867 triples)
+   ✓ country_of_origin (from graph label) → http://www.wikidata.org/prop/direct/P495 (21995 triples)
+   ✓ subclass_of (from graph label) → http://www.wikidata.org/prop/direct/P279 (6298 triples)
+   ✓ assessment (from graph label) → http://www.wikidata.org/prop/direct/P5021 (11995 triples)
+   ✓ writing_language (from graph label) → http://www.wikidata.org/prop/direct/P6886 (16364 triples)
+   ✓ based_on (from graph label) → http://www.wikidata.org/prop/direct/P144 (5194 triples)
+   ✓ has_parts (from graph label) → http://www.wikidata.org/prop/direct/P527 (4590 triples)
+   ✓ custom: rating → http://ddis.ch/atai/rating (2218 triples)
+   ✓ color (from graph label) → http://www.wikidata.org/prop/direct/P462 (12900 triples)
+   ✓ country_of_citizenship (from graph label) → http://www.wikidata.org/prop/direct/P27 (86522 triples)
+   ✓ fsk_film_rating (from graph label) → http://www.wikidata.org/prop/direct/P1981 (6440 triples)
+   ✓ has_works_in_the_collection (from graph label) → http://www.wikidata.org/prop/direct/P6379 (6577 triples)
+   ✓ original_language_of_film_or_tv_show (from graph label) → http://www.wikidata.org/prop/direct/P364 (15530 triples)
+   ✓ unmarried_partner (from graph label) → http://www.wikidata.org/prop/direct/P451 (2550 triples)
+   ✓ work_location (from graph label) → http://www.wikidata.org/prop/direct/P937 (5279 triples)
+   ✓ inspired_by (from graph label) → http://www.wikidata.org/prop/direct/P941 (825 triples)
+   ✓ creator (from graph label) → http://www.wikidata.org/prop/direct/P170 (4483 triples)
+   ✓ family (from graph label) → http://www.wikidata.org/prop/direct/P53 (552 triples)
+   ✓ owned_by (from graph label) → http://www.wikidata.org/prop/direct/P127 (910 triples)
+   ✓ part_of_the_series (from graph label) → http://www.wikidata.org/prop/direct/P179 (2758 triples)
+   ✓ different_from (from graph label) → http://www.wikidata.org/prop/direct/P1889 (4598 triples)
+   ✓ noble_title (from graph label) → http://www.wikidata.org/prop/direct/P97 (1161 triples)
+   ✓ military_or_police_rank (from graph label) → http://www.wikidata.org/prop/direct/P410 (1319 triples)
+   ✓ collection (from graph label) → http://www.wikidata.org/prop/direct/P195 (410 triples)
+   ✓ writing_system (from graph label) → http://www.wikidata.org/prop/direct/P282 (217 triples)
+   ✓ classind_rating (from graph label) → http://www.wikidata.org/prop/direct/P3216 (1327 triples)
+   ✓ manner_of_death (from graph label) → http://www.wikidata.org/prop/direct/P1196 (8950 triples)
+   ✓ author (from graph label) → http://www.wikidata.org/prop/direct/P50 (2337 triples)
+   ✓ present_in_work (from graph label) → http://www.wikidata.org/prop/direct/P1441 (20906 triples)
+   ✓ composer (from graph label) → http://www.wikidata.org/prop/direct/P86 (13317 triples)
+   ✓ producer (from graph label) → http://www.wikidata.org/prop/direct/P162 (17281 triples)
+   ✓ said_to_be_the_same_as (from graph label) → http://www.wikidata.org/prop/direct/P460 (687 triples)
+   ✓ set_in_environment (from graph label) → http://www.wikidata.org/prop/direct/P8411 (1990 triples)
+   ✓ participant_in (from graph label) → http://www.wikidata.org/prop/direct/P1344 (3434 triples)
+   ✓ country (from graph label) → http://www.wikidata.org/prop/direct/P17 (9723 triples)
+   ✓ notable_work (from graph label) → http://www.wikidata.org/prop/direct/P800 (5923 triples)
+   ✓ nmhh_film_rating (from graph label) → http://www.wikidata.org/prop/direct/P2363 (1446 triples)
+   ✓ shares_border_with (from graph label) → http://www.wikidata.org/prop/direct/P47 (3371 triples)
+   ✓ cnc_film_rating_france (from graph label) → http://www.wikidata.org/prop/direct/P2758 (7361 triples)
+   ✓ australian_classification (from graph label) → http://www.wikidata.org/prop/direct/P3156 (1153 triples)
+   ✓ characters (from graph label) → http://www.wikidata.org/prop/direct/P674 (12943 triples)
+   ✓ time_period (from graph label) → http://www.wikidata.org/prop/direct/P2348 (724 triples)
+   ✓ member_of_political_party (from graph label) → http://www.wikidata.org/prop/direct/P102 (2371 triples)
+   ✓ art_director (from graph label) → http://www.wikidata.org/prop/direct/P3174 (307 triples)
+   ✓ religion_or_worldview (from graph label) → http://www.wikidata.org/prop/direct/P140 (4006 triples)
+   ✓ mother (from graph label) → http://www.wikidata.org/prop/direct/P25 (1748 triples)
+   ✓ presented_in (from graph label) → http://www.wikidata.org/prop/direct/P5072 (201 triples)
+   ✓ emergency_phone_number (from graph label) → http://www.wikidata.org/prop/direct/P2852 (376 triples)
+   ✓ kijkwijzer_rating (from graph label) → http://www.wikidata.org/prop/direct/P2684 (5797 triples)
+   ✓ located_in_or_next_to_body_of_water (from graph label) → http://www.wikidata.org/prop/direct/P206 (805 triples)
+   ✓ derivative_work (from graph label) → http://www.wikidata.org/prop/direct/P4969 (2956 triples)
+   ✓ architectural_style (from graph label) → http://www.wikidata.org/prop/direct/P149 (266 triples)
+   ✓ form_of_creative_work (from graph label) → http://www.wikidata.org/prop/direct/P7937 (4886 triples)
+   ✓ diplomatic_relation (from graph label) → http://www.wikidata.org/prop/direct/P530 (6419 triples)
+   ✓ participated_in_conflict (from graph label) → http://www.wikidata.org/prop/direct/P607 (3061 triples)
+   ✓ armament (from graph label) → http://www.wikidata.org/prop/direct/P520 (121 triples)
+   ✓ screenwriter (from graph label) → http://www.wikidata.org/prop/direct/P58 (19964 triples)
+   ✓ original_broadcaster (from graph label) → http://www.wikidata.org/prop/direct/P449 (785 triples)
+   ✓ located_in_time_zone (from graph label) → http://www.wikidata.org/prop/direct/P421 (2419 triples)
+   ✓ instrument (from graph label) → http://www.wikidata.org/prop/direct/P1303 (9343 triples)
+   ✓ sibling (from graph label) → http://www.wikidata.org/prop/direct/P3373 (5784 triples)
+   ✓ narrative_role (from graph label) → http://www.wikidata.org/prop/direct/P5800 (1925 triples)
+   ✓ parent_organization (from graph label) → http://www.wikidata.org/prop/direct/P749 (463 triples)
+   ✓ hair_color (from graph label) → http://www.wikidata.org/prop/direct/P1884 (2372 triples)
+   ✓ director (from graph label) → http://www.wikidata.org/prop/direct/P57 (15187 triples)
+   ✓ production_designer (from graph label) → http://www.wikidata.org/prop/direct/P2554 (3405 triples)
+   ✓ platform (from graph label) → http://www.wikidata.org/prop/direct/P400 (1601 triples)
+   ✓ has_characteristic (from graph label) → http://www.wikidata.org/prop/direct/P1552 (2463 triples)
+   ✓ child_organizationunit (from graph label) → http://www.wikidata.org/prop/direct/P355 (395 triples)
+   ✓ state_of_conservation (from graph label) → http://www.wikidata.org/prop/direct/P5816 (26 triples)
+   ✓ eye_color (from graph label) → http://www.wikidata.org/prop/direct/P1340 (2233 triples)
+   ✓ located_in_the_statistical_territorial_entity (from graph label) → http://www.wikidata.org/prop/direct/P8138 (158 triples)
+   ✓ depicted_by (from graph label) → http://www.wikidata.org/prop/direct/P1299 (119 triples)
+   ✓ game_mode (from graph label) → http://www.wikidata.org/prop/direct/P404 (368 triples)
+   ✓ fictional_universe_described_in (from graph label) → http://www.wikidata.org/prop/direct/P1445 (1303 triples)
+   ✓ hong_kong_film_rating (from graph label) → http://www.wikidata.org/prop/direct/P8874 (194 triples)
+   ✓ record_label (from graph label) → http://www.wikidata.org/prop/direct/P264 (6928 triples)
+   ✓ owner_of (from graph label) → http://www.wikidata.org/prop/direct/P1830 (465 triples)
+   ✓ has_grammatical_case (from graph label) → http://www.wikidata.org/prop/direct/P2989 (332 triples)
+   ✓ superhuman_feature_or_ability (from graph label) → http://www.wikidata.org/prop/direct/P2563 (1375 triples)
+   ✓ filmiroda_rating (from graph label) → http://www.wikidata.org/prop/direct/P2747 (3062 triples)
+   ✓ bbfc_rating (from graph label) → http://www.wikidata.org/prop/direct/P2629 (918 triples)
+   ✓ animator (from graph label) → http://www.wikidata.org/prop/direct/P6942 (2341 triples)
+   ✓ eirin_film_rating (from graph label) → http://www.wikidata.org/prop/direct/P2756 (1707 triples)
+   ✓ father (from graph label) → http://www.wikidata.org/prop/direct/P22 (2770 triples)
+   ✓ commander_of_deprecated (from graph label) → http://www.wikidata.org/prop/direct/P598 (34 triples)
+   ✓ blood_type (from graph label) → http://www.wikidata.org/prop/direct/P1853 (1032 triples)
+   ✓ conferred_by (from graph label) → http://www.wikidata.org/prop/direct/P1027 (463 triples)
+   ✓ child (from graph label) → http://www.wikidata.org/prop/direct/P40 (5368 triples)
+   ✓ takes_place_in_fictional_universe (from graph label) → http://www.wikidata.org/prop/direct/P1434 (1235 triples)
+   ✓ country_for_sport (from graph label) → http://www.wikidata.org/prop/direct/P1532 (953 triples)
+   ✓ box_office (from graph label) → http://www.wikidata.org/prop/direct/P2142 (3347 triples)
+   ✓ cause_of_death (from graph label) → http://www.wikidata.org/prop/direct/P509 (11046 triples)
+   ✓ mpa_film_rating (from graph label) → http://www.wikidata.org/prop/direct/P1657 (2328 triples)
+   ✓ heritage_designation (from graph label) → http://www.wikidata.org/prop/direct/P1435 (659 triples)
+   ✓ executive_producer (from graph label) → http://www.wikidata.org/prop/direct/P1431 (2309 triples)
+   ✓ participant (from graph label) → http://www.wikidata.org/prop/direct/P710 (623 triples)
+   ✓ soundtrack_release (from graph label) → http://www.wikidata.org/prop/direct/P406 (1369 triples)
+   ✓ named_after (from graph label) → http://www.wikidata.org/prop/direct/P138 (2032 triples)
+   ✓ artist_files_at (from graph label) → http://www.wikidata.org/prop/direct/P9493 (626 triples)
+   ✓ film_crew_member (from graph label) → http://www.wikidata.org/prop/direct/P3092 (2477 triples)
+   ✓ headquarters_location (from graph label) → http://www.wikidata.org/prop/direct/P159 (2039 triples)
+   ✓ sport (from graph label) → http://www.wikidata.org/prop/direct/P641 (2958 triples)
+   ✓ capital_of (from graph label) → http://www.wikidata.org/prop/direct/P1376 (723 triples)
+   ✓ position_played_on_team__speciality (from graph label) → http://www.wikidata.org/prop/direct/P413 (772 triples)
+   ✓ official_language (from graph label) → http://www.wikidata.org/prop/direct/P37 (803 triples)
+   ✓ from_narrative_universe (from graph label) → http://www.wikidata.org/prop/direct/P1080 (4038 triples)
+   ✓ linguistic_typology (from graph label) → http://www.wikidata.org/prop/direct/P4132 (642 triples)
+   ✓ located_in_the_administrative_territorial_entity (from graph label) → http://www.wikidata.org/prop/direct/P131 (3474 triples)
+   ✓ ethnic_group (from graph label) → http://www.wikidata.org/prop/direct/P172 (1597 triples)
+   ✓ significant_event (from graph label) → http://www.wikidata.org/prop/direct/P793 (1529 triples)
+   ✓ sexual_orientation (from graph label) → http://www.wikidata.org/prop/direct/P91 (918 triples)
+   ✓ sports_discipline_competed_in (from graph label) → http://www.wikidata.org/prop/direct/P2416 (267 triples)
+   ✓ crew_member (from graph label) → http://www.wikidata.org/prop/direct/P1029 (166 triples)
+   ✓ month_of_the_year (from graph label) → http://www.wikidata.org/prop/direct/P2922 (132 triples)
+   ✓ research_project_that_contributed_to_this_data_set (from graph label) → http://www.wikidata.org/prop/direct/P13459 (95 triples)
+   ✓ followed_by (from graph label) → http://www.wikidata.org/prop/direct/P156 (2251 triples)
+   ✓ military_branch (from graph label) → http://www.wikidata.org/prop/direct/P241 (1893 triples)
+   ✓ samples_from_work (from graph label) → http://www.wikidata.org/prop/direct/P5707 (70 triples)
+   ✓ industry (from graph label) → http://www.wikidata.org/prop/direct/P452 (1530 triples)
+   ✓ depicts (from graph label) → http://www.wikidata.org/prop/direct/P180 (1043 triples)
+   ✓ lifestyle (from graph label) → http://www.wikidata.org/prop/direct/P1576 (291 triples)
+   ✓ storyboard_artist (from graph label) → http://www.wikidata.org/prop/direct/P3275 (506 triples)
+   ✓ unesco_language_status (from graph label) → http://www.wikidata.org/prop/direct/P1999 (75 triples)
+   ✓ publisher (from graph label) → http://www.wikidata.org/prop/direct/P123 (1334 triples)
+   ✓ enemy (from graph label) → http://www.wikidata.org/prop/direct/P7047 (1816 triples)
+   ✓ oflc_classification (from graph label) → http://www.wikidata.org/prop/direct/P7327 (57 triples)
+   ✓ voice_type (from graph label) → http://www.wikidata.org/prop/direct/P412 (935 triples)
+   ✓ first_appearance (from graph label) → http://www.wikidata.org/prop/direct/P4584 (1160 triples)
+   ✓ studied_by (from graph label) → http://www.wikidata.org/prop/direct/P2579 (235 triples)
+   ✓ archives_at (from graph label) → http://www.wikidata.org/prop/direct/P485 (1674 triples)
+   ✓ jmk_film_rating (from graph label) → http://www.wikidata.org/prop/direct/P3650 (1229 triples)
+   ✓ basic_form_of_government (from graph label) → http://www.wikidata.org/prop/direct/P122 (368 triples)
+   ✓ place_of_publication (from graph label) → http://www.wikidata.org/prop/direct/P291 (1372 triples)
+   ✓ replaced_by (from graph label) → http://www.wikidata.org/prop/direct/P1366 (218 triples)
+   ✓ input_device (from graph label) → http://www.wikidata.org/prop/direct/P479 (202 triples)
+   ✓ designed_by (from graph label) → http://www.wikidata.org/prop/direct/P287 (134 triples)
+   ✓ relative (from graph label) → http://www.wikidata.org/prop/direct/P1038 (1561 triples)
+   ✓ medical_condition (from graph label) → http://www.wikidata.org/prop/direct/P1050 (1630 triples)
+   ✓ contains_the_administrative_territorial_entity (from graph label) → http://www.wikidata.org/prop/direct/P150 (1802 triples)
+   ✓ second_family_name_in_spanish_name (from graph label) → http://www.wikidata.org/prop/direct/P1950 (478 triples)
+   ✓ costume_designer (from graph label) → http://www.wikidata.org/prop/direct/P2515 (2401 triples)
+   ✓ basin_country (from graph label) → http://www.wikidata.org/prop/direct/P205 (197 triples)
+   ✓ significant_person (from graph label) → http://www.wikidata.org/prop/direct/P3342 (991 triples)
+   ✓ icaa_rating (from graph label) → http://www.wikidata.org/prop/direct/P3306 (1518 triples)
+   ✓ theme_music (from graph label) → http://www.wikidata.org/prop/direct/P942 (270 triples)
+   ✓ mtrcb_rating (from graph label) → http://www.wikidata.org/prop/direct/P8889 (113 triples)
+   ✓ product_or_material_produced (from graph label) → http://www.wikidata.org/prop/direct/P1056 (674 triples)
+   ✓ has_parts_of_the_class (from graph label) → http://www.wikidata.org/prop/direct/P2670 (363 triples)
+   ✓ facet_of (from graph label) → http://www.wikidata.org/prop/direct/P1269 (842 triples)
+   ✓ plot_expanded_in (from graph label) → http://www.wikidata.org/prop/direct/P5940 (93 triples)
+   ✓ driving_side (from graph label) → http://www.wikidata.org/prop/direct/P1622 (198 triples)
+   ✓ bamid_film_rating (from graph label) → http://www.wikidata.org/prop/direct/P9086 (189 triples)
+   ✓ has_cause (from graph label) → http://www.wikidata.org/prop/direct/P828 (240 triples)
+   ✓ interested_in (from graph label) → http://www.wikidata.org/prop/direct/P2650 (170 triples)
+   ✓ taxon_rank (from graph label) → http://www.wikidata.org/prop/direct/P105 (47 triples)
+   ✓ student_of (from graph label) → http://www.wikidata.org/prop/direct/P1066 (859 triples)
+   ✓ music_created_for (from graph label) → http://www.wikidata.org/prop/direct/P9899 (464 triples)
+   ✓ operating_area (from graph label) → http://www.wikidata.org/prop/direct/P2541 (129 triples)
+   ✓ made_from_material (from graph label) → http://www.wikidata.org/prop/direct/P186 (202 triples)
+   ✓ location (from graph label) → http://www.wikidata.org/prop/direct/P276 (1334 triples)
+   ✓ language_used (from graph label) → http://www.wikidata.org/prop/direct/P2936 (2132 triples)
+   ✓ make_up_artist (from graph label) → http://www.wikidata.org/prop/direct/P4805 (268 triples)
+   ✓ members_have_occupation (from graph label) → http://www.wikidata.org/prop/direct/P3989 (43 triples)
+   ✓ illustrator (from graph label) → http://www.wikidata.org/prop/direct/P110 (88 triples)
+   ✓ character_type (from graph label) → http://www.wikidata.org/prop/direct/P9071 (488 triples)
+   ✓ student (from graph label) → http://www.wikidata.org/prop/direct/P802 (506 triples)
+   ✓ after_a_work_by (from graph label) → http://www.wikidata.org/prop/direct/P1877 (1912 triples)
+   ✓ partner_in_business_or_sport (from graph label) → http://www.wikidata.org/prop/direct/P1327 (706 triples)
+   ✓ capital (from graph label) → http://www.wikidata.org/prop/direct/P36 (505 triples)
+   ✓ copyright_representative (from graph label) → http://www.wikidata.org/prop/direct/P6275 (1275 triples)
+   ✓ founded_by (from graph label) → http://www.wikidata.org/prop/direct/P112 (1167 triples)
+   ✓ social_classification (from graph label) → http://www.wikidata.org/prop/direct/P3716 (283 triples)
+   ✓ godparent (from graph label) → http://www.wikidata.org/prop/direct/P1290 (142 triples)
+   ✓ movement (from graph label) → http://www.wikidata.org/prop/direct/P135 (880 triples)
+   ✓ rars_rating (from graph label) → http://www.wikidata.org/prop/direct/P2637 (446 triples)
+   ✓ quotes_work (from graph label) → http://www.wikidata.org/prop/direct/P6166 (176 triples)
+   ✓ uses (from graph label) → http://www.wikidata.org/prop/direct/P2283 (297 triples)
+   ✓ has_spin_off (from graph label) → http://www.wikidata.org/prop/direct/P2512 (43 triples)
+   ✓ cnc_film_rating_romania (from graph label) → http://www.wikidata.org/prop/direct/P3402 (1240 triples)
+   ✓ igac_rating (from graph label) → http://www.wikidata.org/prop/direct/P5150 (393 triples)
+   ✓ sponsor (from graph label) → http://www.wikidata.org/prop/direct/P859 (62 triples)
+   ✓ rcq_classification (from graph label) → http://www.wikidata.org/prop/direct/P6658 (619 triples)
+   ✓ competition_won (from graph label) → http://www.wikidata.org/prop/direct/P2522 (129 triples)
+   ✓ railway_traffic_side (from graph label) → http://www.wikidata.org/prop/direct/P5658 (85 triples)
+   ✓ published_in (from graph label) → http://www.wikidata.org/prop/direct/P1433 (300 triples)
+   ✓ has_effect (from graph label) → http://www.wikidata.org/prop/direct/P1542 (294 triples)
+   ✓ patronym_or_matronym (from graph label) → http://www.wikidata.org/prop/direct/P5056 (108 triples)
+   ✓ member_of_the_crew_of (from graph label) → http://www.wikidata.org/prop/direct/P5096 (191 triples)
+   ✓ located_on_street (from graph label) → http://www.wikidata.org/prop/direct/P669 (52 triples)
+   ✓ uses_capitalization_for (from graph label) → http://www.wikidata.org/prop/direct/P6106 (33 triples)
+   ✓ set_during_recurring_event (from graph label) → http://www.wikidata.org/prop/direct/P9215 (508 triples)
+   ✓ partnership_with (from graph label) → http://www.wikidata.org/prop/direct/P2652 (46 triples)
+   ✓ ifco_rating (from graph label) → http://www.wikidata.org/prop/direct/P7573 (526 triples)
+   ✓ historic_county (from graph label) → http://www.wikidata.org/prop/direct/P7959 (429 triples)
+   ✓ fabrication_method (from graph label) → http://www.wikidata.org/prop/direct/P2079 (516 triples)
+   ✓ honorific_prefix (from graph label) → http://www.wikidata.org/prop/direct/P511 (285 triples)
+   ✓ original_film_format (from graph label) → http://www.wikidata.org/prop/direct/P3803 (327 triples)
+   ✓ location_of_formation (from graph label) → http://www.wikidata.org/prop/direct/P740 (533 triples)
+   ✓ edition_or_translation_of (from graph label) → http://www.wikidata.org/prop/direct/P629 (283 triples)
+   ✓ represented_by (from graph label) → http://www.wikidata.org/prop/direct/P1875 (373 triples)
+   ✓ notable_role (from graph label) → http://www.wikidata.org/prop/direct/P10606 (563 triples)
+   ✓ has_goal (from graph label) → http://www.wikidata.org/prop/direct/P3712 (39 triples)
+   ✓ recorded_participant (from graph label) → http://www.wikidata.org/prop/direct/P11108 (126 triples)
+   ✓ nomen_gentilicium (from graph label) → http://www.wikidata.org/prop/direct/P2359 (28 triples)
+   ✓ head_of_state (from graph label) → http://www.wikidata.org/prop/direct/P35 (83 triples)
+   ✓ dance_style (from graph label) → http://www.wikidata.org/prop/direct/P10741 (106 triples)
+   ✓ imda_rating (from graph label) → http://www.wikidata.org/prop/direct/P5201 (417 triples)
+   ✓ lowest_point (from graph label) → http://www.wikidata.org/prop/direct/P1589 (161 triples)
+   ✓ has_edition_or_translation (from graph label) → http://www.wikidata.org/prop/direct/P747 (297 triples)
+   ✓ model_item (from graph label) → http://www.wikidata.org/prop/direct/P5869 (68 triples)
+   ✓ translator (from graph label) → http://www.wikidata.org/prop/direct/P655 (79 triples)
+   ✓ sound_designer (from graph label) → http://www.wikidata.org/prop/direct/P5028 (813 triples)
+   ✓ central_bank (from graph label) → http://www.wikidata.org/prop/direct/P1304 (11 triples)
+   ✓ captured_with (from graph label) → http://www.wikidata.org/prop/direct/P4082 (37 triples)
+   ✓ contributed_to_creative_work (from graph label) → http://www.wikidata.org/prop/direct/P3919 (115 triples)
+   ✓ academic_degree (from graph label) → http://www.wikidata.org/prop/direct/P512 (503 triples)
+   ✓ praenomen (from graph label) → http://www.wikidata.org/prop/direct/P2358 (50 triples)
+   ✓ used_by (from graph label) → http://www.wikidata.org/prop/direct/P1535 (109 triples)
+   ✓ ethnologue_language_status (from graph label) → http://www.wikidata.org/prop/direct/P3823 (136 triples)
+   ✓ located_inon_physical_feature (from graph label) → http://www.wikidata.org/prop/direct/P706 (334 triples)
+   ✓ musical_conductor (from graph label) → http://www.wikidata.org/prop/direct/P3300 (52 triples)
+   ✓ genetic_association (from graph label) → http://www.wikidata.org/prop/direct/P2293 (15 triples)
+   ✓ intended_public (from graph label) → http://www.wikidata.org/prop/direct/P2360 (179 triples)
+   ✓ pegi_rating (from graph label) → http://www.wikidata.org/prop/direct/P908 (82 triples)
+   ✓ practiced_by (from graph label) → http://www.wikidata.org/prop/direct/P3095 (338 triples)
+   ✓ currency (from graph label) → http://www.wikidata.org/prop/direct/P38 (124 triples)
+   ✓ cites_work (from graph label) → http://www.wikidata.org/prop/direct/P2860 (141 triples)
+   ✓ has_pet (from graph label) → http://www.wikidata.org/prop/direct/P1429 (82 triples)
+   ✓ handedness (from graph label) → http://www.wikidata.org/prop/direct/P552 (235 triples)
+   ✓ target (from graph label) → http://www.wikidata.org/prop/direct/P533 (67 triples)
+   ✓ references_work_tradition_or_theory (from graph label) → http://www.wikidata.org/prop/direct/P8371 (590 triples)
+   ✓ drafted_by (from graph label) → http://www.wikidata.org/prop/direct/P647 (131 triples)
+   ✓ partially_coincident_with (from graph label) → http://www.wikidata.org/prop/direct/P1382 (260 triples)
+   ✓ most_populous_urban_area (from graph label) → http://www.wikidata.org/prop/direct/P13574 (91 triples)
+   ✓ day_of_week (from graph label) → http://www.wikidata.org/prop/direct/P2894 (70 triples)
+   ✓ köppen_climate_classification (from graph label) → http://www.wikidata.org/prop/direct/P2564 (54 triples)
+   ✓ alternate_universe_counterpart (from graph label) → http://www.wikidata.org/prop/direct/P11799 (110 triples)
+   ✓ organizer (from graph label) → http://www.wikidata.org/prop/direct/P664 (27 triples)
+   ✓ set_in_period (from graph label) → http://www.wikidata.org/prop/direct/P2408 (1744 triples)
+   ✓ world_heritage_criteria (from graph label) → http://www.wikidata.org/prop/direct/P2614 (120 triples)
+   ✓ has_tense (from graph label) → http://www.wikidata.org/prop/direct/P3103 (194 triples)
+   ⚠️  property_569 (no label) → http://www.wikidata.org/prop/direct/P569 (50 triples)
+   ✓ shape (from graph label) → http://www.wikidata.org/prop/direct/P1419 (36 triples)
+   ✓ health_specialty (from graph label) → http://www.wikidata.org/prop/direct/P1995 (110 triples)
+   ✓ home_world (from graph label) → http://www.wikidata.org/prop/direct/P1165 (290 triples)
+   ✓ has_use (from graph label) → http://www.wikidata.org/prop/direct/P366 (294 triples)
+   ✓ political_ideology (from graph label) → http://www.wikidata.org/prop/direct/P1142 (190 triples)
+   ✓ presenter (from graph label) → http://www.wikidata.org/prop/direct/P371 (303 triples)
+   ✓ party_chief_representative (from graph label) → http://www.wikidata.org/prop/direct/P210 (10 triples)
+   ✓ state_of_use (from graph label) → http://www.wikidata.org/prop/direct/P5817 (101 triples)
+   ✓ birthday (from graph label) → http://www.wikidata.org/prop/direct/P3150 (18 triples)
+   ✓ league_or_competition (from graph label) → http://www.wikidata.org/prop/direct/P118 (456 triples)
+   ✓ official_symbol (from graph label) → http://www.wikidata.org/prop/direct/P2238 (56 triples)
+   ✓ public_holiday (from graph label) → http://www.wikidata.org/prop/direct/P832 (401 triples)
+   ✓ official_religion (from graph label) → http://www.wikidata.org/prop/direct/P3075 (79 triples)
+   ✓ territory_claimed_by (from graph label) → http://www.wikidata.org/prop/direct/P1336 (30 triples)
+   ✓ esrb_rating (from graph label) → http://www.wikidata.org/prop/direct/P852 (126 triples)
+   ✓ occupant (from graph label) → http://www.wikidata.org/prop/direct/P466 (124 triples)
+   ✓ acknowledged (from graph label) → http://www.wikidata.org/prop/direct/P7137 (66 triples)
+   ✓ facial_hair (from graph label) → http://www.wikidata.org/prop/direct/P8852 (79 triples)
+   ✓ operating_system (from graph label) → http://www.wikidata.org/prop/direct/P306 (101 triples)
+   ✓ copyright_license (from graph label) → http://www.wikidata.org/prop/direct/P275 (154 triples)
+   ✓ child_astronomical_body (from graph label) → http://www.wikidata.org/prop/direct/P398 (20 triples)
+   ✓ season (from graph label) → http://www.wikidata.org/prop/direct/P4908 (195 triples)
+   ✓ field_of_this_occupation (from graph label) → http://www.wikidata.org/prop/direct/P425 (71 triples)
+   ✓ opposite_of (from graph label) → http://www.wikidata.org/prop/direct/P461 (444 triples)
+   ✓ crosses (from graph label) → http://www.wikidata.org/prop/direct/P177 (25 triples)
+   ✓ does_not_have_characteristic (from graph label) → http://www.wikidata.org/prop/direct/P6477 (23 triples)
+   ✓ sidekick_of (from graph label) → http://www.wikidata.org/prop/direct/P2546 (103 triples)
+   ✓ stepparent (from graph label) → http://www.wikidata.org/prop/direct/P3448 (95 triples)
+   ✓ indigenous_to (from graph label) → http://www.wikidata.org/prop/direct/P2341 (523 triples)
+   ✓ narrator (from graph label) → http://www.wikidata.org/prop/direct/P2438 (305 triples)
+   ✓ manifestation_of (from graph label) → http://www.wikidata.org/prop/direct/P1557 (52 triples)
+   ✓ appears_in_the_form_of (from graph label) → http://www.wikidata.org/prop/direct/P4675 (64 triples)
+   ✓ model (from graph label) → http://www.wikidata.org/prop/direct/P2634 (33 triples)
+   ✓ affiliation (from graph label) → http://www.wikidata.org/prop/direct/P1416 (164 triples)
+   ✓ replaces (from graph label) → http://www.wikidata.org/prop/direct/P1365 (372 triples)
+   ✓ architect (from graph label) → http://www.wikidata.org/prop/direct/P84 (57 triples)
+   ✓ wears (from graph label) → http://www.wikidata.org/prop/direct/P3828 (173 triples)
+   ✓ librettist (from graph label) → http://www.wikidata.org/prop/direct/P87 (140 triples)
+   ✓ brand (from graph label) → http://www.wikidata.org/prop/direct/P1716 (15 triples)
+   ✓ filmography (from graph label) → http://www.wikidata.org/prop/direct/P1283 (216 triples)
+   ✓ rtc_film_rating (from graph label) → http://www.wikidata.org/prop/direct/P3834 (920 triples)
+   ✓ scheduled_service_destination (from graph label) → http://www.wikidata.org/prop/direct/P521 (26 triples)
+   ✓ operator (from graph label) → http://www.wikidata.org/prop/direct/P137 (248 triples)
+   ✓ is_the_study_of (from graph label) → http://www.wikidata.org/prop/direct/P2578 (25 triples)
+   ✓ coach_of_sports_team (from graph label) → http://www.wikidata.org/prop/direct/P6087 (45 triples)
+   ✓ subject_has_role (from graph label) → http://www.wikidata.org/prop/direct/P2868 (364 triples)
+   ✓ patron_saint (from graph label) → http://www.wikidata.org/prop/direct/P417 (107 triples)
+   ✓ chairperson (from graph label) → http://www.wikidata.org/prop/direct/P488 (33 triples)
+   ✓ maintained_by (from graph label) → http://www.wikidata.org/prop/direct/P126 (31 triples)
+   ✓ location_of_first_performance (from graph label) → http://www.wikidata.org/prop/direct/P4647 (94 triples)
+   ✓ tracklist (from graph label) → http://www.wikidata.org/prop/direct/P658 (138 triples)
+   ✓ feast_day (from graph label) → http://www.wikidata.org/prop/direct/P841 (41 triples)
+   ✓ electrical_plug_type (from graph label) → http://www.wikidata.org/prop/direct/P2853 (401 triples)
+   ✓ incaa_film_rating (from graph label) → http://www.wikidata.org/prop/direct/P3428 (241 triples)
+   ✓ developer (from graph label) → http://www.wikidata.org/prop/direct/P178 (227 triples)
+   ✓ item_operated (from graph label) → http://www.wikidata.org/prop/direct/P121 (21 triples)
+   ✓ office_held_by_head_of_government (from graph label) → http://www.wikidata.org/prop/direct/P1313 (85 triples)
+   ✓ organizational_divisions (from graph label) → http://www.wikidata.org/prop/direct/P199 (52 triples)
+   ✓ has_grammatical_gender (from graph label) → http://www.wikidata.org/prop/direct/P5109 (161 triples)
+   ✓ fpb_rating (from graph label) → http://www.wikidata.org/prop/direct/P4437 (311 triples)
+   ✓ terminus (from graph label) → http://www.wikidata.org/prop/direct/P559 (13 triples)
+   ✓ manufacturer (from graph label) → http://www.wikidata.org/prop/direct/P176 (55 triples)
+   ✓ cover_art_by (from graph label) → http://www.wikidata.org/prop/direct/P736 (40 triples)
+   ✓ has_immediate_cause (from graph label) → http://www.wikidata.org/prop/direct/P1478 (14 triples)
+   ✓ location_of_creation (from graph label) → http://www.wikidata.org/prop/direct/P1071 (71 triples)
+   ✓ has_facility (from graph label) → http://www.wikidata.org/prop/direct/P912 (102 triples)
+   ✓ highest_point (from graph label) → http://www.wikidata.org/prop/direct/P610 (45 triples)
+   ✓ significant_place (from graph label) → http://www.wikidata.org/prop/direct/P7153 (39 triples)
+   ✓ commemorates (from graph label) → http://www.wikidata.org/prop/direct/P547 (26 triples)
+   ✓ software_engine (from graph label) → http://www.wikidata.org/prop/direct/P408 (36 triples)
+   ✓ editor (from graph label) → http://www.wikidata.org/prop/direct/P98 (14 triples)
+   ✓ usk_rating (from graph label) → http://www.wikidata.org/prop/direct/P914 (54 triples)
+   ✓ fictional_or_mythical_analog_of (from graph label) → http://www.wikidata.org/prop/direct/P1074 (85 triples)
+   ✓ worshipped_by (from graph label) → http://www.wikidata.org/prop/direct/P1049 (99 triples)
+   ✓ kmrb_film_rating (from graph label) → http://www.wikidata.org/prop/direct/P3818 (119 triples)
+   ✓ animal_breed (from graph label) → http://www.wikidata.org/prop/direct/P4743 (40 triples)
+   ✓ designated_as_terrorist_by (from graph label) → http://www.wikidata.org/prop/direct/P3461 (31 triples)
+   ✓ chief_executive_officer (from graph label) → http://www.wikidata.org/prop/direct/P169 (31 triples)
+   ✓ mount (from graph label) → http://www.wikidata.org/prop/direct/P3091 (16 triples)
+   ✓ language_regulatory_body (from graph label) → http://www.wikidata.org/prop/direct/P1018 (12 triples)
+   ✓ commissioned_by (from graph label) → http://www.wikidata.org/prop/direct/P88 (51 triples)
+   ✓ has_grammatical_mood (from graph label) → http://www.wikidata.org/prop/direct/P3161 (91 triples)
+   ✓ supported_sports_team (from graph label) → http://www.wikidata.org/prop/direct/P6758 (86 triples)
+   ✓ destination_point (from graph label) → http://www.wikidata.org/prop/direct/P1444 (44 triples)
+   ✓ recording_or_performance_of (from graph label) → http://www.wikidata.org/prop/direct/P2550 (27 triples)
+   ✓ connects_with (from graph label) → http://www.wikidata.org/prop/direct/P2789 (65 triples)
+   ✓ funder (from graph label) → http://www.wikidata.org/prop/direct/P8324 (67 triples)
+   ✓ camera_setup (from graph label) → http://www.wikidata.org/prop/direct/P4312 (39 triples)
+   ✓ narrative_motif (from graph label) → http://www.wikidata.org/prop/direct/P6962 (114 triples)
+   ✓ office_held_by_head_of_state (from graph label) → http://www.wikidata.org/prop/direct/P1906 (64 triples)
+   ✓ domain_of_saint_or_deity (from graph label) → http://www.wikidata.org/prop/direct/P2925 (61 triples)
+   ✓ has_phoneme (from graph label) → http://www.wikidata.org/prop/direct/P2587 (38 triples)
+   ✓ director__manager (from graph label) → http://www.wikidata.org/prop/direct/P1037 (120 triples)
+   ✓ ancestral_home (from graph label) → http://www.wikidata.org/prop/direct/P66 (137 triples)
+   ✓ oral_history_at (from graph label) → http://www.wikidata.org/prop/direct/P9600 (55 triples)
+   ✓ historical_region (from graph label) → http://www.wikidata.org/prop/direct/P6885 (27 triples)
+   ✓ head_of_government (from graph label) → http://www.wikidata.org/prop/direct/P6 (21 triples)
+   ✓ academic_major (from graph label) → http://www.wikidata.org/prop/direct/P812 (68 triples)
+   ✓ has_written_for (from graph label) → http://www.wikidata.org/prop/direct/P6872 (81 triples)
+   ✓ coextensive_with (from graph label) → http://www.wikidata.org/prop/direct/P3403 (23 triples)
+   ✓ hairstyle__hairlength (from graph label) → http://www.wikidata.org/prop/direct/P8839 (32 triples)
+   ✓ taxon_range (from graph label) → http://www.wikidata.org/prop/direct/P9714 (51 triples)
+   ✓ honorific_suffix (from graph label) → http://www.wikidata.org/prop/direct/P1035 (46 triples)
+   ✓ has_grammatical_person (from graph label) → http://www.wikidata.org/prop/direct/P5110 (112 triples)
+   ✓ vehicle_normally_used (from graph label) → http://www.wikidata.org/prop/direct/P3438 (19 triples)
+   ✓ connecting_service (from graph label) → http://www.wikidata.org/prop/direct/P1192 (34 triples)
+   ✓ place_served_by_transport_hub (from graph label) → http://www.wikidata.org/prop/direct/P931 (43 triples)
+   ✓ official_color (from graph label) → http://www.wikidata.org/prop/direct/P6364 (38 triples)
+   ✓ has_contributing_factor (from graph label) → http://www.wikidata.org/prop/direct/P1479 (48 triples)
+   ✓ assistant_director (from graph label) → http://www.wikidata.org/prop/direct/P5126 (37 triples)
+   ✓ tonality (from graph label) → http://www.wikidata.org/prop/direct/P826 (44 triples)
+   ✓ located_in_the_present_day_administrative_territorial_entity (from graph label) → http://www.wikidata.org/prop/direct/P3842 (71 triples)
+   ✓ legislative_body (from graph label) → http://www.wikidata.org/prop/direct/P194 (7 triples)
+   ✓ associated_electoral_district (from graph label) → http://www.wikidata.org/prop/direct/P7938 (46 triples)
+   ✓ gens (from graph label) → http://www.wikidata.org/prop/direct/P5025 (30 triples)
+   ✓ personal_library_at (from graph label) → http://www.wikidata.org/prop/direct/P9419 (25 triples)
+   ✓ union_of (from graph label) → http://www.wikidata.org/prop/direct/P2737 (37 triples)
+   ✓ dedicated_to (from graph label) → http://www.wikidata.org/prop/direct/P825 (107 triples)
+   ✓ instrumentation (from graph label) → http://www.wikidata.org/prop/direct/P870 (38 triples)
+   ✓ broadcast_by (from graph label) → http://www.wikidata.org/prop/direct/P3301 (87 triples)
+   ✓ anthem (from graph label) → http://www.wikidata.org/prop/direct/P85 (41 triples)
+   ✓ religious_order (from graph label) → http://www.wikidata.org/prop/direct/P611 (57 triples)
+   ✓ iconographic_symbol (from graph label) → http://www.wikidata.org/prop/direct/P4185 (15 triples)
+   ✓ permanent_resident_of (from graph label) → http://www.wikidata.org/prop/direct/P5389 (75 triples)
+   ✓ contributing_factor_of (from graph label) → http://www.wikidata.org/prop/direct/P1537 (41 triples)
+   ✓ territory_overlaps (from graph label) → http://www.wikidata.org/prop/direct/P3179 (31 triples)
+   ✓ inflows (from graph label) → http://www.wikidata.org/prop/direct/P200 (31 triples)
+   ✓ personality_trait_of_fictional_character (from graph label) → http://www.wikidata.org/prop/direct/P9652 (26 triples)
+   ✓ kavi_rating (from graph label) → http://www.wikidata.org/prop/direct/P5152 (41 triples)
+   ✓ authority (from graph label) → http://www.wikidata.org/prop/direct/P797 (9 triples)
+   ✓ tributary (from graph label) → http://www.wikidata.org/prop/direct/P974 (8 triples)
+   ✓ seismic_classification (from graph label) → http://www.wikidata.org/prop/direct/P9235 (52 triples)
+   ✓ shooting_handedness (from graph label) → http://www.wikidata.org/prop/direct/P423 (40 triples)
+   ✓ list_of_works (from graph label) → http://www.wikidata.org/prop/direct/P1455 (15 triples)
+   ✓ participating_team (from graph label) → http://www.wikidata.org/prop/direct/P1923 (27 triples)
+   ✓ political_alignment (from graph label) → http://www.wikidata.org/prop/direct/P1387 (33 triples)
+   ✓ carries (from graph label) → http://www.wikidata.org/prop/direct/P2505 (8 triples)
+   ✓ start_point (from graph label) → http://www.wikidata.org/prop/direct/P1427 (26 triples)
+   ✓ supplement_to (from graph label) → http://www.wikidata.org/prop/direct/P9234 (71 triples)
+   ✓ structural_engineer (from graph label) → http://www.wikidata.org/prop/direct/P631 (15 triples)
+   ✓ named_by (from graph label) → http://www.wikidata.org/prop/direct/P3938 (5 triples)
+   ✓ consecrator (from graph label) → http://www.wikidata.org/prop/direct/P1598 (8 triples)
+   ✓ history_of_topic (from graph label) → http://www.wikidata.org/prop/direct/P2184 (26 triples)
+   ✓ alphabetical_index (from graph label) → http://www.wikidata.org/prop/direct/P11106 (18 triples)
+   ✓ scenographer (from graph label) → http://www.wikidata.org/prop/direct/P4608 (65 triples)
+   ⚠️  property_1476 (no label) → http://www.wikidata.org/prop/direct/P1476 (50 triples)
+   ✓ featured_tracks (from graph label) → http://www.wikidata.org/prop/direct/P10664 (67 triples)
+   ✓ handled_mitigated_or_managed_by (from graph label) → http://www.wikidata.org/prop/direct/P11738 (19 triples)
+   ✓ canonization_status (from graph label) → http://www.wikidata.org/prop/direct/P411 (59 triples)
+   ✓ vessel_class (from graph label) → http://www.wikidata.org/prop/direct/P289 (10 triples)
+   ✓ coat_of_arms (from graph label) → http://www.wikidata.org/prop/direct/P237 (11 triples)
+   ✓ recorded_at_studio_or_venue (from graph label) → http://www.wikidata.org/prop/direct/P483 (45 triples)
+   ✓ culture (from graph label) → http://www.wikidata.org/prop/direct/P2596 (25 triples)
+   ✓ board_member (from graph label) → http://www.wikidata.org/prop/direct/P3320 (15 triples)
+   ✓ astronaut_mission (from graph label) → http://www.wikidata.org/prop/direct/P450 (52 triples)
+   ✓ parent_astronomical_body (from graph label) → http://www.wikidata.org/prop/direct/P397 (22 triples)
+   ✓ parent_taxon (from graph label) → http://www.wikidata.org/prop/direct/P171 (8 triples)
+   ✓ main_building_contractor (from graph label) → http://www.wikidata.org/prop/direct/P193 (9 triples)
+   ✓ discography (from graph label) → http://www.wikidata.org/prop/direct/P358 (10 triples)
+   ✓ individual_of_taxon (from graph label) → http://www.wikidata.org/prop/direct/P10241 (33 triples)
+   ✓ advertises (from graph label) → http://www.wikidata.org/prop/direct/P6291 (33 triples)
+   ✓ transport_network (from graph label) → http://www.wikidata.org/prop/direct/P16 (21 triples)
+   ✓ main_food_source (from graph label) → http://www.wikidata.org/prop/direct/P1034 (14 triples)
+   ✓ attested_in (from graph label) → http://www.wikidata.org/prop/direct/P5323 (26 triples)
+   ✓ game_mechanics (from graph label) → http://www.wikidata.org/prop/direct/P4151 (16 triples)
+   ✓ military_unit (from graph label) → http://www.wikidata.org/prop/direct/P7779 (9 triples)
+   ✓ cognomen (from graph label) → http://www.wikidata.org/prop/direct/P2365 (13 triples)
+   ✓ risk_factor (from graph label) → http://www.wikidata.org/prop/direct/P5642 (26 triples)
+   ✓ adjacent_station (from graph label) → http://www.wikidata.org/prop/direct/P197 (6 triples)
+   ✓ professorship (from graph label) → http://www.wikidata.org/prop/direct/P803 (22 triples)
+   ✓ mountain_range (from graph label) → http://www.wikidata.org/prop/direct/P4552 (14 triples)
+   ✓ discoverer_or_inventor (from graph label) → http://www.wikidata.org/prop/direct/P61 (30 triples)
+   ✓ carnegie_classification_of_institutions_of_higher_education (from graph label) → http://www.wikidata.org/prop/direct/P2643 (12 triples)
+   ✓ position_held_by_head_of_the_organization (from graph label) → http://www.wikidata.org/prop/direct/P2388 (16 triples)
+   ✓ possible_treatment (from graph label) → http://www.wikidata.org/prop/direct/P924 (29 triples)
+   ✓ doctoral_student (from graph label) → http://www.wikidata.org/prop/direct/P185 (11 triples)
+   ✓ doctoral_advisor (from graph label) → http://www.wikidata.org/prop/direct/P184 (17 triples)
+   ✓ species_kept (from graph label) → http://www.wikidata.org/prop/direct/P1990 (26 triples)
+   ✓ has_cabinet (from graph label) → http://www.wikidata.org/prop/direct/P12443 (1 triples)
+   ✓ located_in_protected_area (from graph label) → http://www.wikidata.org/prop/direct/P3018 (11 triples)
+   ✓ symptoms_and_signs (from graph label) → http://www.wikidata.org/prop/direct/P780 (28 triples)
+   ✓ motto (from graph label) → http://www.wikidata.org/prop/direct/P1546 (13 triples)
+   ✓ first_family_name_in_portuguese_name (from graph label) → http://www.wikidata.org/prop/direct/P9139 (17 triples)
+   ✓ contains_settlement (from graph label) → http://www.wikidata.org/prop/direct/P1383 (21 triples)
+   ✓ day_in_year_for_periodic_occurrence (from graph label) → http://www.wikidata.org/prop/direct/P837 (8 triples)
+   ✓ relates_to_sustainable_development_goal_target_or_indicator (from graph label) → http://www.wikidata.org/prop/direct/P12933 (4 triples)
+   ✓ interchange_station (from graph label) → http://www.wikidata.org/prop/direct/P833 (9 triples)
+   ✓ contains_the_statistical_territorial_entity (from graph label) → http://www.wikidata.org/prop/direct/P10888 (6 triples)
+   ✓ medical_examination (from graph label) → http://www.wikidata.org/prop/direct/P923 (1 triples)
+   ✓ executive_body (from graph label) → http://www.wikidata.org/prop/direct/P208 (11 triples)
+   ✓ diocese (from graph label) → http://www.wikidata.org/prop/direct/P708 (6 triples)
+   ✓ top_level_internet_domain (from graph label) → http://www.wikidata.org/prop/direct/P78 (1 triples)
+   ✓ list_of_episodes (from graph label) → http://www.wikidata.org/prop/direct/P1811 (1 triples)
+   ✓ connecting_line (from graph label) → http://www.wikidata.org/prop/direct/P81 (4 triples)
+   ✓ significant_drug_interaction (from graph label) → http://www.wikidata.org/prop/direct/P769 (4 triples)
+   ✓ scandinavian_middle_family_name (from graph label) → http://www.wikidata.org/prop/direct/P6978 (7 triples)
+   ✓ this_taxon_is_source_of (from graph label) → http://www.wikidata.org/prop/direct/P1672 (2 triples)
+   ✓ measurement_scale (from graph label) → http://www.wikidata.org/prop/direct/P1880 (4 triples)
+   ✓ open_data_portal (from graph label) → http://www.wikidata.org/prop/direct/P8402 (1 triples)
+   ✓ flag (from graph label) → http://www.wikidata.org/prop/direct/P163 (6 triples)
+   ✓ head_coach (from graph label) → http://www.wikidata.org/prop/direct/P286 (4 triples)
+   ✓ drainage_basin (from graph label) → http://www.wikidata.org/prop/direct/P4614 (4 triples)
+   ✓ foods_traditionally_associated (from graph label) → http://www.wikidata.org/prop/direct/P868 (1 triples)
+   ✓ has_seal_badge_or_sigil (from graph label) → http://www.wikidata.org/prop/direct/P418 (2 triples)
+   ✓ fandom (from graph label) → http://www.wikidata.org/prop/direct/P8693 (1 triples)
+
+   🔄 Building reverse mappings from dynamic schema...
+      director → Q5
+      cast_member → Q5
+      screenwriter → Q5
+      producer → Q5
+      genre → Q108329096
+      country_of_origin → Q3624078
+      award_received → Q38033430
+      language_of_work_or_name → Q1288568
+      voice_actor → Q5
+      director_of_photography → Q5
+      place_of_birth → Q1093829
+      medierådet_rating → Q56887397
+      described_by_source → Q186165
+      production_company → Q1762059
+      allegiance → Q3024240
+      narrative_location → Q6256
+      languages_spoken_written_or_signed → Q1288568
+      follows → Q11424
+      winner → Q5
+      continent → Q5107
+      film_editor → Q5
+      drug_or_therapy_used_for_treatment → Q113145171
+      main_subject → Q813912
+      aspect_ratio_wh → Q20970434
+      part_of → Q861437
+      filming_location → Q208511
+      place_of_death → Q745456
+      place_of_burial → Q39614
+      performer → Q59755569
+      media_franchise → Q130371093
+      nominated_for → Q38033430
+      spouse → Q5
+      influenced_by → Q5
+      lyricist → Q5
+      native_language → Q1097949
+      distributed_by → Q59152282
+      employer → Q47913
+      choreographer → Q5
+      twinned_administrative_body → Q1549591
+      contributor_to_the_creative_work_or_subject → Q5
+      residence → Q1093829
+      subclass_of → Q9415
+      assessment → Q102179937
+      writing_language → Q1097949
+      based_on → Q7725634
+      has_parts → Q11424
+      color → Q1075
+      country_of_citizenship → Q3624078
+      fsk_film_rating → Q23649977
+      has_works_in_the_collection → Q726929
+      original_language_of_film_or_tv_show → Q1097949
+      unmarried_partner → Q5
+      work_location → Q1901835
+      inspired_by → Q5
+      creator → Q5
+      owned_by → Q1762059
+      part_of_the_series → Q24856
+      different_from → Q5
+      military_or_police_rank → Q56019
+      collection → Q33506
+      classind_rating → Q26678730
+      author → Q5
+      present_in_work → Q11424
+      composer → Q5
+      said_to_be_the_same_as → Q15632617
+      set_in_environment → Q15831596
+      participant_in → Q4504495
+      country → Q3624078
+      notable_work → Q11424
+      nmhh_film_rating → Q23683425
+      shares_border_with → Q6256
+      cnc_film_rating_france → Q23817731
+      australian_classification → Q26708074
+      characters → Q15632617
+      time_period → Q578
+      art_director → Q5
+      mother → Q5
+      presented_in → Q27787439
+      kijkwijzer_rating → Q23649978
+      located_in_or_next_to_body_of_water → Q4022
+      derivative_work → Q11424
+      architectural_style → Q32880
+      form_of_creative_work → Q4263830
+      diplomatic_relation → Q3624078
+      participated_in_conflict → Q103495
+      original_broadcaster → Q1254874
+      sibling → Q5
+      parent_organization → Q891723
+      production_designer → Q5
+      has_characteristic → Q124877477
+      child_organizationunit → Q1762059
+      located_in_the_statistical_territorial_entity → Q1907114
+      depicted_by → Q11424
+      fictional_universe_described_in → Q11424
+      hong_kong_film_rating → Q100711986
+      owner_of → Q4830453
+      superhuman_feature_or_ability → Q1047698
+      filmiroda_rating → Q23830575
+      bbfc_rating → Q23790218
+      animator → Q5
+      eirin_film_rating → Q23790276
+      father → Q5
+      commander_of_deprecated → Q772547
+      conferred_by → Q708676
+      child → Q5
+      takes_place_in_fictional_universe → Q559618
+      country_for_sport → Q512187
+      mpa_film_rating → Q23660208
+      executive_producer → Q5
+      participant → Q6256
+      soundtrack_release → Q482994
+      named_after → Q11424
+      film_crew_member → Q5
+      headquarters_location → Q1093829
+      sport → Q31629
+      capital_of → Q3624078
+      official_language → Q1288568
+      from_narrative_universe → Q559618
+      located_in_the_administrative_territorial_entity → Q3624078
+      ethnic_group → Q41710
+      significant_event → Q12737077
+      sexual_orientation → Q4688879
+      crew_member → Q15773347
+      month_of_the_year → Q47018901
+      research_project_that_contributed_to_this_data_set → Q1298668
+      followed_by → Q11424
+      military_branch → Q1898583
+      samples_from_work → Q11424
+      industry → Q268592
+      depicts → Q1053916
+      storyboard_artist → Q5
+      enemy → Q15632617
+      oflc_classification → Q57737074
+      first_appearance → Q11424
+      studied_by → Q11862829
+      jmk_film_rating → Q28732980
+      place_of_publication → Q512187
+      replaced_by → Q3624078
+      relative → Q5
+      contains_the_administrative_territorial_entity → Q3624078
+      costume_designer → Q5
+      basin_country → Q6256
+      significant_person → Q15773347
+      icaa_rating → Q27253938
+      mtrcb_rating → Q102107926
+      facet_of → Q11862829
+      plot_expanded_in → Q7725634
+      bamid_film_rating → Q104839722
+      has_cause → Q112965645
+      interested_in → Q11862829
+      taxon_rank → Q13578154
+      student_of → Q5
+      music_created_for → Q11424
+      operating_area → Q3624078
+      location → Q1066984
+      language_used → Q1288568
+      make_up_artist → Q5
+      members_have_occupation → Q12737077
+      illustrator → Q5
+      student → Q5
+      after_a_work_by → Q5
+      partner_in_business_or_sport → Q5
+      capital → Q1549591
+      founded_by → Q5
+      social_classification → Q5932254
+      godparent → Q5
+      movement → Q968159
+      rars_rating → Q24561543
+      quotes_work → Q11424
+      uses → Q41719
+      has_spin_off → Q11424
+      cnc_film_rating_romania → Q27915572
+      igac_rating → Q52690603
+      sponsor → Q5
+      rcq_classification → Q62361091
+      competition_won → Q4220917
+      published_in → Q102336293
+      has_effect → Q30897648
+      member_of_the_crew_of → Q53710030
+      located_on_street → Q79007
+      uses_capitalization_for → Q11042
+      set_during_recurring_event → Q1238731
+      partnership_with → Q279239
+      ifco_rating → Q74431214
+      fabrication_method → Q3516833
+      original_film_format → Q759853
+      location_of_formation → Q1549591
+      edition_or_translation_of → Q11424
+      represented_by → Q88789639
+      notable_role → Q15632617
+      has_goal → Q11862829
+      recorded_participant → Q5
+      head_of_state → Q5
+      imda_rating → Q52380000
+      lowest_point → Q9430
+      has_edition_or_translation → Q26204053
+      model_item → Q11424
+      translator → Q5
+      sound_designer → Q5
+      captured_with → Q20888659
+      contributed_to_creative_work → Q11424
+      used_by → Q4830453
+      located_inon_physical_feature → Q82794
+      musical_conductor → Q5
+      intended_public → Q851990
+      practiced_by → Q58635633
+      cites_work → Q11424
+      has_pet → Q15711870
+      target → Q5
+      references_work_tradition_or_theory → Q11424
+      drafted_by → Q13393265
+      partially_coincident_with → Q22087155
+      most_populous_urban_area → Q51929311
+      alternate_universe_counterpart → Q15773347
+      organizer → Q708676
+      set_in_period → Q39911
+      health_specialty → Q1639378
+      home_world → Q3504248
+      has_use → Q11862829
+      political_ideology → Q12909644
+      presenter → Q5
+      party_chief_representative → Q5
+      birthday → Q14795564
+      official_symbol → Q22704163
+      public_holiday → Q60075825
+      official_religion → Q6957341
+      territory_claimed_by → Q3624078
+      occupant → Q15773347
+      acknowledged → Q5
+      operating_system → Q920890
+      copyright_license → Q77205602
+      child_astronomical_body → Q17480853
+      season → Q3464665
+      field_of_this_occupation → Q56055944
+      opposite_of → Q38033430
+      crosses → Q4022
+      does_not_have_characteristic → Q2135465
+      sidekick_of → Q15711870
+      stepparent → Q5
+      indigenous_to → Q3624078
+      narrator → Q5
+      manifestation_of → Q151885
+      appears_in_the_form_of → Q55983715
+      model → Q5
+      affiliation → Q55586013
+      replaces → Q3024240
+      architect → Q5
+      wears → Q18328097
+      librettist → Q5
+      brand → Q196600
+      filmography → Q11424
+      rtc_film_rating → Q28980086
+      scheduled_service_destination → Q94993988
+      operator → Q24577840
+      is_the_study_of → Q151885
+      patron_saint → Q20643955
+      chairperson → Q5
+      maintained_by → Q1549591
+      location_of_first_performance → Q27787439
+      tracklist → Q105543609
+      feast_day → Q60075825
+      incaa_film_rating → Q27925238
+      developer → Q4830453
+      item_operated → Q229371
+      organizational_divisions → Q1762059
+      fpb_rating → Q42012485
+      terminus → Q174782
+      manufacturer → Q48900561
+      cover_art_by → Q5
+      has_immediate_cause → Q5
+      location_of_creation → Q1093829
+      has_facility → Q129133491
+      highest_point → Q8502
+      significant_place → Q1093829
+      commemorates → Q856663
+      software_engine → Q7058673
+      editor → Q5
+      fictional_or_mythical_analog_of → Q5
+      worshipped_by → Q9134
+      kmrb_film_rating → Q28951018
+      animal_breed → Q39367
+      designated_as_terrorist_by → Q3624078
+      chief_executive_officer → Q5
+      mount → Q2962925
+      commissioned_by → Q5
+      destination_point → Q6256
+      recording_or_performance_of → Q105543609
+      connects_with → Q158438
+      funder → Q11396960
+      narrative_motif → Q16521
+      domain_of_saint_or_deity → Q3624078
+      director__manager → Q5
+      ancestral_home → Q3624078
+      historical_region → Q1620908
+      head_of_government → Q15632617
+      academic_major → Q11862829
+      coextensive_with → Q8514
+      taxon_range → Q6256
+      vehicle_normally_used → Q15707563
+      place_served_by_transport_hub → Q1549591
+      official_color → Q56053097
+      has_contributing_factor → Q151885
+      assistant_director → Q5
+      located_in_the_present_day_administrative_territorial_entity → Q3624078
+      dedicated_to → Q5
+      instrumentation → Q110295396
+      broadcast_by → Q723685
+      anthem → Q42605452
+      religious_order → Q43229
+      iconographic_symbol → Q16521
+      permanent_resident_of → Q161243
+      contributing_factor_of → Q41397
+      territory_overlaps → Q123705
+      inflows → Q4022
+      personality_trait_of_fictional_character → Q2393196
+      kavi_rating → Q52412816
+      authority → Q1752939
+      tributary → Q4022
+      list_of_works → Q11424
+      participating_team → Q104538495
+      political_alignment → Q28819924
+      carries → Q728937
+      start_point → Q5327160
+      supplement_to → Q11424
+      structural_engineer → Q11424
+      named_by → Q5
+      consecrator → Q5
+      history_of_topic → Q17544377
+      scenographer → Q5
+      featured_tracks → Q55850593
+      handled_mitigated_or_managed_by → Q11862829
+      canonization_status → Q216353
+      vessel_class → Q18039177
+      recorded_at_studio_or_venue → Q6497985
+      culture → Q19958368
+      board_member → Q5
+      astronaut_mission → Q26540
+      parent_astronomical_body → Q3504248
+      individual_of_taxon → Q16521
+      advertises → Q202866
+      main_food_source → Q55983715
+      attested_in → Q11424
+      game_mechanics → Q1643932
+      military_unit → Q176799
+      risk_factor → Q112193867
+      adjacent_station → Q55488
+      mountain_range → Q46831
+      discoverer_or_inventor → Q5
+      position_held_by_head_of_the_organization → Q4164871
+      possible_treatment → Q28598684
+      doctoral_student → Q5
+      doctoral_advisor → Q5
+      species_kept → Q16521
+      located_in_protected_area → Q46169
+      symptoms_and_signs → Q112965645
+      motto → Q59152282
+      contains_settlement → Q123705
+      day_in_year_for_periodic_occurrence → Q14795564
+      interchange_station → Q55488
+      executive_body → Q35798
+      top_level_internet_domain → Q843214
+      connecting_line → Q420962
+      head_coach → Q15773347

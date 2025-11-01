@@ -316,8 +316,15 @@ class QueryWorkflow:
         """
         print(f"\n[NODE: process_with_factual] Processing with factual approach...")
         
-        if not hasattr(self.orchestrator, 'embedding_processor') or self.orchestrator.embedding_processor is None:
-            print(f"[NODE: process_with_factual] ❌ Embedding processor not available")
+        # ✅ ENHANCED: Better error checking
+        if not hasattr(self.orchestrator, 'embedding_processor'):
+            print(f"[NODE: process_with_factual] ❌ Orchestrator has no embedding_processor attribute")
+            state['error'] = "System error: Orchestrator not properly initialized."
+            state["current_node"] = "process_with_factual"
+            return state
+        
+        if self.orchestrator.embedding_processor is None:
+            print(f"[NODE: process_with_factual] ❌ Embedding processor is None")
             state['error'] = "Embedding processor not initialized. Cannot process query."
             state["current_node"] = "process_with_factual"
             return state
@@ -350,8 +357,15 @@ class QueryWorkflow:
         """
         print(f"\n[NODE: process_with_embeddings] Processing with embeddings approach...")
         
-        if not hasattr(self.orchestrator, 'embedding_processor') or self.orchestrator.embedding_processor is None:
-            print(f"[NODE: process_with_embeddings] ❌ Embedding processor not available")
+        # ✅ ENHANCED: Better error checking
+        if not hasattr(self.orchestrator, 'embedding_processor'):
+            print(f"[NODE: process_with_embeddings] ❌ Orchestrator has no embedding_processor attribute")
+            state['error'] = "System error: Orchestrator not properly initialized."
+            state["current_node"] = "process_with_embeddings"
+            return state
+        
+        if self.orchestrator.embedding_processor is None:
+            print(f"[NODE: process_with_embeddings] ❌ Embedding processor is None")
             state['error'] = "Embedding processor not initialized."
             state["current_node"] = "process_with_embeddings"
             return state
@@ -383,8 +397,15 @@ class QueryWorkflow:
         """
         print(f"\n[NODE: process_with_both] Processing with hybrid approach (factual + embeddings)...")
         
-        if not hasattr(self.orchestrator, 'embedding_processor') or self.orchestrator.embedding_processor is None:
-            print(f"[NODE: process_with_both] ❌ Embedding processor not available")
+        # ✅ ENHANCED: Better error checking
+        if not hasattr(self.orchestrator, 'embedding_processor'):
+            print(f"[NODE: process_with_both] ❌ Orchestrator has no embedding_processor attribute")
+            state['error'] = "System error: Orchestrator not properly initialized."
+            state["current_node"] = "process_with_both"
+            return state
+        
+        if self.orchestrator.embedding_processor is None:
+            print(f"[NODE: process_with_both] ❌ Embedding processor is None")
             state['error'] = "Embedding processor not initialized."
             state["current_node"] = "process_with_both"
             return state

@@ -12,6 +12,7 @@ from pydantic import BaseModel, Field
 from src.main.sparql_handler import SPARQLHandler
 from src.main.nl_to_sparql import NLToSPARQL
 from src.main.workflow import QueryWorkflow
+from src.main.answer_formatter import AnswerFormatter
 
 from src.config import (
     GRAPH_FILE_PATH, EMBEDDINGS_DIR, USE_EMBEDDINGS,
@@ -54,7 +55,12 @@ class Orchestrator:
 
         # Initialize SPARQL handler
         self.sparql_handler = SPARQLHandler()
-
+        
+        # ✅ NEW: Initialize RelationManager
+        print("\n🔗 Initializing Relation Manager...")
+        from src.main.relation_manager import RelationManager
+        self.relation_manager = RelationManager(self.sparql_handler.graph)
+        
         # Initialize NL-to-SPARQL
         self.nl_to_sparql = NLToSPARQL(
             method="direct-llm",
@@ -63,9 +69,11 @@ class Orchestrator:
 
         # Initialize embedding processor
         self.embedding_processor = None
+        
+        # ✅ FIXED: Always try to initialize if embeddings are enabled
         if USE_EMBEDDINGS:
+            print("\n🔢 Initializing embedding processor...")
             try:
-                print("\n🔢 Initializing embedding processor...")
                 from src.main.embedding_processor import EmbeddingQueryProcessor
                 self.embedding_processor = EmbeddingQueryProcessor(
                     embeddings_dir=EMBEDDINGS_DIR,
@@ -75,11 +83,21 @@ class Orchestrator:
                     use_simple_aligner=True,
                     sparql_handler=self.sparql_handler
                 )
-                print("✅ Embedding processor initialized\n")
+                print("✅ Embedding processor initialized successfully\n")
+            except FileNotFoundError as e:
+                print(f"⚠️  Embedding files not found: {e}")
+                print(f"   Embeddings directory: {EMBEDDINGS_DIR}")
+                print(f"   Graph path: {GRAPH_FILE_PATH}")
+                print("   Embedding processor will not be available.\n")
+                self.embedding_processor = None
             except Exception as e:
                 print(f"⚠️  Failed to initialize embedding processor: {e}")
+                print("   Embedding processor will not be available.\n")
                 import traceback
                 traceback.print_exc()
+                self.embedding_processor = None
+        else:
+            print("ℹ️  Embeddings disabled in config (USE_EMBEDDINGS=False)\n")
 
         # Initialize workflow
         self.use_workflow = use_workflow
@@ -281,46 +299,6 @@ class Orchestrator:
             # Call the processor with detailed logging
             print("\n🔧 Calling embedding_processor.process_hybrid_factual_query()...")
             
-            # Try to capture intermediate steps if possible
-            try:
-                # Extract entities first
-                print("\n📍 Step: Entity Extraction")
-                entities = self.embedding_processor._extract_entities_from_query(clean_query)
-                self._log_pipeline_step("Entity Extraction Results", {
-                    "Number of Entities": len(entities),
-                    "Entities": entities if entities else "None found"
-                })
-                
-                # Determine query type
-                print("\n🔍 Step: Query Pattern Analysis")
-                query_pattern = self.embedding_processor._determine_query_type(clean_query)
-                self._log_pipeline_step("Query Pattern Detection", {
-                    "Pattern": query_pattern,
-                    "Query": clean_query
-                })
-                
-                # Generate SPARQL
-                print("\n⚡ Step: SPARQL Generation")
-                sparql_query = self.embedding_processor._generate_sparql_for_pattern(
-                    clean_query, query_pattern, entities
-                )
-                self._log_pipeline_step("SPARQL Query Generated", {
-                    "Query Length": len(sparql_query) if sparql_query else 0,
-                    "Query Preview": sparql_query[:200] if sparql_query else "Failed to generate"
-                })
-                
-                if sparql_query:
-                    print("\n📤 Step: SPARQL Execution")
-                    print(f"Full SPARQL Query:")
-                    print("─" * 60)
-                    print(sparql_query)
-                    print("─" * 60)
-                    
-            except AttributeError as ae:
-                print(f"⚠️  Could not access internal methods: {ae}")
-            except Exception as ie:
-                print(f"⚠️  Error in intermediate logging: {ie}")
-            
             # Execute the full pipeline
             response = self.embedding_processor.process_hybrid_factual_query(clean_query)
             
@@ -357,12 +335,13 @@ class Orchestrator:
             # Try to capture intermediate steps
             try:
                 print("\n🔢 Step: Query Embedding")
-                # Note: This assumes the processor has these methods
-                query_embedding = self.embedding_processor.query_encoder.encode([clean_query])[0]
-                self._log_pipeline_step("Query Embedding", {
-                    "Embedding Dimension": len(query_embedding),
-                    "Embedding Norm": float(sum(x**2 for x in query_embedding)**0.5)
-                })
+                # ✅ FIXED: Use correct attribute name
+                if hasattr(self.embedding_processor, 'query_embedder'):
+                    query_embedding = self.embedding_processor.query_embedder.embed_query(clean_query)
+                    self._log_pipeline_step("Query Embedding", {
+                        "Embedding Dimension": len(query_embedding),
+                        "Embedding Norm": float(sum(x**2 for x in query_embedding)**0.5)
+                    })
                 
                 print("\n🔍 Step: Embedding Space Search")
                 # The processor should handle this internally
@@ -393,14 +372,13 @@ class Orchestrator:
             return "⚠️ **Hybrid processing not available**"
         
         try:
-            # ✅ Clean query before processing
             clean_query = self._clean_query_for_processing(query)
             self._log_pipeline_step("Query Cleaning", {
                 "Original Query": query,
                 "Cleaned Query": clean_query
             })
             
-            # Run both approaches with detailed logging
+            # Run both approaches
             print("\n" + "="*60)
             print("🔵 FACTUAL PIPELINE (Hybrid Mode)")
             print("="*60)
@@ -411,10 +389,12 @@ class Orchestrator:
             print("="*60)
             embeddings_result = self._process_embedding_with_logging(clean_query)
             
-            # Combine results
+            # Use AnswerFormatter to combine results
             print("\n🔗 Combining results...")
-            response = f"**Factual Answer:**\n{factual_result}\n\n"
-            response += f"**Embeddings Answer:**\n{embeddings_result}"
+            response = AnswerFormatter.format_hybrid_response(
+                factual=factual_result,
+                embedding=embeddings_result
+            )
             
             return response
             

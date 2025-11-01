@@ -228,9 +228,13 @@ ORDER BY ?movieLabel'''
                 'wdt:P162': {'description': 'producer', 'property_id': 'P162'},
                 'wdt:P577': {'description': 'publication date (release date)', 'property_id': 'P577'},
                 'wdt:P136': {'description': 'genre', 'property_id': 'P136'},
-                'wdt:P495': {'description': 'country of origin', 'property_id': 'P495'},  # ✅ NEW
+                'wdt:P495': {'description': 'country of origin', 'property_id': 'P495'},
                 'wdt:P166': {'description': 'award received', 'property_id': 'P166'},
-                'ddis:rating': {'description': 'MPAA rating or movie rating'},
+                'wdt:P364': {'description': 'original language', 'property_id': 'P364'},
+                # ✅ REMOVED: Generic ddis:rating - use specific rating properties instead
+                # 'ddis:rating': {'description': 'MPAA rating or movie rating'},
+                'wdt:P5201': {'description': 'IMDA rating (Singapore)', 'property_id': 'P5201'},
+                'wdt:P1657': {'description': 'MPA film rating (USA)', 'property_id': 'P1657'},
                 'rdfs:label': {'description': 'label/name of entity'},
             }
         }
@@ -317,21 +321,36 @@ SELECT ?countryName ?countryUri WHERE {
 }"""
             },
             {
-                "question": "What movies did Christopher Nolan direct?",
-                "reasoning": "Reverse query: person → movies. Need to find movies directed by 'Christopher Nolan'.",
+                "question": "What award did 'Parasite' receive?",
+                "reasoning": "Forward query: movie → award. Need to find awards received by 'Parasite'.",
                 "sparql": """PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
 PREFIX wd: <http://www.wikidata.org/entity/>
 PREFIX wdt: <http://www.wikidata.org/prop/direct/>
 
-SELECT ?movieLabel ?movieUri WHERE {
-  ?personUri rdfs:label ?personLabel .
-  FILTER(regex(str(?personLabel), "^Christopher Nolan$", "i")) .
+SELECT ?awardName ?awardUri WHERE {
   ?movieUri wdt:P31 wd:Q11424 .
-  ?movieUri wdt:P57 ?personUri .
   ?movieUri rdfs:label ?movieLabel .
-  FILTER(LANG(?movieLabel) = "en" || LANG(?movieLabel) = "")
-}
-ORDER BY ?movieLabel"""
+  FILTER(regex(str(?movieLabel), "^Parasite$", "i")) .
+  ?movieUri wdt:P166 ?awardUri .
+  ?awardUri rdfs:label ?awardName .
+  FILTER(LANG(?awardName) = "en" || LANG(?awardName) = "")
+}"""
+            },
+            {
+                "question": "Who acted in Inception?",
+                "reasoning": "Forward query: movie → cast. Need to find actors in 'Inception'.",
+                "sparql": """PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX wd: <http://www.wikidata.org/entity/>
+PREFIX wdt: <http://www.wikidata.org/prop/direct/>
+
+SELECT ?actorName ?actorUri WHERE {
+  ?movieUri wdt:P31 wd:Q11424 .
+  ?movieUri rdfs:label ?movieLabel .
+  FILTER(regex(str(?movieLabel), "^Inception$", "i")) .
+  ?movieUri wdt:P161 ?actorUri .
+  ?actorUri rdfs:label ?actorName .
+  FILTER(LANG(?actorName) = "en" || LANG(?actorName) = "")
+}"""
             },
             {
                 "question": "What is the genre of Inception?",
@@ -389,7 +408,39 @@ SELECT ?directorName ?directorUri WHERE {
 }"""
                 }
             ],
-            # ✅ NEW: Country of origin examples
+            # ✅ NEW: Language examples
+            'forward_original_language_of_film_or_tv_show': [
+                {
+                    "question": "What language is the movie 'La Vie en Rose' in?",
+                    "sparql": """PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX wd: <http://www.wikidata.org/entity/>
+PREFIX wdt: <http://www.wikidata.org/prop/direct/>
+
+SELECT ?languageName ?languageUri WHERE {
+  ?movieUri wdt:P31 wd:Q11424 .
+  ?movieUri rdfs:label ?movieLabel .
+  FILTER(regex(str(?movieLabel), "^La Vie en Rose$", "i")) .
+  ?movieUri wdt:P364 ?languageUri .
+  ?languageUri rdfs:label ?languageName .
+  FILTER(LANG(?languageName) = "en" || LANG(?languageName) = "")
+}"""
+                },
+                {
+                    "question": "In which language is 'Amélie' spoken?",
+                    "sparql": """PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX wd: <http://www.wikidata.org/entity/>
+PREFIX wdt: <http://www.wikidata.org/prop/direct/>
+
+SELECT ?languageName ?languageUri WHERE {
+  ?movieUri wdt:P31 wd:Q11424 .
+  ?movieUri rdfs:label ?movieLabel .
+  FILTER(regex(str(?movieLabel), "^Amélie$", "i")) .
+  ?movieUri wdt:P364 ?languageUri .
+  ?languageUri rdfs:label ?languageName .
+  FILTER(LANG(?languageName) = "en" || LANG(?languageName) = "")
+}"""
+                }
+            ],
             'forward_country_of_origin': [
                 {
                     "question": "From what country is the movie 'Aro Tolbukhin. En la mente del asesino'?",
@@ -541,14 +592,14 @@ ASK WHERE {
             for ex in examples
         ])
         
-        # ✅ FIX: Use literal text instead of {movie} placeholder
+        # ✅ FIX: Escape braces in the literal text by doubling them
         prompt = f"""Generate SPARQL for movie questions.
 
 {self._get_ontology_description()}
 
 RULES:
 1. End triple patterns with period (.)
-2. ALWAYS use FILTER for text matching: ?var rdfs:label ?varLabel . FILTER(regex(str(?varLabel), "^The Matrix$", "i"))
+2. ALWAYS use FILTER for text matching: ?var rdfs:label ?varLabel . FILTER(regex(str(?varLabel), "^{{movie}}$", "i"))
 3. Use proper English title case: "The Bridge on the River Kwai"
 4. NEVER use exact match like: ?var rdfs:label "Text" (database is case-sensitive)
 5. For YES/NO questions, use ASK queries
@@ -576,6 +627,13 @@ SPARQL:
             SPARQLQuery or None if generation fails
         """
         try:
+            # ✅ NEW: Log pattern information if provided
+            if pattern:
+                print(f"[LLM] 📌 Using pattern context:")
+                print(f"[LLM]    Type: {pattern.pattern_type}")
+                print(f"[LLM]    Relation: {pattern.relation}")
+                print(f"[LLM]    Subject → Object: {pattern.subject_type} → {pattern.object_type}")
+            
             # Create few-shot prompt
             prompt = self._create_few_shot_prompt(question, pattern)
             

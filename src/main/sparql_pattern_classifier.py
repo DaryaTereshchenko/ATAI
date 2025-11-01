@@ -101,6 +101,9 @@ class TransformerSPARQLClassifier:
                 parts = label.split('_', 1)
                 if len(parts) == 2:
                     pattern_type, relation = parts
+                    # ✅ NEW: Normalize language relation variants
+                    if relation in ['original_language', 'language', 'original_language_of_film_or_tv_show']:
+                        relation = 'original_language_of_film_or_tv_show'
                     self.label_components[label] = (pattern_type, relation)
                 else:
                     self.label_components[label] = (label, 'unknown')

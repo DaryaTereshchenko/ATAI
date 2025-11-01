@@ -229,7 +229,7 @@ class EntityExtractor:
         Strategy:
         1. Try quoted text (highest priority, exact match required)
         2. Try spaCy NER entities (high confidence)
-        3. Try capitalized spans (person names)
+        3. Try capitalized spans (person names) ✅ ENHANCED
         4. Try whole-word pattern matching (longest first)
         
         Args:
@@ -291,27 +291,122 @@ class EntityExtractor:
             print(f"[EntityExtractor] ✅ Returning {len(matches)} NER matches")
             return self._deduplicate_matches(matches)
         
-        # PRIORITY 3: Try capitalized spans (person names)
+        # PRIORITY 3: Try capitalized spans (person names) - ENHANCED
         cap_spans = self._extract_capitalized_spans(query)
         
         for cap_span in cap_spans:
             cap_lower = cap_span.lower()
             
-            # Try exact match
+            # ✅ ENHANCED: Try exact match first
             if cap_lower in self.entity_cache:
                 for uri in self.entity_cache[cap_lower]:
                     if entity_type is None or self._has_type(uri, entity_type):
                         original_label = self.get_entity_label(uri)
-                        print(f"[EntityExtractor] ✅ Capitalized match: '{cap_span}' → '{original_label}'")
+                        print(f"[EntityExtractor] ✅ Capitalized exact match: '{cap_span}' → '{original_label}'")
                         matches.append((uri, original_label, 96))
+            else:
+                # ✅ ENHANCED: Try comprehensive fuzzy matching
+                print(f"[EntityExtractor] 🔍 Trying comprehensive fuzzy match for: '{cap_span}'")
+                
+                fuzzy_matches = self._fuzzy_match_person_name(cap_span, entity_type)
+                if fuzzy_matches:
+                    matches.extend(fuzzy_matches)
+                    print(f"[EntityExtractor] ✅ Found {len(fuzzy_matches)} fuzzy matches")
         
         if matches:
             print(f"[EntityExtractor] ✅ Returning {len(matches)} capitalized span matches")
             return self._deduplicate_matches(matches)
         
         # FALLBACK: Pattern-based extraction with whole-word matching
-        print(f"[EntityExtractor] ⚠️ No high-confidence matches, trying pattern extraction...")
+        print(f"[EntityExtractor] ⚠️  No high-confidence matches, trying pattern extraction...")
         return self._pattern_based_extraction(query, entity_type, threshold)
+    
+    def _fuzzy_match_person_name(
+        self,
+        name: str,
+        entity_type: Optional[str]
+    ) -> List[Tuple[str, str, int]]:
+        """
+        Comprehensive fuzzy matching for person names.
+        Handles various name formats and variations.
+        
+        Args:
+            name: Person name to match (e.g., "Quentin Tarantino")
+            entity_type: Optional entity type filter
+            
+        Returns:
+            List of (uri, label, confidence) tuples
+        """
+        matches = []
+        name_lower = name.lower()
+        parts = name_lower.split()
+        
+        if len(parts) < 2:
+            return matches
+        
+        # Generate variations
+        variations = []
+        
+        # 1. Original: "quentin tarantino"
+        variations.append(name_lower)
+        
+        # 2. Reversed: "tarantino quentin"
+        variations.append(f"{parts[-1]} {parts[0]}")
+        
+        # 3. Comma-separated: "tarantino, quentin"
+        variations.append(f"{parts[-1]}, {parts[0]}")
+        
+        # 4. Last name only: "tarantino"
+        variations.append(parts[-1])
+        
+        # 5. First name only: "quentin"
+        variations.append(parts[0])
+        
+        # 6. All parts reversed with commas: "tarantino, quentin jerome"
+        if len(parts) > 2:
+            variations.append(f"{parts[-1]}, {' '.join(parts[:-1])}")
+        
+        # 7. Middle name variations
+        if len(parts) == 3:
+            # "quentin jerome tarantino" → "tarantino, quentin j."
+            variations.append(f"{parts[-1]}, {parts[0]} {parts[1][0]}.")
+            # "quentin j tarantino"
+            variations.append(f"{parts[0]} {parts[1][0]} {parts[-1]}")
+        
+        print(f"[EntityExtractor]    Generated {len(variations)} name variations")
+        print(f"[EntityExtractor]    Variations: {variations[:5]}...")  # Show first 5
+        
+        # Try each variation
+        for variation in variations:
+            if variation in self.entity_cache:
+                for uri in self.entity_cache[variation]:
+                    if entity_type is None or self._has_type(uri, entity_type):
+                        original_label = self.get_entity_label(uri)
+                        print(f"[EntityExtractor]    ✅ Variation '{variation}' → '{original_label}'")
+                        # Confidence decreases with more transformations
+                        confidence = 94 if variation == name_lower else 92
+                        matches.append((uri, original_label, confidence))
+                        break  # Take first valid match for this variation
+        
+        # If still no matches, try partial substring matching on cache keys
+        if not matches:
+            print(f"[EntityExtractor]    Trying substring matching...")
+            last_name = parts[-1]
+            first_name = parts[0]
+            
+            # Search cache keys that contain both first and last name
+            for cache_key in self.entity_cache.keys():
+                if last_name in cache_key and first_name in cache_key:
+                    for uri in self.entity_cache[cache_key]:
+                        if entity_type is None or self._has_type(uri, entity_type):
+                            original_label = self.get_entity_label(uri)
+                            print(f"[EntityExtractor]    ✅ Substring match '{cache_key}' → '{original_label}'")
+                            matches.append((uri, original_label, 90))
+                            break
+                    if matches:
+                        break  # Stop after finding first match
+        
+        return matches
 
     def _deduplicate_matches(
         self,
@@ -346,24 +441,27 @@ class EntityExtractor:
         """
         Fallback: Extract entities using whole-word matching.
         
+        ✅ FIXED: Works on ORIGINAL case-sensitive query, not lowercase.
+        
         Strategy:
         - Sort labels by length (longest first) to prefer complete multi-word names
         - Use word boundary matching to avoid partial matches
         - Skip very short labels to reduce false positives
         """
         matches = []
-        query_original = query.strip()
-        query_lower = query_original.lower()
+        query_original = query.strip()  # ✅ Keep original case
         
         # Remove common question words and verbs for better matching
+        # ✅ Use case-insensitive regex but preserve original query
         stop_words = [
             'who', 'what', 'when', 'where', 'which', 'how', 'is', 'was', 'are', 'were',
             'show', 'find', 'list', 'get', 'tell', 'give', 'directed', 'director',
             'screenwriter', 'actor', 'released', 'the', 'of', 'in', 'for', 'about', 'did'
         ]
         
-        query_cleaned = query_lower
+        query_cleaned = query_original
         for word in stop_words:
+            # ✅ Remove stop words but preserve case of remaining text
             query_cleaned = re.sub(rf'\b{word}\b', ' ', query_cleaned, flags=re.IGNORECASE)
         query_cleaned = re.sub(r'\s+', ' ', query_cleaned).strip()
         
@@ -380,11 +478,12 @@ class EntityExtractor:
             found_labels = []
             
             for label_lower in labels_sorted:
-                # Use word boundary matching to avoid partial matches
+                # ✅ CRITICAL: Use case-insensitive matching
                 # Match in both original and cleaned query
-                if (re.search(rf'\b{re.escape(label_lower)}\b', query_lower) or
-                    re.search(rf'\b{re.escape(label_lower)}\b', query_cleaned)):
-                    
+                pattern_original = re.compile(rf'\b{re.escape(label_lower)}\b', re.IGNORECASE)
+                pattern_cleaned = re.compile(rf'\b{re.escape(label_lower)}\b', re.IGNORECASE)
+                
+                if pattern_original.search(query_original) or pattern_cleaned.search(query_cleaned):
                     for uri in self.entity_cache[label_lower]:
                         if entity_type is None or self._has_type(uri, entity_type):
                             original_label = self.get_entity_label(uri)

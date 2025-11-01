@@ -16,32 +16,37 @@ from typing import Optional
 class SPARQLGenerator:
     """Generates SPARQL queries dynamically based on query patterns."""
     
-    # Relation URI mappings
-    RELATION_URIS = {
-        'director': 'http://www.wikidata.org/prop/direct/P57',
-        'cast_member': 'http://www.wikidata.org/prop/direct/P161',
-        'screenwriter': 'http://www.wikidata.org/prop/direct/P58',
-        'producer': 'http://www.wikidata.org/prop/direct/P162',
-        'genre': 'http://www.wikidata.org/prop/direct/P136',
-        'publication_date': 'http://www.wikidata.org/prop/direct/P577',
-        'rating': 'http://ddis.ch/atai/rating',
-        'country_of_origin': 'http://www.wikidata.org/prop/direct/P495'  # ✅ NEW
-    }
-    
-    # Type URIs
-    TYPE_URIS = {
-        'movie': 'http://www.wikidata.org/entity/Q11424',
-        'person': 'http://www.wikidata.org/entity/Q5'
-    }
-    
-    def __init__(self, sparql_handler):
+    def __init__(self, sparql_handler, relation_manager=None):
         """
         Initialize with SPARQLHandler for label normalization.
         
         Args:
             sparql_handler: SPARQLHandler instance for validation and label operations
+            relation_manager: Optional RelationManager for dynamic relation resolution
         """
         self.sparql_handler = sparql_handler
+        self.relation_manager = relation_manager
+        
+        # Legacy mappings (kept for backward compatibility)
+        self.RELATION_URIS = {
+            'director': 'http://www.wikidata.org/prop/direct/P57',
+            'cast_member': 'http://www.wikidata.org/prop/direct/P161',
+            'screenwriter': 'http://www.wikidata.org/prop/direct/P58',
+            'producer': 'http://www.wikidata.org/prop/direct/P162',
+            'genre': 'http://www.wikidata.org/prop/direct/P136',
+            'publication_date': 'http://www.wikidata.org/prop/direct/P577',
+            # ✅ REMOVED: Generic 'rating' - should be resolved dynamically via RelationManager
+            # 'rating': 'http://ddis.ch/atai/rating',
+            'country_of_origin': 'http://www.wikidata.org/prop/direct/P495',
+            'award_received': 'http://www.wikidata.org/prop/direct/P166',
+            # ✅ Language properties
+            'original_language_of_film_or_tv_show': 'http://www.wikidata.org/prop/direct/P364',
+            'original_language': 'http://www.wikidata.org/prop/direct/P364',
+            'language': 'http://www.wikidata.org/prop/direct/P364',
+            # ✅ Specific rating properties (examples - there are many more)
+            'imda_rating': 'http://www.wikidata.org/prop/direct/P5201',
+            'mpa_film_rating': 'http://www.wikidata.org/prop/direct/P1657',
+        }
     
     def generate(
         self,
@@ -124,9 +129,17 @@ LIMIT 1"""
     def _generate_forward(self, pattern, movie_label: str) -> str:
         """Generate forward query: Movie → Property"""
         
-        relation_uri = self.RELATION_URIS.get(pattern.relation)
+        print(f"[SPARQLGenerator] Generating FORWARD query")
+        print(f"   Pattern relation: {pattern.relation}")
+        print(f"   Subject (movie): {movie_label}")
+        print(f"   Object type: {pattern.object_type}")
+        
+        # ✅ Use dynamic relation resolution
+        relation_uri = self._get_relation_uri(pattern.relation)
         if not relation_uri:
             raise ValueError(f"Unknown relation: {pattern.relation}")
+        
+        print(f"[SPARQLGenerator] Using relation URI: {relation_uri}")
         
         # Normalize label using SPARQLHandler's snap_label
         normalized_label = self._escape_label(movie_label)
@@ -269,3 +282,50 @@ ASK {{
         escaped = normalized.replace('\\', '\\\\').replace('"', '\\"')
         
         return escaped
+    
+    def _get_relation_uri(self, relation: str) -> str:
+        """
+        Get Wikidata property URI for a relation.
+        
+        Args:
+            relation: Relation key (e.g., 'director', 'cast_member')
+            
+        Returns:
+            Property URI
+        """
+        # ✅ CRITICAL FIX: Map 'country' to 'country_of_origin'
+        if relation == 'country':
+            relation = 'country_of_origin'
+        
+        # Try RelationManager first
+        if self.relation_manager:
+            uri = self.relation_manager.get_relation_uri(relation)
+            if uri:
+                return uri
+        
+        # Fallback to hardcoded mappings
+        relation_to_property = {
+            'director': 'http://www.wikidata.org/prop/direct/P57',
+            'cast_member': 'http://www.wikidata.org/prop/direct/P161',
+            'screenwriter': 'http://www.wikidata.org/prop/direct/P58',
+            'producer': 'http://www.wikidata.org/prop/direct/P162',
+            'genre': 'http://www.wikidata.org/prop/direct/P136',
+            'publication_date': 'http://www.wikidata.org/prop/direct/P577',
+            # ✅ REMOVED: Generic 'rating' - should be resolved dynamically via RelationManager
+            # 'rating': 'http://ddis.ch/atai/rating',
+            'country_of_origin': 'http://www.wikidata.org/prop/direct/P495',
+            'country': 'http://www.wikidata.org/prop/direct/P495',  # ✅ Alias
+            'award_received': 'http://www.wikidata.org/prop/direct/P166',
+            # ✅ Language properties
+            'original_language_of_film_or_tv_show': 'http://www.wikidata.org/prop/direct/P364',
+            'original_language': 'http://www.wikidata.org/prop/direct/P364',
+            'language': 'http://www.wikidata.org/prop/direct/P364',
+            # ✅ Specific rating properties (examples - there are many more)
+            'imda_rating': 'http://www.wikidata.org/prop/direct/P5201',
+            'mpa_film_rating': 'http://www.wikidata.org/prop/direct/P1657',
+        }
+        
+        if relation in relation_to_property:
+            return relation_to_property[relation]
+        
+        raise ValueError(f"Unknown relation: {relation}")

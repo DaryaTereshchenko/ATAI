@@ -1,0 +1,178 @@
+\documentclass{article}
+
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithmic}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{url}
+
+\begin{document}
+
+\title{Evaluation Event II/III/Final - \textit{Agent Account Name}}
+
+\author{1\textsuperscript{st} Full Name (\textit{User Account Name})
+\and
+2\textsuperscript{nd} Full Name (\textit{User Account Name}) \\}
+
+\maketitle
+
+
+\section{Introduction}
+Our agent implements a hybrid approach to movie knowledge graph question answering, combining pattern-based analysis, embedding-based retrieval, and LLM-assisted SPARQL generation. The system supports factual queries about movies, directors, actors, genres, and other movie-related information using a Wikidata-based knowledge graph. Key features include robust entity extraction, flexible query pattern recognition, and a fallback strategy using embeddings for complex queries. The agent employs both traditional rule-based methods and modern neural approaches, ensuring reliable answers while handling natural language variations.
+
+\section{Capabilities}
+
+\begin{figure}[h]
+\centering
+\begin{verbatim}
++-----------------------------------------------------------+
+|                   Movie QA Bot Architecture                  |
++-----------------------------------------------------------+
+
+            Natural Language Query
+                    ↓
++-----------------[Query Router]------------------+
+|             Pattern Classification             |
+|   +------------+    +------------+            |
+|   |  Factual   |    | Embedding  |           |
+|   +------------+    +------------+            |
++---------------------------------------------->
+
+[Factual Pipeline]                [Embedding Pipeline]
+     ↓                                 ↓
++------------+                  +--------------+
+|   Query    |                 |    Query     |
+| Analyzer   |                 |   Embedder   |
++------------+                 +--------------+
+     ↓                                 ↓
++------------+                  +--------------+
+|  Entity    |                 |  Embedding   |
+| Extractor  |                 |   Aligner    |
++------------+                 +--------------+
+     ↓                                 ↓
++------------+                  +--------------+
+|  SPARQL    |                 |  Embedding   |
+| Generator  |                 |  Processor   |
++------------+                 +--------------+
+     ↓                                 ↓
++------------+                  +--------------+
+|  SPARQL    |                 |   Entity     |
+| Handler    |                 |  Validator   |
++------------+                 +--------------+
+     ↓                                 ↓
+           [Response Formatter]
+                    ↓
+            Natural Language Answer
+\end{verbatim}
+\caption{Architecture overview showing the main components: Query Analyzer, Entity Extractor, SPARQL Generator, and Embedding Processor}
+\label{fig:architecture}
+\end{figure}
+
+Our agent supports the following question types:
+
+\begin{itemize}
+    \item Factual Questions \\
+    The agent processes factual queries using a three-stage pipeline: 1) Query pattern analysis using a transformer classifier, 2) Entity extraction with spaCy NER and custom pattern matching, and 3) Dynamic SPARQL generation with LLM assistance. The system supports forward queries (movie → property), reverse queries (person → movies), and verification queries (relationship checks).
+
+    \item Embedding Questions \\
+    For embedding-based queries, we use a TransE-based approach combining sentence transformers for query embedding and learned alignments to the knowledge graph embedding space. The system can handle both direct similarity search and structured relation-based queries through embedding composition.
+
+    \item Hybrid Processing \\
+    The agent implements a fallback strategy where factual queries that fail pattern matching can be processed through the embedding pipeline, ensuring robust handling of edge cases and complex queries.
+\end{itemize}
+
+\section{Adopted Methods}
+
+\begin{itemize}
+    \item DeepSeek Coder (1.3B)\footnote{\url{https://github.com/deepseek-ai/DeepSeek-Coder}} \\
+    Used for natural language to SPARQL translation through few-shot prompting. The lightweight model enables fast local inference while maintaining good query generation quality.
+
+    \item sentence-transformers\footnote{\url{https://www.sbert.net/}} \\
+    Specifically the all-MiniLM-L6-v2 model for embedding natural language queries. Selected for its efficiency and strong semantic understanding capabilities.
+
+    \item spaCy\footnote{\url{https://spacy.io/}} \\
+    Employed for Named Entity Recognition in the entity extraction pipeline, particularly effective for identifying person names and movie titles.
+
+    \item TransE\footnote{\url{https://papers.nips.cc/paper/2013/hash/1cecc7a77928ca8133fa24680a88d2f9-Abstract.html}} \\
+    Knowledge graph embeddings for semantic similarity search and relation-based reasoning. The model encodes entities and relations in a shared vector space.
+
+    \item RDFLib\footnote{\url{https://rdflib.readthedocs.io/}} \\
+    Core library for handling RDF graph operations and SPARQL query execution against the movie knowledge graph.
+
+    \item llama-cpp-python\footnote{\url{https://github.com/abetlen/llama-cpp-python}} \\
+    Efficient inference engine for running the DeepSeek Coder model locally, enabling fast SPARQL generation.
+\end{itemize}
+
+\section{Examples}
+
+\begin{itemize}
+    \item Factual Questions\\
+    For the question "Who directed The Matrix?", the agent:
+    1) Identifies a forward query pattern with director relation
+    2) Extracts "The Matrix" as the movie entity using case-insensitive matching
+    3) Generates a SPARQL query with proper prefixes and filters
+    4) Executes against the knowledge graph to retrieve the director
+
+    \item Embedding Questions\\
+    Given "Please answer with embeddings: What genre is Inception?":
+    1) Embeds the query using sentence-transformers
+    2) Aligns to TransE space using learned projection
+    3) Uses TransE composition (movie + genre relation)
+    4) Finds nearest genre entities in the embedding space
+    5) Validates results against expected entity types
+
+    \item Hybrid Processing\\
+    For complex queries like "From what country is Parasite?":
+    1) Attempts pattern matching first
+    2) Falls back to embedding similarity if needed
+    3) Validates results using entity type constraints
+    4) Returns formatted natural language response
+\end{itemize}
+
+\section{Additional Features}
+
+Key improvements in our implementation include:
+
+\begin{itemize}
+    \item Robust entity extraction with multi-strategy approach:
+    \begin{verbatim}
+    # Priority order for entity extraction:
+    1. Quoted text extraction
+    2. spaCy NER
+    3. Capitalized spans
+    4. Pattern-based matching
+    \end{verbatim}
+
+    \item Smart case handling for movie titles:
+    \begin{verbatim}
+    # Proper English title case:
+    "the bridge on the river kwai" →
+    "The Bridge on the River Kwai"
+    \end{verbatim}
+
+    \item LLM-first SPARQL generation with template fallback:
+    \begin{verbatim}
+    1. Try DeepSeek Coder with few-shot examples
+    2. Fallback to templates if LLM fails
+    3. Validate and clean generated queries
+    \end{verbatim}
+\end{itemize}
+
+\section{Conclusions}
+
+Future improvements planned:
+
+\begin{itemize}
+    \item Enhanced support for temporal queries and date handling
+    \item Integration of multimedia content for movie-related images
+    \item Expansion of the knowledge graph with additional movie data sources
+    \item Implementation of a query caching system for improved response times
+\end{itemize}
+
+
+\bibliographystyle{abbrv}
+\bibliography{references}
+
+\end{document}

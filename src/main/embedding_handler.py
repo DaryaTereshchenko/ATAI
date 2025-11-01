@@ -313,6 +313,9 @@ class EmbeddingHandler:
             type_str = str(type_uri)
             if '/Q' in type_str:
                 # Extract Q-code
-                return type_str.split('/Q')[-1].split('#')[0]
+                qcode = type_str.split('/Q')[-1].split('#')[0]
+                # Remove any trailing characters
+                qcode = 'Q' + qcode.split('/')[0].split('?')[0]
+                return qcode
         
         return None
