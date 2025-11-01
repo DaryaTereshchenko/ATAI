@@ -7,6 +7,7 @@ import os
 import numpy as np
 from typing import Dict, List, Tuple, Optional
 import pickle
+import gc  # ✅ ADD: For memory cleanup
 
 
 class EmbeddingHandler:
@@ -15,15 +16,12 @@ class EmbeddingHandler:
     def __init__(self, embeddings_dir: str):
         """
         Initialize the embedding handler.
-        
-        Args:
-            embeddings_dir: Directory containing embedding files
-                - entity_embeds.npy: Entity embeddings
-                - entity_ids.del: Entity ID mappings
-                - relation_embeds.npy: Relation embeddings
-                - relation_ids.del: Relation ID mappings
         """
         self.embeddings_dir = embeddings_dir
+        
+        # ✅ CRITICAL: Validate directory exists
+        if not os.path.exists(embeddings_dir):
+            raise FileNotFoundError(f"Embeddings directory not found: {embeddings_dir}")
         
         # Load embeddings and mappings
         self.entity_embeddings = None
@@ -35,94 +33,168 @@ class EmbeddingHandler:
         
         self._load_embeddings()
         
-        print(f"✅ Loaded {len(self.entity_id_to_uri)} entity embeddings")
-        print(f"✅ Loaded {len(self.relation_id_to_uri)} relation embeddings")
-        print(f"   Entity embedding dimension: {self.entity_embeddings.shape[1]}")
-        print(f"   Relation embedding dimension: {self.relation_embeddings.shape[1]}")
+        # ✅ Validate loaded data
+        self._validate_embeddings()
+        
+        # ✅ ADD: Force garbage collection after loading
+        gc.collect()
+
+    def __del__(self):
+        """✅ ADD: Cleanup when object is destroyed."""
+        self.entity_embeddings = None
+        self.relation_embeddings = None
+        gc.collect()
+
+    def _validate_embeddings(self):
+        """Validate that embeddings and mappings are consistent."""
+        # Check entity embeddings
+        if self.entity_embeddings is None:
+            raise ValueError("Entity embeddings not loaded")
+        
+        if len(self.entity_id_to_uri) == 0:
+            raise ValueError("Entity ID mappings not loaded")
+    
+
+        
+        # Check relation embeddings
+        if self.relation_embeddings is None:
+            raise ValueError("Relation embeddings not loaded")
+        
+        if len(self.relation_id_to_uri) == 0:
+            raise ValueError("Relation ID mappings not loaded")
+        
+        if self.relation_embeddings.shape[0] != len(self.relation_id_to_uri):
+            print(f"⚠️  WARNING: Relation embedding count mismatch!")
+
+        
+        # Check for NaN or Inf values
+        if np.isnan(self.entity_embeddings).any():
+            raise ValueError("Entity embeddings contain NaN values")
+        if np.isinf(self.entity_embeddings).any():
+            raise ValueError("Entity embeddings contain Inf values")
+        
+        if np.isnan(self.relation_embeddings).any():
+            raise ValueError("Relation embeddings contain NaN values")
+        if np.isinf(self.relation_embeddings).any():
+            raise ValueError("Relation embeddings contain Inf values")
+        
     
     def _load_embeddings(self):
         """Load embeddings and ID mappings from files."""
-        # Load entity embeddings
+        print(f"📂 Loading embeddings from: {self.embeddings_dir}")
+        
+        # ✅ ENTITY EMBEDDINGS
         entity_embeds_path = os.path.join(self.embeddings_dir, "entity_embeds.npy")
         entity_ids_path = os.path.join(self.embeddings_dir, "entity_ids.del")
         
+        print(f"   • Checking entity embeddings: {entity_embeds_path}")
         if not os.path.exists(entity_embeds_path):
             raise FileNotFoundError(f"Entity embeddings not found: {entity_embeds_path}")
+        
+        print(f"   • Checking entity IDs: {entity_ids_path}")
         if not os.path.exists(entity_ids_path):
             raise FileNotFoundError(f"Entity IDs not found: {entity_ids_path}")
         
-        self.entity_embeddings = np.load(entity_embeds_path)
-        self.entity_id_to_uri, self.entity_uri_to_id = self._load_id_mappings(entity_ids_path)
+        # ✅ Load entity embeddings
+        print(f"   • Loading entity embeddings...")
+        self.entity_embeddings = np.load(entity_embeds_path, mmap_mode='r')
+        print(f"   ✅ Loaded {self.entity_embeddings.shape[0]} entity embeddings (dim={self.entity_embeddings.shape[1]})")
         
-        # Load relation embeddings
+        # Load entity ID mappings
+        print(f"   • Loading entity ID mappings...")
+        self.entity_id_to_uri, self.entity_uri_to_id = self._load_id_mappings(entity_ids_path, "entity")
+        print(f"   ✅ Loaded {len(self.entity_id_to_uri)} entity ID mappings")
+        
+        # ✅ RELATION EMBEDDINGS
         relation_embeds_path = os.path.join(self.embeddings_dir, "relation_embeds.npy")
         relation_ids_path = os.path.join(self.embeddings_dir, "relation_ids.del")
         
+        print(f"   • Checking relation embeddings: {relation_embeds_path}")
         if not os.path.exists(relation_embeds_path):
             raise FileNotFoundError(f"Relation embeddings not found: {relation_embeds_path}")
+        
+        print(f"   • Checking relation IDs: {relation_ids_path}")
         if not os.path.exists(relation_ids_path):
             raise FileNotFoundError(f"Relation IDs not found: {relation_ids_path}")
         
-        self.relation_embeddings = np.load(relation_embeds_path)
-        self.relation_id_to_uri, self.relation_uri_to_id = self._load_id_mappings(relation_ids_path)
-    
-    def _load_id_mappings(self, filepath: str) -> Tuple[Dict[int, str], Dict[str, int]]:
-        """
-        Load ID mappings from .del file.
+        # ✅ Load relation embeddings
+        print(f"   • Loading relation embeddings...")
+        self.relation_embeddings = np.load(relation_embeds_path, mmap_mode='r')
+        print(f"   ✅ Loaded {self.relation_embeddings.shape[0]} relation embeddings (dim={self.relation_embeddings.shape[1]})")
         
-        Args:
-            filepath: Path to .del file
-            
-        Returns:
-            Tuple of (id_to_uri, uri_to_id) dictionaries
-        """
+        # Load relation ID mappings
+        print(f"   • Loading relation ID mappings...")
+        self.relation_id_to_uri, self.relation_uri_to_id = self._load_id_mappings(relation_ids_path, "relation")
+        print(f"   ✅ Loaded {len(self.relation_id_to_uri)} relation ID mappings")
+        
+        print(f"✅ All embeddings loaded successfully")
+
+    
+    def _load_id_mappings(self, filepath: str, entity_type: str) -> Tuple[Dict[int, str], Dict[str, int]]:
+        """Load ID mappings from .del file."""
+
         id_to_uri = {}
         uri_to_id = {}
         
+        # Strategy 1: Try pickle format first
         try:
-            # Try pickle format first
             with open(filepath, 'rb') as f:
                 data = pickle.load(f)
                 if isinstance(data, dict):
                     id_to_uri = data
                     uri_to_id = {v: k for k, v in data.items()}
                     return id_to_uri, uri_to_id
-        except:
-            pass
+        except Exception as e:
+            pass  # Silent fallback
         
-        # Try text format: "id\turi\n"
+        # Strategy 2: Try tab-separated format
         try:
             with open(filepath, 'r', encoding='utf-8') as f:
-                for line in f:
+                for line_num, line in enumerate(f, 1):
                     line = line.strip()
                     if not line:
                         continue
+                    
                     parts = line.split('\t')
                     if len(parts) >= 2:
-                        entity_id = int(parts[0])
-                        uri = parts[1]
-                        id_to_uri[entity_id] = uri
-                        uri_to_id[uri] = entity_id
-            return id_to_uri, uri_to_id
-        except:
-            pass
+                        try:
+                            entity_id = int(parts[0])
+                            uri = parts[1]
+                            id_to_uri[entity_id] = uri
+                            uri_to_id[uri] = entity_id
+                        except ValueError:
+                            continue
+            
+            if id_to_uri:
+                return id_to_uri, uri_to_id
+        except Exception:
+            pass  # Silent fallback
         
-        # Try space-separated format
+        # Strategy 3: Try space-separated format
         try:
             with open(filepath, 'r', encoding='utf-8') as f:
-                for line in f:
+                for line_num, line in enumerate(f, 1):
                     line = line.strip()
                     if not line:
                         continue
+                    
                     parts = line.split()
                     if len(parts) >= 2:
-                        entity_id = int(parts[0])
-                        uri = parts[1]
-                        id_to_uri[entity_id] = uri
-                        uri_to_id[uri] = entity_id
-            return id_to_uri, uri_to_id
-        except Exception as e:
-            raise ValueError(f"Could not parse ID mapping file {filepath}: {e}")
+                        try:
+                            entity_id = int(parts[0])
+                            uri = parts[1]
+                            id_to_uri[entity_id] = uri
+                            uri_to_id[uri] = entity_id
+                        except ValueError:
+                            continue
+            
+            if id_to_uri:
+                return id_to_uri, uri_to_id
+        except Exception:
+            pass
+        
+        # All strategies failed
+        raise ValueError(f"Could not parse {entity_type} ID mapping file {filepath} in any known format")
     
     def get_entity_embedding(self, entity_uri: str) -> Optional[np.ndarray]:
         """

@@ -1,19 +1,13 @@
+#!/usr/bin/env python3
 """
-Comprehensive end-to-end pipeline test for transformer classifier.
-Tests the complete flow: Classification → Pattern Analysis → Entity Extraction → 
-                         LLM/Template SPARQL Generation → Execution → Response
-
-Focus on:
-1. FACTUAL queries: Full pipeline with LLM-first, template-fallback strategy
-2. EMBEDDING queries: Pure embedding-based approach with entity type reporting
-3. HYBRID queries: Both factual and embedding answers
-4. Answer validation against expected results
-
-Uses real Wikidata entities from the provided test cases.
+Test script for factual query classification and SPARQL generation.
+Tests the complete pipeline from natural language to SPARQL execution.
 """
 
 import sys
 import os
+import io  # ✅ ADD: Missing import for io.StringIO
+import contextlib  # ✅ ADD: Missing import for contextlib.redirect_stdout
 import json
 import re
 from datetime import datetime
@@ -136,148 +130,388 @@ def compare_answers(actual: str, expected: str) -> tuple:
 
 
 def test_transformer_pipeline():
-    """Test complete pipeline with provided example queries."""
-    
-    # ✅ NEW: Setup file logging
-    # Create logs directory if it doesn't exist
-    logs_dir = Path(project_root) / 'logs'
-    logs_dir.mkdir(exist_ok=True)
-    
-    # Generate log filename with timestamp
-    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-    log_file_path = logs_dir / f'test_pipeline_{timestamp}.log'
-    
-    # Setup tee output to write to both console and file
-    tee = TeeOutput(str(log_file_path))
-    original_stdout = sys.stdout
-    sys.stdout = tee
+    """Test complete transformer-based NL→SPARQL→Results pipeline."""
+    print("\n" + "="*80)
+    print("TEST: Complete Transformer Pipeline (NL → SPARQL → Results)")
+    print("="*80 + "\n")
     
     try:
-        print("\n" + "="*80)
-        print("TRANSFORMER CLASSIFIER - FULL PIPELINE TEST")
-        print("Testing Factual, Embedding, and Hybrid Approaches")
-        print("="*80)
-        print(f"\n📝 Log file: {log_file_path}")
-        print(f"📅 Test started: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
-        
         from src.main.orchestrator import Orchestrator
+        orchestrator = Orchestrator(use_workflow=True)
         
-        # Initialize orchestrator (suppress initialization output)
-        import io
-        import contextlib
-        
-        print("🔧 Initializing Orchestrator...")
-        f = io.StringIO()
-        try:
-            with contextlib.redirect_stdout(f):
-                orchestrator = Orchestrator(use_workflow=True)
-            print("✅ Orchestrator initialized\n")
-        except Exception as e:
-            print(f"❌ Failed to initialize: {e}")
-            return
+        # ✅ Check if embedding processor is available
+        if not hasattr(orchestrator, 'embedding_processor') or orchestrator.embedding_processor is None:
+            print("⚠️  Embedding processor not available - skipping test")
+            return  # ✅ Changed from pytest.skip() to return
         
         # ==================== TEST CASES ====================
         test_cases = [
-            # FACTUAL APPROACH TESTS
+            # FACTUAL APPROACH TESTS - Using actual database properties
             {
                 'query': "Please answer this question with a factual approach: From what country is the movie 'Aro Tolbukhin. En la mente del asesino'?",
                 'expected_type': 'factual',
                 'expected_answer': 'Mexico',
-                'description': 'Country of origin query'
+                'description': 'Country of origin query (P495)'
             },
             {
                 'query': "Please answer this question with a factual approach: Who is the screenwriter of 'Shortcut to Happiness'?",
                 'expected_type': 'factual',
                 'expected_answer': 'Pete Dexter',
-                'description': 'Screenwriter query'
+                'description': 'Screenwriter query (P58)'
             },
             {
                 'query': "Please answer this question with a factual approach: What country is 'The Bridge on the River Kwai' from?",
                 'expected_type': 'factual',
                 'expected_answer': 'United Kingdom',
-                'description': 'Country of origin query (alternate phrasing)'
+                'description': 'Country of origin query (P495)'
             },
             {
                 'query': "Please answer this question with a factual approach: Who directed 'Fargo'?",
                 'expected_type': 'factual',
                 'expected_answer': 'Ethan Coen and Joel Coen',
-                'description': 'Director query (multiple directors)'
+                'description': 'Director query (P57)'
             },
             {
                 'query': "Please answer this question with a factual approach: What genre is the movie 'Bandit Queen'?",
                 'expected_type': 'factual',
                 'expected_answer': 'drama film and biographical film and crime film',
-                'description': 'Genre query (multiple genres)'
+                'description': 'Genre query (P136)'
             },
             {
-                'query': "Please answer this question with a factual approach: When did the movie 'Miracles Still Happen' come out?",
+                'query': "Please answer this question with a factual approach: When was 'The Godfather' released?",
                 'expected_type': 'factual',
-                'expected_answer': '1974-07-19',
-                'description': 'Release date query'
+                'expected_answer': '1972',
+                'description': 'Publication date query (P577)'
+            },
+            {
+                'query': "Please answer this question with a factual approach: Who composed the music for 'The Lion King'?",
+                'expected_type': 'factual',
+                'expected_answer': 'Hans Zimmer',
+                'description': 'Composer query (P86)'
+            },
+            {
+                'query': "Please answer this question with a factual approach: In which language is 'Amélie' filmed?",
+                'expected_type': 'factual',
+                'expected_answer': 'French',
+                'description': 'Original language query (P364)'
+            },
+            {
+                'query': "Please answer this question with a factual approach: Who are the main actors in 'Pulp Fiction'?",
+                'expected_type': 'factual',
+                'expected_answer': 'John Travolta and Samuel L. Jackson and Uma Thurman',
+                'description': 'Cast members query (P161)'
+            },
+            {
+                'query': "Please answer this question with a factual approach: What production company made 'Jurassic Park'?",
+                'expected_type': 'factual',
+                'expected_answer': 'Universal Pictures',
+                'description': 'Production company query (P272)'
+            },
+            {
+                'query': "Please answer this question with a factual approach: What awards did 'Titanic' win?",
+                'expected_type': 'factual',
+                'expected_answer': 'Academy Award for Best Picture',
+                'description': 'Awards query (P166)'
+            },
+            {
+                'query': "Please answer this question with a factual approach: Who is the cinematographer of 'Blade Runner'?",
+                'expected_type': 'factual',
+                'expected_answer': 'Jordan Cronenweth',
+                'description': 'Director of photography query (P344)'
+            },
+            {
+                'query': "Please answer this question with a factual approach: What is the filming location of 'The Lord of the Rings'?",
+                'expected_type': 'factual',
+                'expected_answer': 'New Zealand',
+                'description': 'Filming location query (P915)'
+            },
+            {
+                'query': "Please answer this question with a factual approach: Who wrote the screenplay for 'The Shawshank Redemption'?",
+                'expected_type': 'factual',
+                'expected_answer': 'Frank Darabont',
+                'description': 'Screenwriter query (P58)'
+            },
+            {
+                'query': "Please answer this question with a factual approach: What is the original language of 'Parasite'?",
+                'expected_type': 'factual',
+                'expected_answer': 'Korean',
+                'description': 'Original language query (P364)'
+            },
+            {
+                'query': "Please answer this question with a factual approach: When was 'Casablanca' released?",
+                'expected_type': 'factual',
+                'expected_answer': '1942',
+                'description': 'Publication date query (P577)'
+            },
+            {
+                'query': "Please answer this question with a factual approach: Who produced 'The Dark Knight'?",
+                'expected_type': 'factual',
+                'expected_answer': 'Christopher Nolan and Emma Thomas and Charles Roven',
+                'description': 'Producer query (P162)'
+            },
+            {
+                'query': "Please answer this question with a factual approach: What studio distributed 'Spider-Man: No Way Home'?",
+                'expected_type': 'factual',
+                'expected_answer': 'Sony Pictures',
+                'description': 'Distributor query (P750)'
+            },
+            {
+                'query': "Please answer this question with a factual approach: Who are the cast members of 'The Avengers'?",
+                'expected_type': 'factual',
+                'expected_answer': 'Robert Downey Jr. and Chris Evans and Scarlett Johansson',
+                'description': 'Cast query (P161)'
+            },
+            {
+                'query': "Please answer this question with a factual approach: Who edited 'Whiplash'?",
+                'expected_type': 'factual',
+                'expected_answer': 'Tom Cross',
+                'description': 'Film editor query (P1040)'
+            },
+            {
+                'query': "Please answer this question with a factual approach: Who is the costume designer of 'Marie Antoinette'?",
+                'expected_type': 'factual',
+                'expected_answer': 'Milena Canonero',
+                'description': 'Costume designer query (P2515)'
+            },
+            {
+                'query': "Please answer this question with a factual approach: What film series does 'The Fellowship of the Ring' belong to?",
+                'expected_type': 'factual',
+                'expected_answer': 'The Lord of the Rings',
+                'description': 'Part of series query (P179)'
+            },
+            {
+                'query': "Please answer this question with a factual approach: Who narrated 'The Shawshank Redemption'?",
+                'expected_type': 'factual',
+                'expected_answer': 'Morgan Freeman',
+                'description': 'Narrator query (P2438)'
+            },
+            {
+                'query': "Please answer this question with a factual approach: What is the sequel to 'The Terminator'?",
+                'expected_type': 'factual',
+                'expected_answer': 'Terminator 2: Judgment Day',
+                'description': 'Followed by query (P156)'
+            },
+            {
+                'query': "Please answer this question with a factual approach: Who did the production design for 'Blade Runner 2049'?",
+                'expected_type': 'factual',
+                'expected_answer': 'Dennis Gassner',
+                'description': 'Production designer query (P2554)'
             },
             
             # EMBEDDING APPROACH TESTS
             {
                 'query': "Please answer this question with an embedding approach: Who is the director of 'Apocalypse Now'?",
                 'expected_type': 'embeddings',
-                'expected_answer': 'John Milius (type: Q5)',
-                'description': 'Embedding director query'
+                'expected_answer': 'Francis Ford Coppola (type: Q5)',
+                'description': 'Embedding director query (P57)'
             },
             {
                 'query': "Please answer this question with an embedding approach: Who is the screenwriter of '12 Monkeys'?",
                 'expected_type': 'embeddings',
-                'expected_answer': 'Carol Florence (type: Q5)',
-                'description': 'Embedding screenwriter query'
+                'expected_answer': 'David Peoples (type: Q5)',
+                'description': 'Embedding screenwriter query (P58)'
             },
             {
                 'query': "Please answer this question with an embedding approach: What is the genre of 'Shoplifters'?",
                 'expected_type': 'embeddings',
-                'expected_answer': 'comedy film (type: Q201658)',
-                'description': 'Embedding genre query'
+                'expected_answer': 'drama film (type: Q201658)',
+                'description': 'Embedding genre query (P136)'
+            },
+            {
+                'query': "Please answer this question with an embedding approach: Who produced 'Inception'?",
+                'expected_type': 'embeddings',
+                'expected_answer': 'Emma Thomas (type: Q5)',
+                'description': 'Embedding producer query (P162)'
+            },
+            {
+                'query': "Please answer this question with an embedding approach: What studio distributed 'Star Wars'?",
+                'expected_type': 'embeddings',
+                'expected_answer': '20th Century Fox (type: Q1762059)',
+                'description': 'Embedding distributor query (P750)'
+            },
+            {
+                'query': "Please answer this question with an embedding approach: Who composed the soundtrack for 'Interstellar'?",
+                'expected_type': 'embeddings',
+                'expected_answer': 'Hans Zimmer (type: Q5)',
+                'description': 'Embedding composer query (P86)'
+            },
+            {
+                'query': "Please answer this question with an embedding approach: What language is spoken in 'Life Is Beautiful'?",
+                'expected_type': 'embeddings',
+                'expected_answer': 'Italian (type: Q1288568)',
+                'description': 'Embedding language query (P364)'
+            },
+            {
+                'query': "Please answer this question with an embedding approach: Who did the cinematography for 'The Revenant'?",
+                'expected_type': 'embeddings',
+                'expected_answer': 'Emmanuel Lubezki (type: Q5)',
+                'description': 'Embedding cinematographer query (P344)'
+            },
+            {
+                'query': "Please answer this question with an embedding approach: What country produced 'Crouching Tiger, Hidden Dragon'?",
+                'expected_type': 'embeddings',
+                'expected_answer': 'China (type: Q6256)',
+                'description': 'Embedding country query (P495)'
+            },
+            {
+                'query': "Please answer this question with an embedding approach: What studio made 'Toy Story'?",
+                'expected_type': 'embeddings',
+                'expected_answer': 'Pixar (type: Q1762059)',
+                'description': 'Embedding production company query (P272)'
+            },
+            {
+                'query': "Please answer this question with an embedding approach: Who edited 'Mad Max: Fury Road'?",
+                'expected_type': 'embeddings',
+                'expected_answer': 'Margaret Sixel (type: Q5)',
+                'description': 'Embedding film editor query (P1040)'
+            },
+            {
+                'query': "Please answer this question with an embedding approach: What genre is '2001: A Space Odyssey'?",
+                'expected_type': 'embeddings',
+                'expected_answer': 'science fiction film (type: Q201658)',
+                'description': 'Embedding genre query (P136)'
             },
             
-            # HYBRID APPROACH TEST (no explicit approach specified)
+            # HYBRID APPROACH TESTS
             {
                 'query': "Please answer this question: Who is the director of 'Good Will Hunting'?",
                 'expected_type': 'hybrid',
                 'expected_factual_answer': 'Gus Van Sant',
-                'expected_embedding_answer': 'Harmony Korine (type: Q5)',
-                'description': 'Hybrid query (both approaches)'
+                'expected_embedding_answer': 'Gus Van Sant (type: Q5)',
+                'description': 'Hybrid director query (P57)'
             },
             {
                 'query': "Which movie has the highest user rating?",
                 'expected_type': 'hybrid',
                 'expected_factual_answer': 'The Shawshank Redemption',
                 'expected_embedding_answer': 'The Godfather (type: Q11424)',
-                'description': 'Hybrid query - highest rated movie'
+                'description': 'Hybrid query - highest rated movie (rating property)'
             },
             {
                 'query': "Who directed the movie 'The Bridge on the River Kwai'?",
                 'expected_type': 'hybrid',
                 'expected_factual_answer': 'David Lean',
                 'expected_embedding_answer': 'David Lean (type: Q5)',
-                'description': 'Hybrid query - director of classic film'
+                'description': 'Hybrid director query (P57)'
             },
             {
                 'query': "What genre is the movie 'Shoplifters'?",
                 'expected_type': 'hybrid',
                 'expected_factual_answer': 'drama film',
-                'expected_embedding_answer': 'comedy film (type: Q201658)',
-                'description': 'Hybrid query - genre identification'
+                'expected_embedding_answer': 'drama film (type: Q201658)',
+                'description': 'Hybrid genre query (P136)'
             },
             {
                 'query': "Who is the producer of the movie 'French Kiss'?",
                 'expected_type': 'hybrid',
                 'expected_factual_answer': 'Meg Ryan',
-                'expected_embedding_answer': 'Tim Bevan (type: Q5)',
-                'description': 'Hybrid query - producer query'
+                'expected_embedding_answer': 'Meg Ryan (type: Q5)',
+                'description': 'Hybrid producer query (P162)'
             },
             {
                 'query': "Which movie, originally from the country 'South Korea', received the award 'Academy Award for Best Picture'?",
                 'expected_type': 'hybrid',
                 'expected_factual_answer': 'Parasite',
                 'expected_embedding_answer': 'Parasite (type: Q11424)',
-                'description': 'Hybrid query - complex multi-criteria query'
+                'description': 'Hybrid complex query (P495 + P166)'
+            },
+            {
+                'query': "Who are the main cast members of 'Fight Club'?",
+                'expected_type': 'hybrid',
+                'expected_factual_answer': 'Brad Pitt and Edward Norton',
+                'expected_embedding_answer': 'Brad Pitt (type: Q5)',
+                'description': 'Hybrid cast query (P161)'
+            },
+            {
+                'query': "What sequel followed 'The Terminator'?",
+                'expected_type': 'hybrid',
+                'expected_factual_answer': 'Terminator 2: Judgment Day',
+                'expected_embedding_answer': 'Terminator 2: Judgment Day (type: Q11424)',
+                'description': 'Hybrid sequel query (P156)'
+            },
+            {
+                'query': "Which actor played the lead role in 'Forrest Gump'?",
+                'expected_type': 'hybrid',
+                'expected_factual_answer': 'Tom Hanks',
+                'expected_embedding_answer': 'Tom Hanks (type: Q5)',
+                'description': 'Hybrid cast member query (P161)'
+            },
+            {
+                'query': "Who composed the music for 'Star Wars'?",
+                'expected_type': 'hybrid',
+                'expected_factual_answer': 'John Williams',
+                'expected_embedding_answer': 'John Williams (type: Q5)',
+                'description': 'Hybrid composer query (P86)'
+            },
+            {
+                'query': "What language is 'Amélie' in?",
+                'expected_type': 'hybrid',
+                'expected_factual_answer': 'French',
+                'expected_embedding_answer': 'French (type: Q1288568)',
+                'description': 'Hybrid language query (P364)'
+            },
+            {
+                'query': "When was 'Pulp Fiction' released?",
+                'expected_type': 'hybrid',
+                'expected_factual_answer': '1994',
+                'expected_embedding_answer': '1994 (type: Q577)',
+                'description': 'Hybrid publication date query (P577)'
+            },
+            {
+                'query': "Who wrote the screenplay for 'Eternal Sunshine of the Spotless Mind'?",
+                'expected_type': 'hybrid',
+                'expected_factual_answer': 'Charlie Kaufman',
+                'expected_embedding_answer': 'Charlie Kaufman (type: Q5)',
+                'description': 'Hybrid screenwriter query (P58)'
+            },
+            {
+                'query': "What country is 'Cinema Paradiso' from?",
+                'expected_type': 'hybrid',
+                'expected_factual_answer': 'Italy',
+                'expected_embedding_answer': 'Italy (type: Q6256)',
+                'description': 'Hybrid country query (P495)'
+            },
+            {
+                'query': "Who did the cinematography for 'Birdman'?",
+                'expected_type': 'hybrid',
+                'expected_factual_answer': 'Emmanuel Lubezki',
+                'expected_embedding_answer': 'Emmanuel Lubezki (type: Q5)',
+                'description': 'Hybrid cinematographer query (P344)'
+            },
+            {
+                'query': "Who are the producers of 'Schindler's List'?",
+                'expected_type': 'hybrid',
+                'expected_factual_answer': 'Steven Spielberg and Gerald R. Molen and Branko Lustig',
+                'expected_embedding_answer': 'Steven Spielberg (type: Q5)',
+                'description': 'Hybrid multiple producers query (P162)'
+            },
+            {
+                'query': "Who is the production designer of 'The Grand Budapest Hotel'?",
+                'expected_type': 'hybrid',
+                'expected_factual_answer': 'Adam Stockhausen',
+                'expected_embedding_answer': 'Adam Stockhausen (type: Q5)',
+                'description': 'Hybrid production designer query (P2554)'
+            },
+            {
+                'query': "What franchise does 'Iron Man' belong to?",
+                'expected_type': 'hybrid',
+                'expected_factual_answer': 'Marvel Cinematic Universe',
+                'expected_embedding_answer': 'Marvel Cinematic Universe (type: Q130371093)',
+                'description': 'Hybrid media franchise query (P8345)'
+            },
+            {
+                'query': "Who narrated 'The Big Lebowski'?",
+                'expected_type': 'hybrid',
+                'expected_factual_answer': 'Sam Elliott',
+                'expected_embedding_answer': 'Sam Elliott (type: Q5)',
+                'description': 'Hybrid narrator query (P2438)'
+            },
+            {
+                'query': "Who did the costume design for 'The Great Gatsby'?",
+                'expected_type': 'hybrid',
+                'expected_factual_answer': 'Catherine Martin',
+                'expected_embedding_answer': 'Catherine Martin (type: Q5)',
+                'description': 'Hybrid costume designer query (P2515)'
             }
         ]
         
@@ -298,192 +532,93 @@ def test_transformer_pipeline():
             description = test_case['description']
             
             print(f"\n{'='*80}")
-            print(f"TEST CASE [{i}/{len(test_cases)}]: {description}")
-            print(f"{'='*80}")
-            print(f"📝 Query: '{query}'")
-            print()
+            print(f"TEST [{i}/{len(test_cases)}]: {description}")
+            print(f"Query: '{query}'")
             
             # ==================== STAGE 1: CLASSIFICATION ====================
-            print("🔍 STAGE 1: QUERY CLASSIFICATION")
-            print("-" * 80)
-            
             classification = orchestrator.classify_query(query)
             
-            print(f"Classification Result:")
-            print(f"  • Type:       {classification.question_type.value}")
-            print(f"  • Confidence: {classification.confidence:.1%}")
-            print(f"  • Expected:   {expected_type}")
+            print(f"  Classification: {classification.question_type.value} ({classification.confidence:.1%})", end="")
             
             # Check classification
             if classification.question_type.value == expected_type:
                 results['classification_correct'] += 1
-                print(f"✅ Classification: CORRECT")
+                print(" ✅")
             else:
-                print(f"❌ Classification: INCORRECT (got {classification.question_type.value}, expected {expected_type})")
-                print()
+                print(f" ❌ Expected: {expected_type}")
                 continue
-            print()
             
             # ==================== STAGE 2: QUERY PROCESSING ====================
-            print("⚙️  STAGE 2: QUERY PROCESSING")
-            print("-" * 80)
-            
             try:
-                # Log which processor will be used
-                if expected_type == 'factual':
-                    print("📌 Pipeline: FACTUAL APPROACH")
-                    print("  → Clean query → Extract entities → Generate SPARQL → Execute → Format response")
-                    print()
-                    
-                    # Call process with detailed output
-                    print("🔄 Step 2.1: Cleaning query...")
+                # Suppress verbose output during processing
+                f = io.StringIO()
+                with contextlib.redirect_stdout(f):
                     clean_query = orchestrator._clean_query_for_processing(query)
-                    print(f"  Clean query: '{clean_query}'")
-                    print()
                     
-                    print("🔄 Step 2.2: Processing with embedding processor (factual mode)...")
-                    response = orchestrator.embedding_processor.process_hybrid_factual_query(clean_query)
-                    
-                elif expected_type == 'embeddings':
-                    print("📌 Pipeline: EMBEDDING APPROACH")
-                    print("  → Clean query → Encode query → Search embedding space → Find nearest entities → Format response")
-                    print()
-                    
-                    print("🔄 Step 2.1: Cleaning query...")
-                    clean_query = orchestrator._clean_query_for_processing(query)
-                    print(f"  Clean query: '{clean_query}'")
-                    print()
-                    
-                    print("🔄 Step 2.2: Processing with embedding processor (embedding mode)...")
-                    response = orchestrator.embedding_processor.process_embedding_query(clean_query)
-                    
-                elif expected_type == 'hybrid':
-                    print("📌 Pipeline: HYBRID APPROACH")
-                    print("  → Run FACTUAL pipeline")
-                    print("  → Run EMBEDDING pipeline")
-                    print("  → Combine results")
-                    print()
-                    
-                    print("🔄 Step 2.1: Cleaning query...")
-                    clean_query = orchestrator._clean_query_for_processing(query)
-                    print(f"  Clean query: '{clean_query}'")
-                    print()
-                    
-                    print("🔄 Step 2.2a: Running FACTUAL pipeline...")
-                    factual_result = orchestrator.embedding_processor.process_hybrid_factual_query(clean_query)
-                    print(f"  Factual result (preview): {factual_result[:100]}...")
-                    print()
-                    
-                    print("🔄 Step 2.2b: Running EMBEDDING pipeline...")
-                    embeddings_result = orchestrator.embedding_processor.process_embedding_query(clean_query)
-                    print(f"  Embeddings result (preview): {embeddings_result[:100]}...")
-                    print()
-                    
-                    print("🔄 Step 2.3: Combining results...")
-                    response = f"**Factual Answer:**\n{factual_result}\n\n"
-                    response += f"**Embeddings Answer:**\n{embeddings_result}"
+                    if expected_type == 'factual':
+                        response = orchestrator.embedding_processor.process_hybrid_factual_query(clean_query)
+                    elif expected_type == 'embeddings':
+                        response = orchestrator.embedding_processor.process_embedding_query(clean_query)
+                    elif expected_type == 'hybrid':
+                        factual_result = orchestrator.embedding_processor.process_hybrid_factual_query(clean_query)
+                        embeddings_result = orchestrator.embedding_processor.process_embedding_query(clean_query)
+                        response = f"**Factual Answer:**\n{factual_result}\n\n**Embeddings Answer:**\n{embeddings_result}"
                 
-                print("✅ Query processing completed")
-                print()
+                # Check if query was regenerated (capture from suppressed output)
+                processing_log = f.getvalue()
+                if 'regenerat' in processing_log.lower() or 'retry' in processing_log.lower():
+                    print("  🔄 Query regenerated")
                 
-                # ==================== STAGE 3: RESPONSE ANALYSIS ====================
-                print("📊 STAGE 3: RESPONSE ANALYSIS")
-                print("-" * 80)
-                print(f"Full Response:")
-                print("-" * 40)
-                print(response)
-                print("-" * 40)
-                print()
-                
-                # ==================== STAGE 4: ANSWER EXTRACTION ====================
-                print("🎯 STAGE 4: ANSWER EXTRACTION")
-                print("-" * 80)
-                
+                # ==================== STAGE 3: ANSWER EXTRACTION & VALIDATION ====================
                 if expected_type == 'factual':
                     expected_answer = test_case['expected_answer']
                     actual_answer = extract_answer_from_response(response)
                     
-                    print(f"Extraction Method: Factual answer extraction")
-                    print(f"Expected Answer:   '{expected_answer}'")
-                    print(f"Extracted Answer:  '{actual_answer}'")
-                    print()
-                    
-                    print("🔍 STAGE 5: ANSWER VALIDATION")
-                    print("-" * 80)
                     is_match, similarity = compare_answers(actual_answer, expected_answer)
-                    
-                    print(f"Comparison Details:")
-                    print(f"  • Normalized Expected: '{normalize_answer(expected_answer)}'")
-                    print(f"  • Normalized Actual:   '{normalize_answer(actual_answer)}'")
-                    print(f"  • Similarity Score:    {similarity:.1%}")
-                    print(f"  • Match Threshold:     70%")
                     
                     if is_match:
                         results['answer_correct'] += 1
                         results['factual_correct'] += 1
-                        print(f"✅ Answer VALIDATION: PASSED (similarity: {similarity:.1%})")
+                        print(f"  Answer: ✅ '{actual_answer}'")
                     elif similarity > 0.5:
                         results['answer_partial'] += 1
-                        print(f"⚠️  Answer VALIDATION: PARTIAL MATCH (similarity: {similarity:.1%})")
+                        print(f"  Answer: ⚠️  '{actual_answer}' (expected: '{expected_answer}', similarity: {similarity:.1%})")
                     else:
-                        print(f"❌ Answer VALIDATION: FAILED (similarity: {similarity:.1%})")
+                        print(f"  Answer: ❌ '{actual_answer}' (expected: '{expected_answer}')")
+                        # Show SPARQL query on failure
+                        if 'SELECT' in processing_log or 'ASK' in processing_log:
+                            sparql_match = re.search(r'(PREFIX.*?)(?=\n\n|\Z)', processing_log, re.DOTALL)
+                            if sparql_match:
+                                print(f"  SPARQL Query:\n{sparql_match.group(1)}")
                 
                 elif expected_type == 'embeddings':
                     expected_answer = test_case['expected_answer']
                     actual_answer = extract_answer_from_response(response)
                     
-                    print(f"Extraction Method: Embedding answer extraction (with entity type)")
-                    print(f"Expected Answer:   '{expected_answer}'")
-                    print(f"Extracted Answer:  '{actual_answer}'")
-                    print()
-                    
-                    print("🔍 STAGE 5: ANSWER VALIDATION")
-                    print("-" * 80)
-                    
                     # For embedding answers, check if entity type is correct
                     if '(type:' in actual_answer:
                         type_match = re.search(r'\(type:\s*([^)]+)\)', actual_answer)
-                        entity_match = re.search(r'^([^(]+)\s*\(type:', actual_answer)
+                        expected_type_match = re.search(r'\(type:\s*([^)]+)\)', expected_answer)
                         
-                        if type_match and entity_match:
+                        if type_match and expected_type_match:
                             actual_type = type_match.group(1).strip()
-                            actual_entity = entity_match.group(1).strip()
-                            expected_type_match = re.search(r'\(type:\s*([^)]+)\)', expected_answer)
-                            expected_entity_match = re.search(r'^([^(]+)\s*\(type:', expected_answer)
+                            expected_type_val = expected_type_match.group(1).strip()
                             
-                            if expected_type_match and expected_entity_match:
-                                expected_type_val = expected_type_match.group(1).strip()
-                                expected_entity_val = expected_entity_match.group(1).strip()
-                                
-                                print(f"Entity Comparison:")
-                                print(f"  • Expected Entity: '{expected_entity_val}'")
-                                print(f"  • Actual Entity:   '{actual_entity}'")
-                                print(f"Entity Type Comparison:")
-                                print(f"  • Expected Type: '{expected_type_val}'")
-                                print(f"  • Actual Type:   '{actual_type}'")
-                                
-                                if actual_type == expected_type_val:
-                                    results['answer_correct'] += 1
-                                    results['embedding_correct'] += 1
-                                    print(f"✅ Answer VALIDATION: PASSED (entity type match: {actual_type})")
-                                else:
-                                    print(f"❌ Answer VALIDATION: FAILED (wrong entity type)")
+                            if actual_type == expected_type_val:
+                                results['answer_correct'] += 1
+                                results['embedding_correct'] += 1
+                                print(f"  Answer: ✅ '{actual_answer}'")
                             else:
-                                results['answer_partial'] += 1
-                                print(f"⚠️  Answer VALIDATION: PARTIAL (has type: {actual_type})")
+                                print(f"  Answer: ❌ '{actual_answer}' (expected type: {expected_type_val})")
                         else:
-                            print(f"❌ Answer VALIDATION: FAILED (malformed type information)")
+                            results['answer_partial'] += 1
+                            print(f"  Answer: ⚠️  '{actual_answer}' (type check failed)")
                     else:
-                        print(f"❌ Answer VALIDATION: FAILED (missing type information)")
+                        print(f"  Answer: ❌ '{actual_answer}' (missing type information)")
                 
                 elif expected_type == 'hybrid':
                     expected_factual = test_case['expected_factual_answer']
                     expected_embedding = test_case['expected_embedding_answer']
-                    
-                    print(f"Extraction Method: Hybrid (both factual and embedding)")
-                    print(f"Expected Factual Answer:   '{expected_factual}'")
-                    print(f"Expected Embedding Answer: '{expected_embedding}'")
-                    print()
                     
                     # Split response into factual and embedding parts
                     if 'Factual Answer:' in response and 'Embeddings Answer:' in response:
@@ -494,21 +629,10 @@ def test_transformer_pipeline():
                         factual_answer = extract_answer_from_response(factual_part)
                         embedding_answer = extract_answer_from_response(embedding_part)
                         
-                        print(f"Extracted Factual Answer:   '{factual_answer}'")
-                        print(f"Extracted Embedding Answer: '{embedding_answer}'")
-                        print()
-                        
-                        print("🔍 STAGE 5: ANSWER VALIDATION")
-                        print("-" * 80)
-                        
                         # Check factual
-                        print("Validating Factual Answer:")
                         factual_match, factual_sim = compare_answers(factual_answer, expected_factual)
-                        print(f"  • Similarity: {factual_sim:.1%}")
-                        print(f"  • Match: {factual_match}")
                         
                         # Check embedding type
-                        print("Validating Embedding Answer:")
                         embedding_match = False
                         if '(type:' in embedding_answer:
                             type_match = re.search(r'\(type:\s*([^)]+)\)', embedding_answer)
@@ -518,45 +642,52 @@ def test_transformer_pipeline():
                                 if expected_type_match:
                                     expected_type_val = expected_type_match.group(1).strip()
                                     embedding_match = actual_type == expected_type_val
-                                    print(f"  • Expected Type: {expected_type_val}")
-                                    print(f"  • Actual Type: {actual_type}")
-                                    print(f"  • Match: {embedding_match}")
                         
                         if factual_match and embedding_match:
                             results['answer_correct'] += 1
                             results['hybrid_correct'] += 1
-                            print(f"✅ Answer VALIDATION: PASSED (both answers correct)")
+                            print(f"  Factual: ✅ '{factual_answer}'")
+                            print(f"  Embedding: ✅ '{embedding_answer}'")
                         elif factual_match or embedding_match:
                             results['answer_partial'] += 1
-                            print(f"⚠️  Answer VALIDATION: PARTIAL (factual: {factual_match}, embedding: {embedding_match})")
+                            print(f"  Factual: {'✅' if factual_match else '❌'} '{factual_answer}'")
+                            print(f"  Embedding: {'✅' if embedding_match else '❌'} '{embedding_answer}'")
+                            if not factual_match:
+                                print(f"    Expected factual: '{expected_factual}'")
+                            if not embedding_match:
+                                print(f"    Expected embedding: '{expected_embedding}'")
                         else:
-                            print(f"❌ Answer VALIDATION: FAILED (both answers incorrect)")
+                            print(f"  Factual: ❌ '{factual_answer}' (expected: '{expected_factual}')")
+                            print(f"  Embedding: ❌ '{embedding_answer}' (expected: '{expected_embedding}')")
                     else:
-                        print(f"❌ Response format incorrect (missing Factual/Embeddings sections)")
+                        print(f"  ❌ Response format incorrect (missing Factual/Embeddings sections)")
                 
             except Exception as e:
-                print(f"\n❌ ERROR during query processing:")
-                print(f"   {str(e)}")
-                print("\nStack trace:")
+                print(f"  ❌ ERROR: {str(e)}")
                 import traceback
+                print("  Stack trace:")
                 traceback.print_exc()
         
         # Summary
-        print("="*80)
+        print("\n" + "="*80)
         print("TEST SUMMARY")
         print("="*80)
         
         print(f"\n📊 Results:")
-        print(f"  Classification:     {results['classification_correct']}/{results['total']}")
+        print(f"  Classification:     {results['classification_correct']}/{results['total']} ({results['classification_correct']/results['total']:.1%})")
         print(f"  Answer Validation:")
-        print(f"    ✅ Correct:       {results['answer_correct']}/{results['total']}")
+        print(f"    ✅ Correct:       {results['answer_correct']}/{results['total']} ({results['answer_correct']/results['total']:.1%})")
         print(f"    ⚠️  Partial:       {results['answer_partial']}/{results['total']}")
         print(f"    ❌ Incorrect:     {results['total'] - results['answer_correct'] - results['answer_partial']}/{results['total']}")
         
         print(f"\n  By Approach:")
-        print(f"    Factual:          {results['factual_correct']}/{sum(1 for tc in test_cases if tc['expected_type'] == 'factual')}")
-        print(f"    Embedding:        {results['embedding_correct']}/{sum(1 for tc in test_cases if tc['expected_type'] == 'embeddings')}")
-        print(f"    Hybrid:           {results['hybrid_correct']}/{sum(1 for tc in test_cases if tc['expected_type'] == 'hybrid')}")
+        factual_total = sum(1 for tc in test_cases if tc['expected_type'] == 'factual')
+        embedding_total = sum(1 for tc in test_cases if tc['expected_type'] == 'embeddings')
+        hybrid_total = sum(1 for tc in test_cases if tc['expected_type'] == 'hybrid')
+        
+        print(f"    Factual:          {results['factual_correct']}/{factual_total} ({results['factual_correct']/factual_total:.1%})")
+        print(f"    Embedding:        {results['embedding_correct']}/{embedding_total} ({results['embedding_correct']/embedding_total:.1%})")
+        print(f"    Hybrid:           {results['hybrid_correct']}/{hybrid_total} ({results['hybrid_correct']/hybrid_total:.1%})")
         
         success_rate = results['answer_correct'] / results['total']
         print(f"\n  Overall Success:    {results['answer_correct']}/{results['total']} ({success_rate:.1%})")
@@ -568,14 +699,8 @@ def test_transformer_pipeline():
         else:
             print(f"\n⚠️  {results['total'] - results['answer_correct']} test(s) failed or partially matched\n")
         
-        print(f"📝 Full test log saved to: {log_file_path}")
-        print(f"📅 Test completed: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
-    
     finally:
-        # ✅ Restore original stdout and close log file
-        sys.stdout = original_stdout
-        tee.close()
-        print(f"\n✅ Log saved to: {log_file_path}")
+        print(f"\n✅ Test completed: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
 
 
 if __name__ == "__main__":

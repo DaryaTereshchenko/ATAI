@@ -40,6 +40,7 @@ class Agent:
         
         # Process the message through the orchestrator with workflow
         try:
+            # The orchestrator's process_query method uses the workflow
             response = self.orchestrator.process_query(message)
             
             # Post the response
@@ -47,12 +48,19 @@ class Agent:
             
             print(f"\n{'='*80}")
             print(f"Response sent to room {room.room_id}")
+            print(f"Response preview: {response[:200]}...")
             print(f"{'='*80}\n")
             
         except Exception as e:
-            error_msg = f"❌ **Error**\n\nSorry, I encountered an error processing your request.\n\nDetails: {str(e)}"
-            print(f"Error processing message: {e}")
-            room.post_messages(error_msg)
+            error_msg = f"❌ **Error Processing Your Request**\n\nI encountered an unexpected error. Please try:\n• Rephrasing your question\n• Being more specific\n• Checking spelling\n\n*Technical details: {str(e)[:100]}*"
+            print(f"❌ Error processing message: {e}")
+            import traceback
+            traceback.print_exc()
+            
+            try:
+                room.post_messages(error_msg)
+            except Exception as post_error:
+                print(f"❌ Failed to post error message: {post_error}")
 
     def on_new_reaction(self, reaction: str, message_ordinal: int, room: Chatroom): 
         """Callback function to handle new reactions."""

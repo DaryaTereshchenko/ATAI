@@ -1,148 +1,79 @@
 """
 Entity Extractor for extracting entities from natural language queries.
-Optimized for quoted movie title extraction with proper English title case normalization.
-Enhanced with spaCy NER for better person/entity name extraction.
 """
 
-import re
 from typing import List, Dict, Tuple, Optional
-from rdflib import Graph, URIRef, RDFS, RDF, Literal
+from rdflib import Graph
+from src.main.entity_utils import EntityUtils
+from src.main.schema_config import SchemaConfig
 
 
 class EntityExtractor:
-    """Extract entities from natural language queries with focus on quoted text and NER."""
+    """Extract entities from natural language queries."""
     
     def __init__(self, graph: Graph):
-        """
-        Initialize entity extractor with knowledge graph.
-        
-        Args:
-            graph: RDFLib graph containing entities
-        """
+        """Initialize entity extractor with knowledge graph."""
         self.graph = graph
         self.entity_cache = self._build_entity_cache()
-        self.spacy_nlp = None  # Will be set by orchestrator if available
+        self.spacy_nlp = None
+        self.utils = EntityUtils()
     
     def _build_entity_cache(self) -> Dict[str, List[str]]:
         """Build cache of entity labels to URIs for fast lookup."""
-        print("🔨 Building entity cache from knowledge graph...")
         cache = {}
         
         try:
-            # Get all entities with labels
+            count = 0
             for s, p, o in self.graph.triples((None, RDFS.label, None)):
                 if isinstance(o, Literal):
-                    label = str(o).strip()
+                    # ✅ CRITICAL: Store ORIGINAL label from database (no normalization)
+                    original_label = str(o)
                     uri = str(s)
                     
-                    # ✅ CRITICAL: Store ONLY lowercase keys for case-insensitive lookup
-                    label_lower = label.lower()
+                    # ✅ Use lowercase ONLY for lookup key
+                    lookup_key = original_label.lower().strip()
                     
-                    if label_lower not in cache:
-                        cache[label_lower] = []
-                    cache[label_lower].append(uri)
-            
-            print(f"✅ Cached {len(cache)} entity labels (case-insensitive)")
-            
-            # Debug: Show some sample entries
-            sample_labels = list(cache.keys())[:5]
-            print(f"📋 Sample labels: {sample_labels}")
+                    if lookup_key not in cache:
+                        cache[lookup_key] = []
+                    
+                    # ✅ Store tuple of (uri, original_label) - preserve exact database label
+                    entry = (uri, original_label)
+                    if entry not in cache[lookup_key]:
+                        cache[lookup_key].append(entry)
+                    
+                    count += 1
             
         except Exception as e:
             print(f"❌ Error building entity cache: {e}")
+            import traceback
+            traceback.print_exc()
         
         return cache
-    
-    def _normalize_title(self, title: str) -> str:
-        """
-        Normalize movie title to proper English title case.
-        
-        Rules:
-        - First and last words always capitalized
-        - Articles, conjunctions, short prepositions lowercase (unless first/last)
-        - Roman numerals preserved as uppercase
-        - Proper nouns capitalized
-        
-        Examples:
-            "the bridge on the river kwai" → "The Bridge on the River Kwai"
-            "star wars: episode vi - return of the jedi" → "Star Wars: Episode VI - Return of the Jedi"
-            "lord of the rings" → "Lord of the Rings"
-        """
-        if not title:
-            return title
-        
-        # Words that should be lowercase in title case (unless first/last)
-        lowercase_words = {
-            'a', 'an', 'and', 'as', 'at', 'but', 'by', 'for', 'from', 'in',
-            'into', 'of', 'on', 'or', 'over', 'the', 'to', 'up', 'with', 'via',
-            'vs', 'vs.', 'v.', 'v'
-        }
-        
-        # Roman numerals should stay uppercase
-        roman_numerals = {'i', 'ii', 'iii', 'iv', 'v', 'vi', 'vii', 'viii', 'ix', 'x'}
-        
-        words = title.split()
-        result_words = []
-        
-        for i, word in enumerate(words):
-            # Preserve existing punctuation
-            # Split word and punctuation
-            match = re.match(r'^([^\w]*)(\w+)([^\w]*)$', word)
-            if not match:
-                # Word is all punctuation or empty
-                result_words.append(word)
-                continue
-            
-            prefix, core, suffix = match.groups()
-            core_lower = core.lower()
-            
-            # Check if it's a Roman numeral
-            if core_lower in roman_numerals:
-                result_words.append(prefix + core.upper() + suffix)
-                continue
-            
-            # Always capitalize first and last word
-            if i == 0 or i == len(words) - 1:
-                result_words.append(prefix + core_lower.capitalize() + suffix)
-            # Check if word should be lowercase
-            elif core_lower in lowercase_words:
-                result_words.append(prefix + core_lower + suffix)
-            # Capitalize other words
-            else:
-                result_words.append(prefix + core_lower.capitalize() + suffix)
-        
-        return ' '.join(result_words)
     
     def _extract_quoted_text(self, query: str) -> List[str]:
         """
         Extract text within quotes (single or double, including smart quotes).
-        
-        Args:
-            query: User query
-            
-        Returns:
-            List of quoted strings (normalized to title case)
+        ✅ NOW: Returns raw text WITHOUT normalization.
         """
         quoted_texts = []
         
-        # ✅ FIXED: Use character class for smart quotes instead of alternation
         patterns = [
-            r"'([^']+)'",                           # Single quotes
-            r'"([^"]+)"',                           # Double quotes
-            r"'([^']+)'",                           # Smart single quotes (U+2018, U+2019)
-            r"[\u201c\u201d]([^\u201c\u201d]+)[\u201c\u201d]"  # Smart double quotes (U+201C, U+201D)
+            r'"([^"]+)"',
+            r"'([^']+)'",
+            r"'([^']+)'",
+            r"[\u201c\u201d]([^\u201c\u201d]+)[\u201c\u201d]"
         ]
         
         for pattern in patterns:
             try:
                 matches = re.findall(pattern, query)
                 for match in matches:
-                    normalized = self._normalize_title(match)
-                    if normalized:
-                        quoted_texts.append(normalized)
+                    cleaned = match.strip()
+                    if cleaned:
+                        quoted_texts.append(cleaned)
+                        print(f"[EntityExtractor] 📝 Extracted quoted: '{cleaned}'")
             except re.error as e:
-                # Skip patterns that cause regex errors
-                print(f"[EntityExtractor] Warning: Regex pattern error for pattern '{pattern}': {e}")
+                print(f"[EntityExtractor] Warning: Regex pattern error: {e}")
                 continue
         
         # Remove duplicates while preserving order
@@ -156,20 +87,12 @@ class EntityExtractor:
                 unique_texts.append(text)
         
         if unique_texts:
-            print(f"[EntityExtractor] Extracted {len(unique_texts)} quoted text(s): {unique_texts}")
+            print(f"[EntityExtractor] Extracted {len(unique_texts)} unique quoted text(s)")
         
         return unique_texts
     
     def _extract_entities_with_spacy(self, query: str) -> List[str]:
-        """
-        Extract named entities using spaCy NER.
-        
-        Args:
-            query: User query
-            
-        Returns:
-            List of entity text spans detected by NER
-        """
+        """Extract named entities using spaCy NER."""
         if self.spacy_nlp is None:
             return []
         
@@ -178,7 +101,6 @@ class EntityExtractor:
             entities = []
             
             for ent in doc.ents:
-                # Focus on entity types relevant to movies
                 if ent.label_ in ["PERSON", "WORK_OF_ART", "ORG", "GPE"]:
                     entities.append(ent.text.strip())
             
@@ -192,24 +114,11 @@ class EntityExtractor:
             return []
     
     def _extract_capitalized_spans(self, query: str) -> List[str]:
-        """
-        Extract consecutive capitalized word spans as potential entity names.
-        
-        Args:
-            query: User query
-            
-        Returns:
-            List of capitalized spans (e.g., "Christopher Nolan", "Martin Scorsese")
-        """
-        # Match sequences of capitalized words (including possessives like "O'Connor")
-        # Pattern: Capitalized word followed by 0-5 more capitalized words
+        """Extract consecutive capitalized word spans as potential entity names."""
         pattern = r"\b[A-Z][\w']+(?:\s+[A-Z][\w']+){0,5}\b"
-        
         matches = re.findall(pattern, query)
         
-        # Filter out common false positives
         stop_words = {'What', 'Who', 'When', 'Where', 'Which', 'How', 'Why', 'Show', 'Tell', 'Find', 'List', 'Get'}
-        
         filtered = [m for m in matches if m not in stop_words and len(m.split()) <= 6]
         
         if filtered:
@@ -225,20 +134,7 @@ class EntityExtractor:
     ) -> List[Tuple[str, str, int]]:
         """
         Extract entities from query with PRIORITY on quoted text, then NER, then patterns.
-        
-        Strategy:
-        1. Try quoted text (highest priority, exact match required)
-        2. Try spaCy NER entities (high confidence)
-        3. Try capitalized spans (person names)
-        4. Try whole-word pattern matching (longest first)
-        
-        Args:
-            query: Natural language query
-            entity_type: Optional entity type URI to filter by
-            threshold: (unused) kept for API compatibility
-            
-        Returns:
-            List of (entity_uri, matched_text, confidence_score) tuples
+        ✅ NOW: Returns ONLY the most relevant entity when multiple matches exist
         """
         print(f"\n[EntityExtractor] {'='*60}")
         print(f"[EntityExtractor] Extracting entities from: '{query}'")
@@ -254,19 +150,59 @@ class EntityExtractor:
             print(f"[EntityExtractor] 📝 Found quoted text: {quoted_titles}")
             
             for quoted_title in quoted_titles:
-                quoted_lower = quoted_title.lower()
+                # ✅ Normalize for lookup ONLY
+                quoted_normalized = ' '.join(quoted_title.lower().split())
                 
                 print(f"[EntityExtractor] 🔍 Looking up quoted: '{quoted_title}'")
+                print(f"[EntityExtractor] 🔍 Normalized for cache: '{quoted_normalized}'")
                 
-                # Try exact match (case-insensitive via lowercase key)
-                if quoted_lower in self.entity_cache:
-                    for uri in self.entity_cache[quoted_lower]:
-                        if entity_type is None or self._has_type(uri, entity_type):
-                            original_label = self.get_entity_label(uri)
-                            print(f"[EntityExtractor] ✅ Exact match: '{quoted_title}' → '{original_label}'")
-                            matches.append((uri, original_label, 100))
+                # Try exact match with normalized key
+                if quoted_normalized in self.entity_cache:
+                    # ✅ FIX: Prioritize entries by type if filter is provided
+                    entries = self.entity_cache[quoted_normalized]
+                    
+                    # If entity_type filter is provided, prefer matching types
+                    if entity_type:
+                        matching_entries = [(uri, label) for uri, label in entries 
+                                           if self._has_type(uri, entity_type)]
+                        if matching_entries:
+                            entries = matching_entries
+                    
+                    # ✅ CRITICAL: Return ONLY the first match to avoid ambiguity
+                    for uri, original_label in entries[:1]:  # Take only first
+                        print(f"[EntityExtractor] ✅ Exact match: '{quoted_title}' → '{original_label}'")
+                        matches.append((uri, original_label, 100))
+                        break  # Stop after first match
                 else:
-                    print(f"[EntityExtractor] ❌ No exact match for quoted '{quoted_title}'")
+                    print(f"[EntityExtractor] ❌ No exact match for '{quoted_normalized}'")
+                    
+                    # ✅ ENHANCED: Try fuzzy matching
+                    print(f"[EntityExtractor] 🔍 Trying fuzzy match...")
+                    quoted_words = set(quoted_normalized.split())
+                    best_match = None
+                    best_similarity = 0.0
+                    
+                    for cached_label_lower, entries in self.entity_cache.items():
+                        cached_words = set(cached_label_lower.split())
+                        
+                        # Calculate word overlap
+                        common = quoted_words & cached_words
+                        total = quoted_words | cached_words
+                        
+                        if len(total) > 0:
+                            similarity = len(common) / len(total)
+                            
+                            if similarity > best_similarity and similarity > 0.7:
+                                best_similarity = similarity
+                                best_match = (cached_label_lower, entries)
+                    
+                    if best_match:
+                        cached_label, entries = best_match
+                        print(f"[EntityExtractor] ✅ Fuzzy match: '{quoted_title}' → '{cached_label}' (similarity: {best_similarity:.2f})")
+                        # ✅ FIX: Use original_label from entries
+                        for uri, original_label in entries:
+                            if entity_type is None or self._has_type(uri, entity_type):
+                                matches.append((uri, original_label, int(best_similarity * 95)))
         
         # If we found matches from quoted text, return them immediately
         if matches:
@@ -279,37 +215,36 @@ class EntityExtractor:
         for ner_entity in ner_entities:
             ner_lower = ner_entity.lower()
             
-            # Try exact match
             if ner_lower in self.entity_cache:
-                for uri in self.entity_cache[ner_lower]:
+                # ✅ FIX: Use (uri, original_label) tuples
+                for uri, original_label in self.entity_cache[ner_lower]:
                     if entity_type is None or self._has_type(uri, entity_type):
-                        original_label = self.get_entity_label(uri)
                         print(f"[EntityExtractor] ✅ NER match: '{ner_entity}' → '{original_label}'")
                         matches.append((uri, original_label, 98))
         
-        if matches:
-            print(f"[EntityExtractor] ✅ Returning {len(matches)} NER matches")
+        if matches:        
+            print(f"[EntityExtractor] ✅ Returning {len(matches)} NER matches")        
             return self._deduplicate_matches(matches)
         
-        # PRIORITY 3: Try capitalized spans (person names)
+        # PRIORITY 3: Try capitalized spans
         cap_spans = self._extract_capitalized_spans(query)
         
         for cap_span in cap_spans:
             cap_lower = cap_span.lower()
             
-            # Try exact match
             if cap_lower in self.entity_cache:
-                for uri in self.entity_cache[cap_lower]:
+                # ✅ FIX: Use (uri, original_label) tuples
+                for uri, original_label in self.entity_cache[cap_lower]:
                     if entity_type is None or self._has_type(uri, entity_type):
-                        original_label = self.get_entity_label(uri)
                         print(f"[EntityExtractor] ✅ Capitalized match: '{cap_span}' → '{original_label}'")
                         matches.append((uri, original_label, 96))
         
+        # If we found matches from capitalized spans, return them immediately
         if matches:
             print(f"[EntityExtractor] ✅ Returning {len(matches)} capitalized span matches")
             return self._deduplicate_matches(matches)
         
-        # FALLBACK: Pattern-based extraction with whole-word matching
+        # FALLBACK: Pattern-based extraction
         print(f"[EntityExtractor] ⚠️ No high-confidence matches, trying pattern extraction...")
         return self._pattern_based_extraction(query, entity_type, threshold)
 
@@ -317,19 +252,11 @@ class EntityExtractor:
         self,
         matches: List[Tuple[str, str, int]]
     ) -> List[Tuple[str, str, int]]:
-        """
-        Remove duplicate matches, keeping highest score for each URI.
-        
-        Args:
-            matches: List of (uri, text, score) tuples
-            
-        Returns:
-            Deduplicated list
-        """
+        """Remove duplicate matches, keeping highest score for each URI."""
         seen_uris = {}
         for uri, text, score in matches:
             if uri not in seen_uris or score > seen_uris[uri][1]:
-                seen_uris[uri] = (text, score)
+                seen_uris[uri] = (text, score)        
         
         unique_matches = [(uri, text, score) for uri, (text, score) in seen_uris.items()]
         unique_matches.sort(key=lambda x: x[2], reverse=True)
@@ -343,19 +270,12 @@ class EntityExtractor:
         entity_type: Optional[str],
         threshold: int
     ) -> List[Tuple[str, str, int]]:
-        """
-        Fallback: Extract entities using whole-word matching.
-        
-        Strategy:
-        - Sort labels by length (longest first) to prefer complete multi-word names
-        - Use word boundary matching to avoid partial matches
-        - Skip very short labels to reduce false positives
-        """
+        """Fallback: Extract entities using whole-word matching."""
         matches = []
         query_original = query.strip()
         query_lower = query_original.lower()
         
-        # Remove common question words and verbs for better matching
+        # Remove common question words
         stop_words = [
             'who', 'what', 'when', 'where', 'which', 'how', 'is', 'was', 'are', 'were',
             'show', 'find', 'list', 'get', 'tell', 'give', 'directed', 'director',
@@ -370,7 +290,7 @@ class EntityExtractor:
         print(f"[EntityExtractor] 🔍 Pattern matching on: '{query_cleaned}'")
         
         try:
-            # Sort labels by length (longest first) to prefer multi-word matches
+            # Sort labels by length (longest first)
             labels_sorted = sorted(
                 (lbl for lbl in self.entity_cache.keys() if len(lbl) >= 3),
                 key=lambda x: len(x),
@@ -380,21 +300,18 @@ class EntityExtractor:
             found_labels = []
             
             for label_lower in labels_sorted:
-                # Use word boundary matching to avoid partial matches
-                # Match in both original and cleaned query
                 if (re.search(rf'\b{re.escape(label_lower)}\b', query_lower) or
                     re.search(rf'\b{re.escape(label_lower)}\b', query_cleaned)):
                     
-                    for uri in self.entity_cache[label_lower]:
+                    # ✅ FIX: Use (uri, original_label) tuples
+                    for uri, original_label in self.entity_cache[label_lower]:
                         if entity_type is None or self._has_type(uri, entity_type):
-                            original_label = self.get_entity_label(uri)
                             matches.append((uri, original_label, 90))
                             found_labels.append(label_lower)
-                            # Once we find a match for this label, stop checking URIs
                             break
             
             if found_labels:
-                print(f"[EntityExtractor] ✅ Pattern found: {found_labels[:5]}")  # Show first 5
+                print(f"[EntityExtractor] ✅ Pattern found: {found_labels[:5]}")
             else:
                 print(f"[EntityExtractor] ❌ No pattern matches found")
                 
@@ -407,6 +324,7 @@ class EntityExtractor:
     
     def _has_type(self, entity_uri: str, type_uri: str) -> bool:
         """Check if entity has a specific type."""
+        # Use SchemaConfig for type URIs
         try:
             entity_ref = URIRef(entity_uri)
             type_ref = URIRef(type_uri)
@@ -429,18 +347,4 @@ class EntityExtractor:
     
     def get_entity_label(self, entity_uri: str) -> str:
         """Get label for an entity."""
-        try:
-            entity_ref = URIRef(entity_uri)
-            
-            for label in self.graph.objects(entity_ref, RDFS.label):
-                return str(label)
-        except Exception as e:
-            print(f"[EntityExtractor] ⚠️ Error getting label for {entity_uri}: {e}")
-        
-        # Fallback: extract from URI
-        if '#' in entity_uri:
-            return entity_uri.split('#')[-1]
-        elif '/' in entity_uri:
-            return entity_uri.split('/')[-1]
-        
-        return entity_uri
+        return self.utils.get_entity_label(entity_uri, self.graph)

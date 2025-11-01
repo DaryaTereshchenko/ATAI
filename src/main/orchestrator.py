@@ -15,7 +15,9 @@ from src.main.workflow import QueryWorkflow
 
 from src.config import (
     GRAPH_FILE_PATH, EMBEDDINGS_DIR, USE_EMBEDDINGS,
-    EMBEDDING_QUERY_MODEL, EMBEDDING_ALIGNMENT_MATRIX_PATH
+    EMBEDDING_QUERY_MODEL, EMBEDDING_ALIGNMENT_MATRIX_PATH,
+    RELATION_CLASSIFIER_PATH,
+    USE_LAZY_GRAPH_LOADING  # ✅ ADD
 )
 
 class QuestionType(str, Enum):
@@ -50,10 +52,11 @@ class Orchestrator:
         """
         global orchestrator_instance
 
-        print("\n🔧 Initializing Orchestrator with rule-based classification...")
-
-        # Initialize SPARQL handler
-        self.sparql_handler = SPARQLHandler()
+        # Initialize SPARQL handler with lazy loading if configured
+        self.sparql_handler = SPARQLHandler(
+            graph_file_path=GRAPH_FILE_PATH,
+            use_lazy_loading=USE_LAZY_GRAPH_LOADING  # ✅ ADD
+        )
 
         # Initialize NL-to-SPARQL
         self.nl_to_sparql = NLToSPARQL(
@@ -66,20 +69,40 @@ class Orchestrator:
         if USE_EMBEDDINGS:
             try:
                 print("\n🔢 Initializing embedding processor...")
-                from src.main.embedding_processor import EmbeddingQueryProcessor
-                self.embedding_processor = EmbeddingQueryProcessor(
-                    embeddings_dir=EMBEDDINGS_DIR,
-                    graph_path=GRAPH_FILE_PATH,
-                    query_model=EMBEDDING_QUERY_MODEL,
-                    alignment_matrix_path=EMBEDDING_ALIGNMENT_MATRIX_PATH,
-                    use_simple_aligner=True,
-                    sparql_handler=self.sparql_handler
-                )
-                print("✅ Embedding processor initialized\n")
+                
+                # ✅ Validate embeddings directory exists
+                if not os.path.exists(EMBEDDINGS_DIR):
+                    print(f"⚠️  Embeddings directory not found: {EMBEDDINGS_DIR}")
+                    print(f"   Skipping embedding initialization")
+                else:
+                    # Check for required files
+                    required_files = ["entity_embeds.npy", "entity_ids.del", "relation_embeds.npy", "relation_ids.del"]
+                    missing = [f for f in required_files if not os.path.exists(os.path.join(EMBEDDINGS_DIR, f))]
+                    
+                    if missing:
+                        print(f"⚠️  Missing embedding files: {', '.join(missing)}")
+                        print(f"   Skipping embedding initialization")
+                    else:
+                        from src.main.embedding_processor import EmbeddingQueryProcessor
+                        self.embedding_processor = EmbeddingQueryProcessor(
+                            embeddings_dir=EMBEDDINGS_DIR,
+                            graph_path=GRAPH_FILE_PATH,
+                            query_model=EMBEDDING_QUERY_MODEL,
+                            alignment_matrix_path=EMBEDDING_ALIGNMENT_MATRIX_PATH,
+                            use_simple_aligner=True,
+                            sparql_handler=self.sparql_handler,
+                            relation_classifier_path=RELATION_CLASSIFIER_PATH
+                        )
+                        print("✅ Embedding processor initialized\n")
+                
+            except FileNotFoundError as e:
+                print(f"⚠️  Embedding files not found: {e}")
+                print(f"   Embeddings-based queries will not be available")
             except Exception as e:
                 print(f"⚠️  Failed to initialize embedding processor: {e}")
                 import traceback
                 traceback.print_exc()
+                print(f"   Embeddings-based queries will not be available")
 
         # Initialize workflow
         self.use_workflow = use_workflow
@@ -87,7 +110,7 @@ class Orchestrator:
             self.workflow = QueryWorkflow(self)
 
         orchestrator_instance = self
-        print("✅ Orchestrator initialized (rule-based mode)\n")
+        # print("✅ Orchestrator initialized (rule-based mode)\n")  # REMOVED
 
     def classify_query(self, query: str) -> QueryClassification:
         """
@@ -175,7 +198,7 @@ class Orchestrator:
         # DEFAULT: Hybrid (use both factual and embeddings)
         print(f"[CLASSIFICATION] Type: hybrid (no explicit approach specified)")
         print(f"[CLASSIFICATION] Confidence: 80%")
-        print(f"[CLASSIFICATION] Method: Default fallback")
+        print(f"[CLASSIFICATION] Method: Keyword matching (default fallback)")
         print(f"{'='*80}\n")
         return QueryClassification(
             question_type=QuestionType.HYBRID,
@@ -306,7 +329,7 @@ class Orchestrator:
                 )
                 self._log_pipeline_step("SPARQL Query Generated", {
                     "Query Length": len(sparql_query) if sparql_query else 0,
-                    "Query Preview": sparql_query[:200] if sparql_query else "Failed to generate"
+                    "Query Preview": sparql_query if sparql_query else "Failed to generate"
                 })
                 
                 if sparql_query:

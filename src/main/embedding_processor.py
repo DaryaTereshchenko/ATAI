@@ -1,18 +1,12 @@
 """
 Embedding-based Query Processor.
-Orchestrates the complete embedding-based query answering pipeline:
-1. Analyze query pattern (forward/reverse/verification)
-2. Extract entities from query (case-insensitive)
-3. Generate SPARQL dynamically based on pattern
-4. Execute using cached graph
-5. Format natural language response
-
-✅ ENHANCED: Uses QueryAnalyzer + SPARQLGenerator for robust pattern handling
+✅ NOW: Uses dynamically extracted relations and entities from knowledge graph.
 """
 
 import sys
 import os
 import traceback
+import numpy as np  # ✅ ADDED: Missing numpy import
 from typing import List, Tuple, Optional, Dict
 from rdflib import Graph, URIRef, RDFS
 import re
@@ -33,7 +27,6 @@ from src.main.sparql_generator import SPARQLGenerator
 class EmbeddingQueryProcessor:
     """
     Main processor for embedding-based query answering.
-    Uses hybrid approach: pattern analysis + entity extraction + dynamic SPARQL generation.
     """
     
     def __init__(
@@ -43,31 +36,19 @@ class EmbeddingQueryProcessor:
         query_model: str = "all-MiniLM-L6-v2",
         alignment_matrix_path: Optional[str] = None,
         use_simple_aligner: bool = False,
-        sparql_handler: Optional[SPARQLHandler] = None
+        sparql_handler: Optional[SPARQLHandler] = None,
+        relation_classifier_path: Optional[str] = None  # ✅ NEW: Accept classifier path
     ):
         """
         Initialize the embedding query processor.
-        
-        Args:
-            embeddings_dir: Directory containing TransE embeddings
-            graph_path: Path to knowledge graph file
-            query_model: Sentence transformer model for query embedding
-            alignment_matrix_path: Path to alignment matrix (optional)
-            use_simple_aligner: Use simple normalization-based alignment
-            sparql_handler: Optional SPARQLHandler instance (shared across components)
         """
-        print("🔧 Initializing Embedding Query Processor (Hybrid Mode)...")
-        
         # Initialize embedding handler for TransE embeddings
-        print("   📊 Loading TransE embeddings...")
         self.embedding_handler = EmbeddingHandler(embeddings_dir)
         
         # Initialize query embedder for natural language
-        print("   🔤 Loading query embedding model...")
         self.query_embedder = QueryEmbedder(model_name=query_model)
         
         # Initialize alignment between query and TransE spaces
-        print("   🔗 Setting up embedding alignment...")
         query_dim = self.query_embedder.get_embedding_dimension()
         transe_dim = self.embedding_handler.get_embedding_dimension()
         
@@ -83,67 +64,187 @@ class EmbeddingQueryProcessor:
         
         # Initialize SPARQL handler (shared or new)
         if sparql_handler is None:
-            print("   🔍 Loading knowledge graph...")
             self.sparql_handler = SPARQLHandler(graph_file_path=graph_path)
         else:
-            print("   🔍 Using shared SPARQL handler...")
             self.sparql_handler = sparql_handler
         
         # Initialize entity extractor
-        print("   🏷️  Initializing entity extractor...")
         self.entity_extractor = EntityExtractor(self.sparql_handler.graph)
         
-        # ✅ NEW: Initialize query analyzer and SPARQL generator
-        print("   🧠 Initializing query analysis components...")
-        from src.config import SPARQL_CLASSIFIER_MODEL_PATH
+        # ✅ REMOVED: No more relation analyzer for embeddings
+        # ✅ REMOVED: No more query analyzer for embeddings
+        
+        # ✅ Keep SPARQL components for factual queries only
+        from src.main.query_analyzer import QueryAnalyzer
+        from src.main.embedding_relation_matcher import EmbeddingRelationMatcher
+        
+        self.embedding_relation_matcher = EmbeddingRelationMatcher(
+            embedding_handler=self.embedding_handler,
+            query_embedder=self.query_embedder,
+            aligner=self.aligner
+        )
+        
         self.query_analyzer = QueryAnalyzer(
-            use_transformer=True,
-            transformer_model_path=SPARQL_CLASSIFIER_MODEL_PATH  # Use SPARQL classifier, not question classifier
+            use_transformer=False,
+            transformer_model_path=None,
+            sparql_handler=self.sparql_handler,
+            embedding_matcher=self.embedding_relation_matcher,
+            relation_classifier_path=relation_classifier_path  # ✅ NEW: Pass classifier path
         )
         self.sparql_generator = SPARQLGenerator(self.sparql_handler)
         
-        # ✅ NEW: Initialize NL2SPARQL for LLM fallback
-        print("   🤖 Initializing LLM fallback for SPARQL generation...")
+        # ✅ Extract dynamic schema from SPARQLGenerator
+        self.relation_uris = self.sparql_generator.relation_uris
+        self.type_uris = self.sparql_generator.type_uris
+        
+        # ✅ Build reverse mappings
+        self._build_reverse_mappings()
+        self._add_fallback_qcode_mappings()
+        
+        # Initialize NL2SPARQL for LLM fallback
         from src.main.nl_to_sparql import NLToSPARQL
         self.nl2sparql = NLToSPARQL(method="direct-llm", sparql_handler=self.sparql_handler)
+
+    def _build_reverse_mappings(self):
+        """Build reverse mappings from relation names to URIs and Q-codes."""
+        # ✅ REMOVED: Initial print statement
         
-        print("✅ Embedding Query Processor ready (hybrid mode)\n")
+        # Initialize empty mapping
+        self.relation_to_qcode = {}
+        
+        # ✅ Only attempt dynamic extraction if graph has data
+        if not self.sparql_handler.graph or len(self.sparql_handler.graph) == 0:
+            print("   ⚠️  Graph is empty, skipping dynamic Q-code inference")
+            return
+        
+        from rdflib import URIRef
+        P31 = URIRef("http://www.wikidata.org/prop/direct/P31")
+        
+        for relation_name, relation_uri in self.relation_uris.items():
+            relation_ref = URIRef(relation_uri)
+            
+            object_types = {}
+            sample_count = 0
+            max_samples = 50
+            
+            for s, p, o in self.sparql_handler.graph.triples((None, relation_ref, None)):
+                if isinstance(o, URIRef):
+                    for type_uri in self.sparql_handler.graph.objects(o, P31):
+                        type_str = str(type_uri)
+                        if '/Q' in type_str:
+                            qcode = type_str.split('/Q')[-1].split('#')[0]
+                            object_types[qcode] = object_types.get(qcode, 0) + 1
+                
+                sample_count += 1
+                if sample_count >= max_samples:
+                    break
+            
+            if object_types:
+                most_common_qcode = max(object_types.items(), key=lambda x: x[1])[0]
+                self.relation_to_qcode[relation_name] = most_common_qcode
+                # ✅ REMOVED: Individual relation logging
+        
+        print(f"   ✅ Built mappings for {len(self.relation_to_qcode)} relations")
+
+    def _add_fallback_qcode_mappings(self):
+        """Add/merge fallback Q-code mappings (does not overwrite existing)."""
+        fallback_mappings = {
+            'director': '5',
+            'cast_member': '5',
+            'screenwriter': '5',
+            'producer': '5',
+            'genre': '201658',
+            'country_of_origin': '6256',
+        }
+        
+        # Merge without overwriting
+        for relation, qcode in fallback_mappings.items():
+            if relation not in self.relation_to_qcode:
+                self.relation_to_qcode[relation] = qcode
+        
+        print(f"   ✅ Total Q-code mappings: {len(self.relation_to_qcode)}")
     
     def process_hybrid_factual_query(self, query: str) -> str:
         """
         Process factual query using ROBUST pattern analysis + dynamic SPARQL.
-        
-        Pipeline:
-        1. Analyze query pattern (forward/reverse/verification/complex)
-        2. Extract required entities based on pattern (or skip for superlative)
-        3. Generate SPARQL query dynamically
-        4. Execute and format response
-        
-        Args:
-            query: Natural language query
-            
-        Returns:
-            Natural language response
         """
-        print(f"\n{'='*80}")
-        print(f"🔍 PROCESSING HYBRID FACTUAL QUERY")
-        print(f"{'='*80}\n")
-        print(f"Query: {query}\n")
+        # ✅ FORCE PRINT - These should always be visible
+        print(f"\n{'='*80}", flush=True)
+        print(f"🔍 PROCESSING HYBRID FACTUAL QUERY", flush=True)
+        print(f"{'='*80}\n", flush=True)
+        print(f"Query: {query}\n", flush=True)
         
         try:
             # ==================== STEP 1: ANALYZE QUERY PATTERN ====================
-            print("📝 Step 1: Analyzing query pattern...")
+            print("📝 Step 1: Analyzing query pattern...", flush=True)
+            
             pattern = self.query_analyzer.analyze(query)
             
             if not pattern:
-                print("❌ No pattern detected - query structure not recognized\n")
                 return self._handle_unrecognized_query(query)
             
-            print(f"✅ Pattern detected:")
-            print(f"   Type: {pattern.pattern_type}")
-            print(f"   Relation: {pattern.relation}")
-            print(f"   Subject: {pattern.subject_type} → Object: {pattern.object_type}")
-            print(f"   Confidence: {pattern.confidence:.2%}\n")
+            # ✅ NEW: ENHANCED LOGGING - Show relation extraction method immediately
+            print(f"\n{'='*80}", flush=True)
+            print(f"📊 RELATION EXTRACTION RESULTS", flush=True)
+            print(f"{'='*80}", flush=True)
+            print(f"Query: '{query[:80]}...'", flush=True)
+            print(f"\n✅ Pattern Detected:", flush=True)
+            print(f"  • Type: {pattern.pattern_type}", flush=True)
+            print(f"  • Relation: {pattern.relation}", flush=True)
+            print(f"  • Subject Type: {pattern.subject_type}", flush=True)
+            print(f"  • Object Type: {pattern.object_type}", flush=True)
+            print(f"  • Confidence: {pattern.confidence:.2%}", flush=True)
+            
+            # ✅ NEW: Decode which method extracted the relation
+            if hasattr(pattern, 'extracted_entities') and pattern.extracted_entities:
+                if 'keywords' in pattern.extracted_entities:
+                    keywords = pattern.extracted_entities['keywords']
+                    print(f"\n📋 Extraction Method Details:", flush=True)
+                    if keywords and len(keywords) > 0:
+                        first_keyword = keywords[0]
+                        
+                        if first_keyword.startswith('bert:'):
+                            print(f"  • Method: 🤖 DISTILBERT CLASSIFIER", flush=True)
+                            print(f"  • Classification: {first_keyword.split(':')[1]}", flush=True)
+                            print(f"  • Description: Fine-tuned transformer model", flush=True)
+                        elif first_keyword.startswith('sbert:'):
+                            print(f"  • Method: 🔢 SBERT ZERO-SHOT MATCHER", flush=True)
+                            print(f"  • Matched Property: {first_keyword.split(':')[1]}", flush=True)
+                            print(f"  • Description: Semantic similarity to property descriptions", flush=True)
+                        elif first_keyword.startswith('embedding:'):
+                            print(f"  • Method: 🎯 TRANSE EMBEDDING MATCHER", flush=True)
+                            print(f"  • Matched Relation: {first_keyword.split(':')[1]}", flush=True)
+                            print(f"  • Description: TransE embedding cosine similarity", flush=True)
+                        else:
+                            print(f"  • Method: 🔤 KEYWORD-BASED FALLBACK", flush=True)
+                            print(f"  • Matched Keyword: '{first_keyword}'", flush=True)
+                            print(f"  • Description: Rule-based pattern matching", flush=True)
+                    else:
+                        print(f"  • Method: ⚠️ UNKNOWN", flush=True)
+                        print(f"  • Keywords list is empty", flush=True)
+            
+            # ✅ NEW: Show relation URI resolution
+            relation_uri = self.relation_uris.get(pattern.relation)
+            print(f"\n📋 Relation URI Mapping:", flush=True)
+            if relation_uri:
+                if '/P' in relation_uri:
+                    prop_code = 'P' + relation_uri.split('/P')[-1].split('#')[0]
+                    print(f"  • Relation Name: '{pattern.relation}'", flush=True)
+                    print(f"  • Wikidata Property: {prop_code}", flush=True)
+                    print(f"  • Full URI: {relation_uri}", flush=True)
+                    print(f"  • Status: ✅ RESOLVED", flush=True)
+                else:
+                    prop_code = relation_uri.split('/')[-1]
+                    print(f"  • Relation Name: '{pattern.relation}'", flush=True)
+                    print(f"  • Custom Property: {prop_code}", flush=True)
+                    print(f"  • Full URI: {relation_uri}", flush=True)
+                    print(f"  • Status: ✅ RESOLVED", flush=True)
+            else:
+                print(f"  • Relation Name: '{pattern.relation}'", flush=True)
+                print(f"  • Status: ❌ NOT FOUND IN MAPPING", flush=True)
+                print(f"  • Available relations: {list(self.relation_uris.keys())[:10]}...", flush=True)
+            
+            print(f"{'='*80}\n", flush=True)
             
             # ==================== STEP 2: EXTRACT ENTITIES ====================
             print("📝 Step 2: Extracting entities based on pattern...")
@@ -172,161 +273,119 @@ class EmbeddingQueryProcessor:
             print(f"❌ Error in hybrid processing: {e}")
             traceback.print_exc()
             return f"❌ An error occurred while processing your query: {str(e)}"
-    
-    def _generate_sparql_with_fallback(
-        self,
-        pattern: QueryPattern,
-        subject_label: str,
-        object_label: Optional[str] = None
-    ) -> Dict:
-        """
-        Generate SPARQL with LLM-first, template-fallback strategy.
-        NOW ENHANCED: Passes pattern to LLM for better few-shot example selection.
-        """
-        print("📝 Generating SPARQL query...")
-        
-        # PRIMARY: Try LLM-based generation FIRST with pattern-specific examples
-        try:
-            print("   Attempting LLM-based generation...")
-            
-            # ✅ FIX: Map relation names correctly for LLM query construction
-            relation_to_phrase = {
-                'director': 'director',
-                'cast_member': 'cast member',
-                'screenwriter': 'screenwriter',
-                'producer': 'producer',
-                'genre': 'genre',
-                'publication_date': 'release date',
-                'country_of_origin': 'country of origin',  # ✅ FIXED
-                'rating': 'rating'
-            }
-            
-            # Construct a descriptive query based on pattern
-            if pattern.pattern_type == 'forward':
-                relation_phrase = relation_to_phrase.get(pattern.relation, pattern.relation.replace('_', ' '))
-                llm_query = f"What is the {relation_phrase} of \"{subject_label}\"?"
-            elif pattern.pattern_type == 'reverse':
-                relation_verb = {
-                    'director': 'direct',
-                    'cast_member': 'act in',
-                    'screenwriter': 'write',
-                    'producer': 'produce'
-                }.get(pattern.relation, pattern.relation)
-                llm_query = f"What movies did \"{subject_label}\" {relation_verb}?"
-            else:  # verification
-                relation_verb = {
-                    'director': 'direct',
-                    'cast_member': 'act in',
-                    'screenwriter': 'write',
-                    'producer': 'produce'
-                }.get(pattern.relation, pattern.relation)
-                llm_query = f"Did \"{subject_label}\" {relation_verb} \"{object_label}\"?"
-            
-            print(f"   LLM query: {llm_query}")
-            print(f"   Pattern: {pattern.pattern_type}_{pattern.relation}")
-            
-            # Generate with pattern context for better example selection AND validation
-            result = self.nl2sparql.convert(llm_query, pattern=pattern)
-            
-            if result.confidence > 0.0:
-                print(f"   ✅ LLM generation successful (confidence: {result.confidence:.2%})")
-                return {
-                    'query': result.query,
-                    'method': 'llm',
-                    'confidence': result.confidence
-                }
-            else:
-                print(f"   ⚠️ LLM generated invalid query (confidence: {result.confidence:.2%})")
-                raise ValueError("LLM generated invalid query")
-                
-        except Exception as e:
-            print(f"   ⚠️ LLM generation failed: {e}")
-        
-        # FALLBACK: Use template-based generation
-        try:
-            print("   Attempting template-based generation (fallback)...")
-            sparql = self.sparql_generator.generate(pattern, subject_label, object_label)
-            print("   ✅ Template generation successful")
-            return {
-                'query': sparql,
-                'method': 'template',
-                'confidence': 0.95
-            }
-        except Exception as e:
-            print(f"   ❌ Template fallback failed: {e}")
-            raise ValueError(f"Both LLM and template generation failed: {str(e)}")
-    
+
     def _process_forward_query(self, query: str, pattern: QueryPattern) -> str:
         """
-        Process forward query: Movie → Property
-        Example: "Who directed The Matrix?"
-        
-        Args:
-            query: Natural language query
-            pattern: Detected query pattern
-            
-        Returns:
-            Natural language response
+        Process forward query: Entity → Property
         """
+        # ✅ REMOVED: Duplicate relation extraction logging (now done earlier)
+        # The detailed logging is now in process_hybrid_factual_query
+
         print(f"   Direction: Forward ({pattern.subject_type} → {pattern.object_type})")
         
-        # ✅ CRITICAL: Check superlative FIRST before entity extraction
+        # ✅ Check superlative first
         if pattern.extracted_entities and 'superlative' in pattern.extracted_entities:
             print("   ℹ️  Superlative query detected - delegating to superlative handler")
             return self._process_superlative_forward_query(query, pattern)
         
-        # Regular forward query - needs entity extraction
-        # Use entity hints from pattern if available
-        entity_hints = pattern.extracted_entities if pattern.extracted_entities else {}
+        # ✅ CRITICAL: Always extract movie entities for movie queries
+        # Determine entity type based on query keywords, not pattern.subject_type
+        query_lower = query.lower()
+        movie_keywords = ['movie', 'film', 'directed', 'genre', 'released', 'cast']
         
-        # Prioritize quoted entities for movie titles
-        if entity_hints.get('quoted'):
-            print(f"   Using quoted entity hint: {entity_hints['quoted'][0]}")
+        if any(kw in query_lower for kw in movie_keywords) or pattern.subject_type == '11424':
+            entity_type_uri = "http://www.wikidata.org/entity/Q11424"
+            print(f"   🎬 Detected movie query, using Q11424 entity type")
+        elif pattern.subject_type == 'person' or pattern.subject_type == '5':
+            entity_type_uri = "http://www.wikidata.org/entity/Q5"
+        elif pattern.subject_type in self.type_uris:
+            entity_type_uri = self.type_uris[pattern.subject_type]
+        else:
+            entity_type_uri = None
         
-        # Extract movie entity
-        movie_entities = self.entity_extractor.extract_entities(
+        print(f"   🔍 Entity Extraction:")
+        print(f"      Type filter: {entity_type_uri or 'None (any entity)'}")
+        
+        # Extract entity
+        subject_entities = self.entity_extractor.extract_entities(
             query,
-            entity_type="http://www.wikidata.org/entity/Q11424",  # Q11424 = film
+            entity_type=entity_type_uri,
             threshold=75
         )
         
-        if not movie_entities:
-            print("❌ No movie entity found\n")
+        if not subject_entities:
+            entity_type_name = pattern.subject_type if pattern.subject_type != 'entity' else 'entity'
+            print(f"❌ No {entity_type_name} entity found\n")
             return (
-                "❌ I couldn't identify the movie in your question.\n\n"
+                f"❌ I couldn't identify the {entity_type_name} in your question.\n\n"
                 "**Tips:**\n"
-                "- Use quotes around the movie title: \"The Matrix\"\n"
-                "- Check the spelling of the movie name\n"
-                "- Try a more complete title if it's ambiguous"
+                f"- Use quotes around the {entity_type_name} name\n"
+                "- Check the spelling\n"
+                "- Make sure it exists in the knowledge graph"
             )
         
         # Get best match
-        movie_uri, movie_text, score = movie_entities[0]
-        movie_label = self.entity_extractor.get_entity_label(movie_uri)
-        print(f"✅ Movie identified: '{movie_label}' (confidence: {score}%)\n")
+        subject_uri, subject_text, score = subject_entities[0]
+        subject_label = self.entity_extractor.get_entity_label(subject_uri)
+        print(f"✅ Entity identified: '{subject_label}' (confidence: {score}%)")
+        print(f"   URI: {subject_uri}\n")
         
         # Generate SPARQL query with fallback
         print("📝 Step 3: Generating SPARQL query...")
+        
         try:
             sparql_result = self._generate_sparql_with_fallback(
                 pattern=pattern,
-                subject_label=movie_label
+                subject_label=subject_label
             )
+            
+            # ✅ CRITICAL: Validate sparql_result structure
+            if not isinstance(sparql_result, dict):
+                raise ValueError(f"SPARQL generation returned invalid type: {type(sparql_result)}")
+            
+            if 'query' not in sparql_result:
+                raise ValueError("SPARQL generation missing 'query' key")
+            
+            if 'method' not in sparql_result:
+                raise ValueError("SPARQL generation missing 'method' key")
+            
             sparql = sparql_result['query']
             method = sparql_result['method']
-            confidence = sparql_result['confidence']
+            confidence = sparql_result.get('confidence', 0.0)
             
-            print(f"✅ SPARQL generated using {method} (confidence: {confidence:.2%}):")
-            print("-" * 80)
+            # ✅ Log the generated SPARQL
+            print(f"\n{'='*80}")
+            print(f"📄 GENERATED SPARQL QUERY")
+            print(f"{'='*80}")
+            print(f"Generation Method: {method}")
+            print(f"Confidence: {confidence:.2%}")
+            print(f"\nQuery:")
+            print(f"{'─'*80}")
             print(sparql)
-            print("-" * 80 + "\n")
+            print(f"{'─'*80}\n")
+            
         except Exception as e:
             print(f"❌ SPARQL generation failed: {e}\n")
+            traceback.print_exc()
             return f"❌ Failed to generate query for this request: {str(e)}"
         
         # Execute query
         print("📝 Step 4: Executing query against knowledge graph...")
+        print(f"   Query being executed (full query):")
+        print(f"{'─'*80}")
+        print(sparql)
+        print(f"{'─'*80}\n")
+        
         result = self._execute_sparql(sparql)
+        
+        print(f"   🔍 BREAKPOINT 4.2: After SPARQL execution")
+        print(f"      Success: {result['success']}")
+        if result['success']:
+            print(f"      Data type: {type(result.get('data'))}")
+            print(f"      Data preview: {str(result.get('data', ''))[:200]}...")
+            print(f"      Data is empty: {not result.get('data') or result.get('data') == 'No answer found in the database.'}")
+        else:
+            print(f"      Error: {result.get('error', 'Unknown error')}")
         
         if not result['success']:
             print(f"❌ Query execution failed: {result.get('error', 'Unknown error')}\n")
@@ -334,11 +393,18 @@ class EmbeddingQueryProcessor:
         
         # Format response
         print("📝 Step 5: Formatting response...")
+        print(f"   🔍 BREAKPOINT 5.1: Before response formatting")
+        print(f"      Raw data: {result['data'][:200] if result['data'] else 'None'}...")
+        
         response = self._format_forward_response(
             pattern=pattern,
-            movie_label=movie_label,
+            movie_label=subject_label,
             data=result['data']
         )
+        
+        print(f"   🔍 BREAKPOINT 5.2: After response formatting")
+        print(f"      Response length: {len(response)} chars")
+        print(f"      Response preview: {response[:150]}...")
         
         print(f"✅ Response generated\n")
         print("="*80)
@@ -702,6 +768,13 @@ LIMIT 1"""
                     # Line format: "name, uri" or just "name"
                     parts = line.split(',')
                     name = parts[0].strip()
+                    
+                    # ✅ FIX: Skip if name looks like a URI (starts with http://)
+                    if name.startswith('http://'):
+                        # This line only has URI, no label - skip it
+                        print(f"[Formatter] ⚠️  Skipping result without label: {name}")
+                        continue
+                    
                     if name and name not in names:
                         names.append(name)
                 
@@ -719,7 +792,8 @@ LIMIT 1"""
                 if len(names) == 1:
                     return f"✅ **'{movie_label}'** was {relation_text} **{names[0]}**."
                 else:
-                    names_str = ", ".join(names[:-1]) + f", and {names[-1]}"
+                    # ✅ FIXED: Use "and" for last item
+                    names_str = ", ".join(names[:-1]) + f" and {names[-1]}"
                     return f"✅ **'{movie_label}'** was {relation_text}:\n\n{names_str}"
             
             elif pattern.object_type == 'date':
@@ -736,6 +810,12 @@ LIMIT 1"""
                     # Line format: "value, uri" or just "value"
                     parts = line.split(',')
                     val = parts[0].strip()
+                    
+                    # ✅ FIX: Skip if value looks like a URI
+                    if val.startswith('http://'):
+                        print(f"[Formatter] ⚠️  Skipping result without label: {val}")
+                        continue
+                    
                     if val and val not in values:
                         values.append(val)
                 
@@ -745,8 +825,9 @@ LIMIT 1"""
                 if len(values) == 1:
                     return f"✅ **'{movie_label}'** {pattern.relation.replace('_', ' ')}: **{values[0]}**"
                 else:
-                    values_str = ", ".join(values)
-                    return f"✅ **'{movie_label}'** {pattern.relation.replace('_', ' ')}:\n\n{values_str}"
+                    # ✅ FIXED: Concatenate with "and" instead of newlines
+                    values_str = " and ".join(values)
+                    return f"✅ **'{movie_label}'** {pattern.relation.replace('_', ' ')}: **{values_str}**"
             
             # Default fallback
             return f"✅ Found {len(lines)} result(s) for '{movie_label}':\n\n{data}"
@@ -995,12 +1076,14 @@ LIMIT 1"""
                     filters.append(f"""
     ?movieUri <{property_uri}> ?country .
     ?country rdfs:label ?countryLabel .
+    FILTER(LANG(?countryLabel) = "en" || LANG(?countryLabel) = "")
     FILTER(LCASE(STR(?countryLabel)) = LCASE("{escaped_value}"))""")
                 
                 elif constraint == 'award':
                     filters.append(f"""
     ?movieUri <{property_uri}> ?award .
     ?award rdfs:label ?awardLabel .
+    FILTER(LANG(?awardLabel) = "en" || LANG(?awardLabel) = "")
     FILTER(LCASE(STR(?awardLabel)) = LCASE("{escaped_value}"))""")
         
         if not filters:
@@ -1062,10 +1145,13 @@ LIMIT 10"""
     def process_embedding_query(self, query: str) -> str:
         """
         Process query using pure embedding approach.
+        ✅ SIMPLIFIED: Direct embedding matching without relation analysis.
         
-        Two strategies:
-        1. Direct embedding: Embed the NL question and find nearest entity in embedding space
-        2. Entity+Relation extraction: Extract entity and relation, compute in embedding space
+        Strategy:
+        1. Clean and embed the full question
+        2. Find nearest entity in embedding space
+        3. Detect expected type from query keywords
+        4. Validate result type matches expected
         
         Args:
             query: Natural language query
@@ -1079,402 +1165,341 @@ LIMIT 10"""
         print(f"Query: {query}\n")
         
         try:
-            # ✅ FIXED: More specific patterns to preserve "From" in actual questions
-            clean_query = query
+            # ✅ Step 1: Clean and embed query
+            print(f"📝 Step 1: Cleaning and embedding query...")
+            clean_query = self._clean_query_for_embedding(query)
+            print(f"   Cleaned query: '{clean_query}'")
             
-            # Remove "Please answer this question with an embedding approach:"
-            clean_query = re.sub(
-                r'^please\s+answer\s+this\s+question\s+with\s+(?:a|an)\s+embedding\s+approach:\s*',
-                '',
-                clean_query,
-                flags=re.IGNORECASE
-            )
+            # ✅ Step 2: Detect expected type
+            print(f"\n📝 Step 2: Detecting expected answer type...")
+            expected_type, expected_qcode = self._detect_expected_type_from_query(query)
+            print(f"   Expected type: {expected_type} (Q-code: {expected_qcode})")
             
-            # Remove "Please answer this question:"
-            clean_query = re.sub(
-                r'^please\s+answer\s+this\s+question:\s*',
-                '',
-                clean_query,
-                flags=re.IGNORECASE
-            )
+            # ✅ Step 3: Embed query
+            print(f"\n📝 Step 3: Embedding query...")
+            query_embedding = self.query_embedder.embed(clean_query)
             
-            # Trim whitespace
-            clean_query = clean_query.strip()
+            # ✅ Step 4: Align to TransE space
+            print(f"\n📝 Step 4: Aligning to TransE space...")
+            aligned_embedding = self.aligner.align(query_embedding)
             
-            print(f"Cleaned query: {clean_query}\n")
+            # ✅ Step 5: Find nearest entities
+            print(f"\n📝 Step 5: Finding nearest entities...")
             
-            # Analyze query pattern
-            print("📝 Step 1: Analyzing query pattern...")
-            pattern = self.query_analyzer.analyze(clean_query)
-            
-            if not pattern:
-                print("❌ No pattern detected\n")
-                return self._format_embedding_error("Could not understand query structure")
-            
-            print(f"✅ Pattern: {pattern.pattern_type} + {pattern.relation}")
-            print(f"   Confidence: {pattern.confidence:.2%}\n")
-            
-            # ✅ NEW: Check if this is a superlative query
-            if pattern.extracted_entities and 'superlative' in pattern.extracted_entities:
-                print(f"⚠️  Superlative query detected in embedding pipeline")
-                return self._format_embedding_error(
-                    "Superlative queries (highest/lowest/best/worst) are not supported in embedding mode. "
-                    "These queries require aggregation which embeddings cannot provide. "
-                    "Please use the factual approach or rephrase your question to ask about a specific movie."
+            # Check if we should filter by type
+            if expected_qcode and expected_qcode not in ['string', 'date', 'unknown']:
+                entity_type_uri = self._entity_type_to_uri(expected_type)
+                if entity_type_uri:
+                    print(f"   Filtering by type: {expected_type}")
+                    nearest = self.embedding_handler.find_nearest_entities(
+                        aligned_embedding,
+                        top_k=10,
+                        entity_type=entity_type_uri
+                    )
+                else:
+                    nearest = self.embedding_handler.find_nearest_entities(
+                        aligned_embedding,
+                        top_k=10
+                    )
+            else:
+                nearest = self.embedding_handler.find_nearest_entities(
+                    aligned_embedding,
+                    top_k=10
                 )
             
-            # STRATEGY 1: Try entity+relation approach (more accurate)
-            if pattern.pattern_type == 'forward':
-                return self._embedding_forward_query(clean_query, pattern)
-            elif pattern.pattern_type == 'reverse':
-                return self._embedding_reverse_query(clean_query, pattern)
-            elif pattern.pattern_type == 'verification':
-                return self._embedding_verification_query(clean_query, pattern)
+            if not nearest:
+                return self._format_embedding_error("No results found in embedding space")
+            
+            # ✅ Step 6: Validate and select best match
+            print(f"\n📝 Step 6: Validating results...")
+            print(f"   Found {len(nearest)} candidates")
+            
+            # Show top 3 candidates with better formatting
+            for i, (uri, sim) in enumerate(nearest[:3], 1):
+                label = self.embedding_handler.get_entity_label(uri, self.sparql_handler.graph)
+                qcode = self._get_entity_type_qcode(uri)
+                print(f"   {i}. {label} (type: {qcode}, similarity: {sim:.3f})")
+            
+            # Select best match that matches expected type (if specified)
+            best_match = None
+            
+            if expected_qcode and expected_qcode not in ['string', 'date', 'unknown']:
+                # Try to find type match
+                for uri, similarity in nearest:
+                    actual_qcode = self._get_entity_type_qcode(uri)
+                    if self._qcodes_match(actual_qcode, expected_qcode):
+                        best_match = (uri, similarity, actual_qcode)
+                        print(f"\n✅ Found type-matching result: {actual_qcode} = {expected_qcode}")
+                        break
+            
+            # Fallback: use best similarity
+            if not best_match:
+                uri, similarity = nearest[0]
+                actual_qcode = self._get_entity_type_qcode(uri)
+                best_match = (uri, similarity, actual_qcode)
+                
+                if expected_qcode and expected_qcode not in ['string', 'date', 'unknown']:
+                    print(f"\n⚠️  No exact type match found. Using best similarity.")
+                    print(f"   Expected: {expected_qcode}, Got: {actual_qcode}")
+            
+            # ✅ Format response with better output
+            result_uri, similarity, result_qcode = best_match
+            result_label = self.embedding_handler.get_entity_label(
+                result_uri, 
+                self.sparql_handler.graph
+            )
+            
+            print(f"\n✅ Final answer: {result_label} (type: {result_qcode}, similarity: {similarity:.3f})")
+            
+            # ✅ IMPROVED: Show label instead of URI
+            if result_qcode == "unknown":
+                # Try to infer type from expected type
+                display_type = expected_qcode if expected_qcode != "unknown" else result_qcode
+                return f"The answer suggested by embeddings is: **{result_label}** (type: {display_type})"
             else:
-                # STRATEGY 2: Direct embedding approach (fallback)
-                return self._embedding_direct_query(clean_query, pattern)
+                return f"The answer suggested by embeddings is: **{result_label}** (type: {result_qcode})"
             
         except Exception as e:
             print(f"❌ Error in embedding processing: {e}")
             import traceback
             traceback.print_exc()
-            return self._format_embedding_error(str(e))
+            return self._format_embedding_error(str(e))    
     
-    def _embedding_forward_query(self, query: str, pattern: QueryPattern) -> str:
-        """
-        Process forward query using embeddings: Movie → Property
-        Strategy: Extract movie entity, use TransE to find related entities.
-        """
-        print(f"   Direction: Forward ({pattern.relation})")
+    def _clean_query_for_embedding(self, query: str) -> str:
+        """Clean query for embedding (remove instruction prefixes)."""
+        clean = query
         
-        # ✅ SAFETY CHECK: This should not happen but double-check for superlative
-        if pattern.extracted_entities and 'superlative' in pattern.extracted_entities:
-            return self._format_embedding_error(
-                "Superlative queries require aggregation which embeddings cannot provide"
-            )
-        
-        # Extract movie entity
-        movie_entities = self.entity_extractor.extract_entities(
-            query,
-            entity_type="http://www.wikidata.org/entity/Q11424",
-            threshold=75
+        # Remove instruction prefixes
+        clean = re.sub(
+            r'^please\s+answer\s+this\s+question\s+with\s+(?:a|an)\s+embedding\s+approach:\s*',
+            '',
+            clean,
+            flags=re.IGNORECASE
         )
         
-        if not movie_entities:
-            return self._format_embedding_error("Could not identify movie in query")
-        
-        movie_uri, movie_text, score = movie_entities[0]
-        movie_label = self.entity_extractor.get_entity_label(movie_uri)
-        print(f"✅ Movie: '{movie_label}'\n")
-        
-        # Get movie embedding
-        movie_embedding = self.embedding_handler.get_entity_embedding(movie_uri)
-        if movie_embedding is None:
-            return self._format_embedding_error(f"No embedding found for movie '{movie_label}'")
-        
-        # Get relation embedding
-        relation_uri = self._get_relation_uri(pattern.relation)
-        relation_embedding = self.embedding_handler.get_relation_embedding(relation_uri)
-        
-        if relation_embedding is None:
-            return self._format_embedding_error(f"No embedding found for relation '{pattern.relation}'")
-        
-        # TransE: head + relation ≈ tail
-        # Compute expected tail embedding
-        expected_tail = movie_embedding + relation_embedding
-        
-        # ✅ NEW: Determine expected entity type based on pattern
-        expected_entity_type = self._get_expected_entity_type(pattern)
-        expected_qcode = self._get_expected_qcode(pattern)
-        print(f"📝 Expected result type: {expected_entity_type} (Q-code: {expected_qcode})")
-        
-        # Find nearest entity
-        print(f"📝 Step 2: Finding nearest entity in embedding space...")
-        
-        # ✅ ENHANCED: Get more candidates and validate their types
-        top_k = 10  # Get more candidates for validation
-        
-        # Filter by expected entity type if available
-        if expected_entity_type and expected_entity_type != 'string':
-            type_uri = self._entity_type_to_uri(expected_entity_type)
-            
-            if type_uri is not None:
-                try:
-                    filter_uris = self.embedding_handler.get_entities_by_type(type_uri, self.sparql_handler.graph)
-                    print(f"   Filtering to {len(filter_uris)} entities of type {expected_entity_type}")
-                    
-                    nearest = self.embedding_handler.find_nearest_entities(
-                        expected_tail,
-                        top_k=top_k,
-                        filter_uris=filter_uris
-                    )
-                except Exception as e:
-                    print(f"   ⚠️  Type filtering failed: {e}")
-                    nearest = self.embedding_handler.find_nearest_entities(
-                        expected_tail,
-                        top_k=top_k
-                    )
-            else:
-                nearest = self.embedding_handler.find_nearest_entities(
-                    expected_tail,
-                    top_k=top_k
-                )
-        else:
-            # For string types (like genre), get all candidates and validate
-            print(f"   No entity type filtering (expected type: {expected_entity_type})")
-            nearest = self.embedding_handler.find_nearest_entities(
-                expected_tail,
-                top_k=top_k
-            )
-        
-        if not nearest:
-            return self._format_embedding_error("No results found in embedding space")
-        
-        # ✅ NEW: Validate result type and pick the best match
-        validated_result = self._validate_and_select_result(
-            nearest, 
-            expected_qcode, 
-            expected_entity_type
+        clean = re.sub(
+            r'^please\s+answer\s+this\s+question:\s*',
+            '',
+            clean,
+            flags=re.IGNORECASE
         )
         
-        if validated_result is None:
-            return self._format_embedding_error(
-                f"Found candidates but none matched expected type ({expected_entity_type})"
-            )
-        
-        result_uri, similarity = validated_result
-        result_label = self.embedding_handler.get_entity_label(result_uri, self.sparql_handler.graph)
-        
-        # Get entity type
-        entity_type = self._get_entity_type_label(result_uri)
-        
-        print(f"✅ Result: '{result_label}' (type: {entity_type}, similarity: {similarity:.3f})\n")
-        
-        return f"The answer suggested by embeddings is: **{result_label}** (type: {entity_type})"
+        return clean.strip()
     
-    def _get_expected_qcode(self, pattern: QueryPattern) -> Optional[str]:
+    def _detect_expected_type_from_query(self, query: str) -> Tuple[str, str]:
         """
-        Get expected Wikidata Q-code for the result based on relation.
+        Detect expected answer type from query keywords.
         
-        Args:
-            pattern: Query pattern
-            
         Returns:
-            Expected Q-code string (e.g., 'Q201658' for genre)
+            (type_name, q_code) tuple
         """
-        # Map relations to their expected object Q-codes
-        relation_to_qcode = {
-            'genre': 'Q201658',           # Film genre
-            'director': 'Q5',             # Human
-            'cast_member': 'Q5',          # Human
-            'screenwriter': 'Q5',         # Human
-            'producer': 'Q5',             # Human
-            'country_of_origin': 'Q6256', # Country
-        }
+        query_lower = query.lower()
         
-        return relation_to_qcode.get(pattern.relation)
+        # ✅ Person indicators (who, director, actor, etc.)
+        person_keywords = ['who', 'director', 'actor', 'actress', 'screenwriter', 
+                          'writer', 'producer', 'composer', 'cast']
+        if any(kw in query_lower for kw in person_keywords):
+            return ('person', 'Q5')
+        
+        # ✅ Country indicators
+        country_keywords = ['country', 'nation', 'produced in', 'made in', 'from what country']
+        if any(kw in query_lower for kw in country_keywords):
+            return ('country', 'Q6256')
+        
+        # ✅ Language indicators
+        language_keywords = ['language', 'spoken in', 'filmed in language', 'dialogue']
+        if any(kw in query_lower for kw in language_keywords):
+            return ('language', 'Q1288568')
+        
+        # ✅ Genre indicators
+        genre_keywords = ['genre', 'type of movie', 'kind of film']
+        if any(kw in query_lower for kw in genre_keywords):
+            return ('genre', 'Q201658')
+        
+        # ✅ Movie indicators (reverse queries: "what films did X...")
+        movie_keywords = ['what movies', 'what films', 'which films', 'filmography']
+        if any(kw in query_lower for kw in movie_keywords):
+            return ('movie', 'Q11424')
+        
+        # ✅ Date indicators
+        date_keywords = ['when', 'release date', 'came out', 'published']
+        if any(kw in query_lower for kw in date_keywords):
+            return ('date', 'date')
+        
+        # Default: unknown type
+        return ('unknown', 'unknown')
     
-    def _validate_and_select_result(
-        self,
-        candidates: List[Tuple[str, float]],
-        expected_qcode: Optional[str],
-        expected_type: Optional[str]
-    ) -> Optional[Tuple[str, float]]:
-        """
-        Validate candidates against expected Q-code and select best match.
+    def _qcodes_match(self, qcode1: str, qcode2: str) -> bool:
+        """Check if two Q-codes match (handles formatting differences)."""
+        if not qcode1 or not qcode2:
+            return False
         
-        Args:
-            candidates: List of (uri, similarity) tuples
-            expected_qcode: Expected Wikidata Q-code (e.g., 'Q201658')
-            expected_type: Expected type string (e.g., 'string')
-            
-        Returns:
-            Best validated (uri, similarity) or None if no valid candidate
-        """
-        if not expected_qcode:
-            # No specific Q-code expected, return best candidate
-            return candidates[0] if candidates else None
+        # Normalize both
+        q1 = qcode1.strip().upper()
+        q2 = qcode2.strip().upper()
         
-        print(f"   Validating {len(candidates)} candidates against expected type {expected_qcode}...")
+        if not q1.startswith('Q'):
+            q1 = 'Q' + q1
+        if not q2.startswith('Q'):
+            q2 = 'Q' + q2
         
-        # Check each candidate's type
-        for uri, similarity in candidates:
-            entity_qcode = self._get_entity_type_label(uri)
-            
-            if entity_qcode == expected_qcode:
-                print(f"   ✅ Found valid match: {uri} (type: {entity_qcode})")
-                return (uri, similarity)
-            else:
-                print(f"   ⚠️  Candidate {uri} has wrong type: {entity_qcode} (expected: {expected_qcode})")
-        
-        # No valid candidate found
-        print(f"   ❌ No candidates matched expected type {expected_qcode}")
-        return None
-    
-    def _embedding_reverse_query(self, query: str, pattern: QueryPattern) -> str:
-        """
-        Process reverse query using embeddings: Person → Movies
-        """
-        print(f"   Direction: Reverse ({pattern.relation})")
-        
-        # Extract person entity
-        person_entities = self.entity_extractor.extract_entities(
-            query,
-            entity_type="http://www.wikidata.org/entity/Q5",
-            threshold=75
-        )
-        
-        if not person_entities:
-            return self._format_embedding_error("Could not identify person in query")
-        
-        person_uri, person_text, score = person_entities[0]
-        person_label = self.entity_extractor.get_entity_label(person_uri)
-        print(f"✅ Person: '{person_label}'\n")
-        
-        # Get person embedding
-        person_embedding = self.embedding_handler.get_entity_embedding(person_uri)
-        if person_embedding is None:
-            return self._format_embedding_error(f"No embedding found for person '{person_label}'")
-        
-        # Get relation embedding (reverse direction)
-        relation_uri = self._get_relation_uri(pattern.relation)
-        relation_embedding = self.embedding_handler.get_relation_embedding(relation_uri)
-        
-        if relation_embedding is None:
-            return self._format_embedding_error(f"No embedding found for relation '{pattern.relation}'")
-        
-        # TransE reverse: tail - relation ≈ head
-        expected_head = person_embedding - relation_embedding
-        
-        # Find nearest movie entity
-        print(f"📝 Step 2: Finding nearest movie in embedding space...")
-        
-        # Get all movie URIs
-        movie_uris = self.embedding_handler.get_entities_by_type(
-            "http://www.wikidata.org/entity/Q11424",
-            self.sparql_handler.graph
-        )
-        
-        nearest = self.embedding_handler.find_nearest_entities(
-            expected_head,
-            top_k=1,
-            filter_uris=movie_uris
-        )
-        
-        if not nearest:
-            return self._format_embedding_error("No movies found in embedding space")
-        
-        result_uri, similarity = nearest[0]
-        result_label = self.embedding_handler.get_entity_label(result_uri, self.sparql_handler.graph)
-        
-        entity_type = "Q11424"  # Movie type
-        
-        print(f"✅ Result: '{result_label}' (type: {entity_type}, similarity: {similarity:.3f})\n")
-        
-        return f"The answer suggested by embeddings is: **{result_label}** (type: {entity_type})"
-    
-    def _embedding_verification_query(self, query: str, pattern: QueryPattern) -> str:
-        """Process verification query using embeddings."""
-        return self._format_embedding_error("Verification queries not supported in embedding mode")
-    
-    def _embedding_direct_query(self, query: str, pattern: QueryPattern) -> str:
-        """
-        Direct embedding approach: Embed the NL question and find nearest entity.
-        Fallback when entity extraction fails.
-        """
-        print(f"   Strategy: Direct question embedding")
-        
-        # Embed the query
-        query_embedding = self.query_embedder.embed_query(query)
-        
-        # Align to TransE space
-        aligned_embedding = self.aligner.align(query_embedding)
-        
-        # Find nearest entity
-        print(f"📝 Finding nearest entity to question embedding...")
-        nearest = self.embedding_handler.find_nearest_entities(
-            aligned_embedding,
-            top_k=1
-        )
-        
-        if not nearest:
-            return self._format_embedding_error("No results found in embedding space")
-        
-        result_uri, similarity = nearest[0]
-        result_label = self.embedding_handler.get_entity_label(result_uri, self.sparql_handler.graph)
-        entity_type = self._get_entity_type_label(result_uri)
-        
-        print(f"✅ Result: '{result_label}' (type: {entity_type}, similarity: {similarity:.3f})\n")
-        
-        return f"The answer suggested by embeddings is: **{result_label}** (type: {entity_type})"
-    
-    def _get_expected_entity_type(self, pattern: QueryPattern) -> Optional[str]:
-        """
-        Determine expected entity type based on query pattern.
-        
-        Args:
-            pattern: Query pattern
-            
-        Returns:
-            Entity type string ('person', 'movie', 'date', 'string') or None
-        """
-        if pattern.pattern_type == 'forward':
-            # Object type tells us what we're looking for
-            return pattern.object_type
-        elif pattern.pattern_type == 'reverse':
-            # Looking for movies
-            return 'movie'
-        else:
-            return None
+        return q1 == q2
     
     def _entity_type_to_uri(self, entity_type: str) -> Optional[str]:
         """
-        Map entity type string to Wikidata URI.
+        Convert entity type name to URI.
         
         Args:
-            entity_type: Type string ('person', 'movie', 'date', 'string')
+            entity_type: Entity type name (e.g., 'person', 'movie', 'country')
             
         Returns:
-            Wikidata type URI or None for generic strings
+            Entity type URI or None
         """
         type_map = {
-            'person': 'http://www.wikidata.org/entity/Q5',       # Human
-            'movie': 'http://www.wikidata.org/entity/Q11424',    # Film
-            'date': 'http://www.wikidata.org/entity/Q186408',    # Point in time
-            'string': None  # Genres/strings don't have a specific entity type
+            'person': 'http://www.wikidata.org/entity/Q5',
+            'movie': 'http://www.wikidata.org/entity/Q11424',
+            'country': 'http://www.wikidata.org/entity/Q6256',
+            'genre': 'http://www.wikidata.org/entity/Q201658',
+            'language': 'http://www.wikidata.org/entity/Q1288568'
         }
-        
         return type_map.get(entity_type)
     
-    def _get_relation_uri(self, relation: str) -> str:
-        """Map relation name to Wikidata property URI."""
-        relation_map = {
-            'director': 'http://www.wikidata.org/prop/direct/P57',
-            'cast_member': 'http://www.wikidata.org/prop/direct/P161',
-            'screenwriter': 'http://www.wikidata.org/prop/direct/P58',
-            'producer': 'http://www.wikidata.org/prop/direct/P162',
-            'genre': 'http://www.wikidata.org/prop/direct/P136',
-            'publication_date': 'http://www.wikidata.org/prop/direct/P577',
-            'country_of_origin': 'http://www.wikidata.org/prop/direct/P495',
-            'rating': 'http://ddis.ch/atai/rating',
-        }
-        return relation_map.get(relation, '')
+    def _get_entity_type_qcode(self, entity_uri: str) -> str:
+        """
+        Get the Q-code for an entity's type.
+        
+        Args:
+            entity_uri: Entity URI
+            
+        Returns:
+            Q-code string (e.g., 'Q5') or 'unknown'
+        """
+        try:
+            from rdflib import URIRef
+            P31 = URIRef("http://www.wikidata.org/prop/direct/P31")
+            entity_ref = URIRef(entity_uri)
+            
+            # Get the entity's type(s)
+            for type_uri in self.sparql_handler.graph.objects(entity_ref, P31):
+                type_str = str(type_uri)
+                
+                # ✅ FIX: Better Q-code extraction
+                if '/entity/Q' in type_str:
+                    # Standard Wikidata entity format
+                    qcode = type_str.split('/entity/Q')[-1].split('#')[0].split('/')[0]
+                    return f"Q{qcode}"
+                elif '/Q' in type_str:
+                    # Generic format
+                    qcode = type_str.split('/Q')[-1].split('#')[0].split('/')[0]
+                    return f"Q{qcode}"
+            
+            # ✅ FALLBACK: If no P31 found, check if the entity URI itself is a Q-code
+            if '/entity/Q' in entity_uri:
+                qcode = entity_uri.split('/entity/Q')[-1].split('#')[0].split('/')[0]
+                return f"Q{qcode}"
+            elif '/Q' in entity_uri:
+                qcode = entity_uri.split('/Q')[-1].split('#')[0].split('/')[0]
+                return f"Q{qcode}"
+            
+            return "unknown"
+        
+        except Exception as e:
+            print(f"⚠️  Error getting entity type: {e}")
+            import traceback
+            traceback.print_exc()
+            return "unknown"
     
-    def _get_entity_type_label(self, entity_uri: str) -> str:
-        """Get Wikidata entity type (Q-code) for an entity."""
-        from rdflib import URIRef
+    def _format_embedding_error(self, error_message: str) -> str:
+        """
+        Format error message for embedding queries.
         
-        entity_ref = URIRef(entity_uri)
-        P31 = URIRef("http://www.wikidata.org/prop/direct/P31")
-        
-        for type_uri in self.sparql_handler.graph.objects(entity_ref, P31):
-            type_str = str(type_uri)
-            if 'Q' in type_str:
-                # Extract Q-code
-                return type_str.split('/')[-1]
-        
-        return "unknown"
+        Args:
+            error_message: Error message
+            
+        Returns:
+            Formatted error response
+        """
+        return f"❌ **Embedding Query Error**\n\n{error_message}\n\nPlease try rephrasing your question."
     
-    def _format_embedding_error(self, error_msg: str) -> str:
-        """Format error message for embedding queries."""
-        return f"❌ **Embedding approach error**: {error_msg}"
+    def _generate_sparql_with_fallback(
+        self,
+        pattern: QueryPattern,
+        subject_label: str,
+        object_label: Optional[str] = None
+    ) -> Dict:
+        """
+        Generate SPARQL with LLM-first, template-fallback strategy.
+        NOW ENHANCED: Passes pattern to LLM for better few-shot example selection.
+        """
+        print("📝 Generating SPARQL query...")
+        
+        # PRIMARY: Try LLM-based generation FIRST with pattern-specific examples
+        try:
+            print("   Attempting LLM-based generation...")
+            
+            # ✅ FIX: Map relation names correctly for LLM query construction
+            relation_to_phrase = {
+                'director': 'director',
+                'cast_member': 'cast member',
+                'screenwriter': 'screenwriter',
+                'producer': 'producer',
+                'genre': 'genre',
+                'publication_date': 'release date',
+                'country_of_origin': 'country of origin',
+                'rating': 'rating'
+            }
+            
+            # Construct a descriptive query based on pattern
+            if pattern.pattern_type == 'forward':
+                relation_phrase = relation_to_phrase.get(pattern.relation, pattern.relation.replace('_', ' '))
+                llm_query = f"What is the {relation_phrase} of \"{subject_label}\"?"
+            elif pattern.pattern_type == 'reverse':
+                relation_verb = {
+                    'director': 'direct',
+                    'cast_member': 'act in',
+                    'screenwriter': 'write',
+                    'producer': 'produce'
+                }.get(pattern.relation, pattern.relation)
+                llm_query = f"What movies did \"{subject_label}\" {relation_verb}?"
+            else:  # verification
+                relation_verb = {
+                    'director': 'direct',
+                    'cast_member': 'act in',
+                    'screenwriter': 'write',
+                    'producer': 'produce'
+                }.get(pattern.relation, pattern.relation)
+                llm_query = f"Did \"{subject_label}\" {relation_verb} \"{object_label}\"?"
+            
+            print(f"   LLM query: {llm_query}")
+            print(f"   Pattern: {pattern.pattern_type}_{pattern.relation}")
+            
+            # Generate with pattern context for better example selection AND validation
+            result = self.nl2sparql.convert(llm_query, pattern=pattern)
+            
+            if result.confidence > 0.0:
+                print(f"   ✅ LLM generation successful (confidence: {result.confidence:.2%})")
+                return {
+                    'query': result.query,
+                    'method': 'llm',
+                    'confidence': result.confidence
+                }
+            else:
+                print(f"   ⚠️ LLM generated invalid query (confidence: {result.confidence:.2%})")
+                raise ValueError("LLM generated invalid query")
+                
+        except Exception as e:
+            print(f"   ⚠️ LLM generation failed: {e}")
+        
+        # FALLBACK: Use template-based generation
+        try:
+            print("   Attempting template-based generation (fallback)...")
+            sparql = self.sparql_generator.generate(pattern, subject_label, object_label)
+            print("   ✅ Template generation successful")
+            return {
+                'query': sparql,
+                'method': 'template',
+                'confidence': 0.95
+            }
+        except Exception as e:
+            print(f"   ❌ Template fallback failed: {e}")
+            raise ValueError(f"Both LLM and template generation failed: {str(e)}")

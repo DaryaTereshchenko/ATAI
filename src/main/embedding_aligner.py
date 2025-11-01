@@ -65,7 +65,6 @@ class EmbeddingAligner:
         # Initialize bias to zero
         self.bias = np.zeros(self.transe_dim, dtype=np.float32)
         
-        print(f"✅ Projection matrix initialized: shape {self.projection_matrix.shape}")
     
     def align(self, query_embedding: np.ndarray) -> np.ndarray:
         """
@@ -130,8 +129,7 @@ class EmbeddingAligner:
         
         if target_embeddings.shape[1] != self.transe_dim:
             raise ValueError(f"Target embedding dimension mismatch: expected {self.transe_dim}, got {target_embeddings.shape[1]}")
-        
-        print(f"🎓 Training alignment with {query_embeddings.shape[0]} samples...")
+
         
         # Solve using least squares: W = (X^T X)^-1 X^T Y
         # Where X = query_embeddings, Y = target_embeddings, W = projection_matrix
@@ -149,11 +147,9 @@ class EmbeddingAligner:
             # Compute training loss (MSE)
             aligned = self.align_batch(query_embeddings)
             mse = np.mean((aligned - target_embeddings) ** 2)
-            print(f"✅ Training complete. Final MSE: {mse:.6f}")
+
             
         except np.linalg.LinAlgError as e:
-            print(f"⚠️  Numerical error in training: {e}")
-            print("   Falling back to gradient descent...")
             self._train_gradient_descent(query_embeddings, target_embeddings, learning_rate, epochs, verbose)
     
     def _train_gradient_descent(
@@ -183,10 +179,8 @@ class EmbeddingAligner:
             self.projection_matrix -= learning_rate * grad_W
             self.bias -= learning_rate * grad_b
             
-            if verbose and (epoch + 1) % 10 == 0:
-                print(f"   Epoch {epoch + 1}/{epochs}, Loss: {loss:.6f}")
+
         
-        print(f"✅ Training complete. Final loss: {loss:.6f}")
     
     def save(self, filepath: str):
         """
@@ -205,7 +199,7 @@ class EmbeddingAligner:
         with open(filepath, 'wb') as f:
             pickle.dump(data, f)
         
-        print(f"✅ Saved alignment model to {filepath}")
+
     
     def _load_projection_matrix(self, filepath: str):
         """
@@ -228,23 +222,20 @@ class EmbeddingAligner:
                     f"got ({data['query_dim']}, {data['transe_dim']})"
                 )
             
-            print(f"✅ Loaded alignment model from {filepath}")
             
         except Exception as e:
-            print(f"⚠️  Failed to load projection matrix: {e}")
-            print("   Initializing new projection matrix...")
             self._initialize_projection()
 
 
 class SimpleAligner:
     """
-    Simple aligner that uses normalization and optional PCA for dimension reduction.
-    Useful when no training data is available.
+    Simple linear projection aligner.
+    Uses a learned or identity transformation to map query embeddings to TransE space.
     """
     
     def __init__(self, query_dim: int, transe_dim: int):
         """
-        Initialize simple aligner.
+        Initialize simple aligner with identity or random projection.
         
         Args:
             query_dim: Dimension of query embeddings
@@ -252,31 +243,33 @@ class SimpleAligner:
         """
         self.query_dim = query_dim
         self.transe_dim = transe_dim
+        
+        # Use identity if dimensions match, otherwise random projection
+        if query_dim == transe_dim:
+            self.projection = np.eye(query_dim)
+        else:
+            # Random projection normalized by dimensions
+            self.projection = np.random.randn(query_dim, transe_dim) / np.sqrt(query_dim)
+        
     
     def align(self, query_embedding: np.ndarray) -> np.ndarray:
         """
-        Align query embedding using simple normalization and dimension handling.
+        Align query embedding to TransE space.
         
         Args:
             query_embedding: Query embedding vector
             
         Returns:
-            Aligned embedding
+            Aligned embedding in TransE space
         """
-        # Normalize
-        normalized = query_embedding / (np.linalg.norm(query_embedding) + 1e-10)
+        aligned = np.dot(query_embedding, self.projection)
         
-        # Handle dimension mismatch
-        if self.query_dim == self.transe_dim:
-            return normalized
-        elif self.query_dim < self.transe_dim:
-            # Pad with zeros
-            padded = np.zeros(self.transe_dim, dtype=np.float32)
-            padded[:self.query_dim] = normalized
-            return padded
-        else:
-            # Truncate
-            return normalized[:self.transe_dim]
+        # Normalize
+        norm = np.linalg.norm(aligned)
+        if norm > 0:
+            aligned = aligned / norm
+        
+        return aligned
     
     def align_batch(self, query_embeddings: np.ndarray) -> np.ndarray:
         """Align batch of query embeddings."""

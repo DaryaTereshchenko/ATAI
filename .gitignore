@@ -27,3 +27,7 @@ ENV/
 # OS files
 .DS_Store
 Thumbs.db
+
+# Test logs
+logs/
+*.log

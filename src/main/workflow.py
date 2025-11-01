@@ -101,18 +101,16 @@ class InputValidator:
         - Trim
         - Normalize smart quotes/dashes to ASCII
         - Collapse whitespace
-        - ✅ NEW: Remove explicit approach prefixes
-
-        NOTE: Do NOT title-case or entity-normalize here.
-        NLToSPARQL handles all casing and label matching.
+        - Remove explicit approach prefixes
+        
+        ✅ CRITICAL: Does NOT modify entity names or titles - preserves exact case.
         """
         if not query:
             return ""
 
         s = query.strip()
         
-        # ✅ FIXED: More specific patterns to avoid removing "From" at the start of actual questions
-        # These patterns now require the full phrase with "Please answer" or similar
+        # Remove approach prefixes
         s = re.sub(
             r'^please\s+answer\s+this\s+question\s+with\s+(?:a|an)\s+factual\s+approach:\s*',
             '',
@@ -132,14 +130,16 @@ class InputValidator:
             flags=re.IGNORECASE
         )
         
-        # smart quotes/dashes → ASCII
+        # Smart quotes/dashes → ASCII (for consistent quote detection)
         s = (s.replace(""", '"').replace(""", '"')
                .replace("'", "'").replace("'", "'")
                .replace("—", "-").replace("–", "-"))
-        # collapse spaces
+        
+        # Collapse multiple spaces into one
         s = re.sub(r"\s+", " ", s)
 
-        # Keep user punctuation; do NOT strip characters (movie titles need them)
+        # ✅ CRITICAL: Do NOT modify punctuation or capitalization
+        # Preserve user's exact input for entity extraction
         return s.strip()
 
     @classmethod

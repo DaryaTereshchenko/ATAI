@@ -1,0 +1,65 @@
+# Test SPARQL query to check if "Aro Tolbukhin. En la mente del asesino" exists in the database
+# and retrieve its country of origin
+
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX wd: <http://www.wikidata.org/entity/>
+PREFIX wdt: <http://www.wikidata.org/prop/direct/>
+
+# Query 1: Check if movie exists with exact label (case-sensitive)
+SELECT ?movieUri ?movieLabel WHERE {
+  ?movieUri wdt:P31 wd:Q11424 .
+  ?movieUri rdfs:label ?movieLabel .
+  FILTER(?movieLabel = "Aro Tolbukhin. En la mente del asesino")
+}
+LIMIT 10
+
+# Query 2: Search for any movie containing "Aro" or "Tolbukhin" (case-insensitive)
+# PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+# PREFIX wd: <http://www.wikidata.org/entity/>
+# PREFIX wdt: <http://www.wikidata.org/prop/direct/>
+# 
+# SELECT ?movieUri ?movieLabel WHERE {
+#   ?movieUri wdt:P31 wd:Q11424 .
+#   ?movieUri rdfs:label ?movieLabel .
+#   FILTER(regex(?movieLabel, "Aro|Tolbukhin", "i"))
+# }
+# LIMIT 20
+
+# Query 3: If movie exists, get its country of origin
+# PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+# PREFIX wd: <http://www.wikidata.org/entity/>
+# PREFIX wdt: <http://www.wikidata.org/prop/direct/>
+# 
+# SELECT ?movieLabel ?countryLabel WHERE {
+#   ?movieUri wdt:P31 wd:Q11424 .
+#   ?movieUri rdfs:label ?movieLabel .
+#   FILTER(?movieLabel = "Aro Tolbukhin. En la mente del asesino")
+#   ?movieUri wdt:P495 ?countryUri .
+#   ?countryUri rdfs:label ?countryLabel .
+#   FILTER(LANG(?countryLabel) = "en" || LANG(?countryLabel) = "")
+# }
+
+# Query 4: List all movies with labels containing "mente" to check spelling variations
+# PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+# PREFIX wd: <http://www.wikidata.org/entity/>
+# PREFIX wdt: <http://www.wikidata.org/prop/direct/>
+# 
+# SELECT DISTINCT ?movieLabel WHERE {
+#   ?movieUri wdt:P31 wd:Q11424 .
+#   ?movieUri rdfs:label ?movieLabel .
+#   FILTER(regex(?movieLabel, "mente", "i"))
+# }
+# LIMIT 30
+
+# Query 5: Check for English vs Spanish labels
+# PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+# PREFIX wd: <http://www.wikidata.org/entity/>
+# PREFIX wdt: <http://www.wikidata.org/prop/direct/>
+# 
+# SELECT ?movieUri ?movieLabel ?lang WHERE {
+#   ?movieUri wdt:P31 wd:Q11424 .
+#   ?movieUri rdfs:label ?movieLabel .
+#   BIND(LANG(?movieLabel) AS ?lang)
+#   FILTER(regex(?movieLabel, "Aro.*Tolbukhin", "i"))
+# }
+# LIMIT 20

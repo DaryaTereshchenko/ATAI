@@ -5,6 +5,7 @@ Converts natural language queries into dense embeddings.
 
 import numpy as np
 from typing import Optional
+import gc  # ✅ ADD: For memory cleanup
 
 
 class QueryEmbedder:
@@ -28,10 +29,7 @@ class QueryEmbedder:
         """Load the sentence transformer model."""
         try:
             from sentence_transformers import SentenceTransformer
-            print(f"📥 Loading sentence transformer model: {self.model_name}")
             self.model = SentenceTransformer(self.model_name)
-            print(f"✅ Model loaded successfully")
-            print(f"   Embedding dimension: {self.model.get_sentence_embedding_dimension()}")
         except ImportError:
             raise ImportError(
                 "sentence-transformers not installed. Install with: "
@@ -39,6 +37,12 @@ class QueryEmbedder:
             )
         except Exception as e:
             raise RuntimeError(f"Failed to load sentence transformer model: {e}")
+    
+    def __del__(self):
+        """✅ ADD: Cleanup model when destroyed."""
+        if self.model is not None:
+            del self.model
+        gc.collect()
     
     def embed_query(self, query: str) -> np.ndarray:
         """
