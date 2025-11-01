@@ -5,23 +5,55 @@ Test to verify the fix for the AttributeError: 'EmbeddingQueryProcessor' object 
 import sys
 import os
 from unittest.mock import Mock, MagicMock, patch
-from dataclasses import dataclass
 from typing import Optional
 
 # Add project root to path
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.insert(0, project_root)
 
-
-@dataclass
-class MockQueryPattern:
-    """Mock QueryPattern for testing."""
-    pattern_type: str
-    relation: str
-    subject_type: Optional[str] = None
-    object_type: Optional[str] = None
-    confidence: float = 0.9
-    extracted_entities: Optional[dict] = None
+# Try to import the actual QueryPattern, fall back to mock if unavailable
+try:
+    from src.main.query_analyzer import QueryPattern
+    print("✅ Using actual QueryPattern from query_analyzer")
+    
+    def create_pattern(pattern_type: str, relation: str, subject_type: Optional[str] = None, 
+                      object_type: Optional[str] = None, confidence: float = 0.9, 
+                      extracted_entities: Optional[dict] = None) -> QueryPattern:
+        """Create a QueryPattern using the actual class."""
+        return QueryPattern(
+            pattern_type=pattern_type,
+            relation=relation,
+            subject_type=subject_type,
+            object_type=object_type,
+            confidence=confidence,
+            extracted_entities=extracted_entities or {}
+        )
+except ImportError:
+    print("⚠️  Could not import QueryPattern, using mock")
+    from dataclasses import dataclass
+    
+    @dataclass
+    class QueryPattern:
+        """Mock QueryPattern for testing when actual class is unavailable."""
+        pattern_type: str
+        relation: str
+        subject_type: Optional[str] = None
+        object_type: Optional[str] = None
+        confidence: float = 0.9
+        extracted_entities: Optional[dict] = None
+    
+    def create_pattern(pattern_type: str, relation: str, subject_type: Optional[str] = None, 
+                      object_type: Optional[str] = None, confidence: float = 0.9, 
+                      extracted_entities: Optional[dict] = None) -> QueryPattern:
+        """Create a QueryPattern using the mock class."""
+        return QueryPattern(
+            pattern_type=pattern_type,
+            relation=relation,
+            subject_type=subject_type,
+            object_type=object_type,
+            confidence=confidence,
+            extracted_entities=extracted_entities
+        )
 
 
 def test_embedding_forward_query_calls_get_expected_entity_type():
@@ -36,8 +68,8 @@ def test_embedding_forward_query_calls_get_expected_entity_type():
     # Import after mocking to avoid import-time dependencies
     from src.main.embedding_processor import EmbeddingQueryProcessor
     
-    # Create mock pattern
-    pattern = MockQueryPattern(
+    # Create pattern using helper function
+    pattern = create_pattern(
         pattern_type='forward',
         relation='director',
         subject_type='movie',
@@ -123,8 +155,8 @@ def test_embedding_verification_query_exists():
     
     from src.main.embedding_processor import EmbeddingQueryProcessor
     
-    # Create mock pattern
-    pattern = MockQueryPattern(
+    # Create pattern using helper function
+    pattern = create_pattern(
         pattern_type='verification',
         relation='director',
         confidence=0.85
@@ -152,7 +184,8 @@ def test_embedding_direct_query_exists():
     
     from src.main.embedding_processor import EmbeddingQueryProcessor
     
-    pattern = MockQueryPattern(
+    # Create pattern using helper function
+    pattern = create_pattern(
         pattern_type='unknown',
         relation='',
         confidence=0.2
