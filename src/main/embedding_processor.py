@@ -1928,3 +1928,85 @@ LIMIT 10"""
         
         # ✅ CRITICAL: Add entity type marker for test validation
         return f"✅ Movies directed by **{person_label}** ({person_qcode}) according to embeddings (type: Q11424):\n\n{results_text}"
+    
+    def _embedding_verification_query(self, query: str, pattern: QueryPattern) -> str:
+        """
+        Process verification query using embeddings.
+        
+        Verification queries check if a relationship exists (e.g., "Did X direct Y?").
+        Embeddings are not well-suited for this task as they provide similarity scores,
+        not definitive yes/no answers.
+        
+        Args:
+            query: User query string
+            pattern: Query pattern with verification type
+            
+        Returns:
+            Error message indicating verification is not supported
+        """
+        print(f"   Direction: Verification ({pattern.relation})")
+        print(f"   ⚠️  Verification queries are not supported in embedding mode")
+        
+        return self._format_embedding_error(
+            "Verification queries (e.g., 'Did X direct Y?') are not supported in embedding mode. "
+            "Embeddings provide similarity scores, not definitive yes/no answers. "
+            "Please use the factual approach for verification queries."
+        )
+    
+    def _embedding_direct_query(self, query: str, pattern: QueryPattern) -> str:
+        """
+        Process query using direct embedding similarity (fallback approach).
+        
+        This method is used when entity extraction fails or pattern is unclear.
+        It embeds the entire query and searches for similar entities in the embedding space.
+        
+        Args:
+            query: User query string
+            pattern: Query pattern (may have limited information)
+            
+        Returns:
+            Formatted response with embedding-based results
+        """
+        print(f"   Using direct query embedding (fallback approach)")
+        
+        try:
+            # Embed the query using sentence transformer
+            query_embedding = self.query_embedder.embed_query(query)
+            
+            # Align to TransE space
+            aligned_embedding = self.aligner.align(query_embedding)
+            
+            # Search for nearest entities
+            print(f"📝 Finding nearest entities for entire query...")
+            nearest = self.embedding_handler.find_nearest_entities(
+                aligned_embedding,
+                top_k=10
+            )
+            
+            if not nearest:
+                return self._format_embedding_error("No results found in embedding space")
+            
+            # Format results
+            print(f"📝 Found {len(nearest)} candidates")
+            results = []
+            for entity_uri, similarity in nearest[:5]:
+                entity_label = self.embedding_handler.get_entity_label(entity_uri, self.sparql_handler.graph)
+                entity_qcode = self.embedding_handler.get_entity_type_qcode(entity_uri, self.sparql_handler.graph) or "unknown"
+                results.append(f"• **{entity_label}** (type: {entity_qcode}, similarity: {similarity:.3f})")
+            
+            results_text = "\n".join(results)
+            
+            # Get type from top result for validation
+            top_entity_uri = nearest[0][0]
+            top_entity_qcode = self.embedding_handler.get_entity_type_qcode(top_entity_uri, self.sparql_handler.graph)
+            
+            if top_entity_qcode:
+                return f"✅ Suggested results from direct embedding search (type: {top_entity_qcode}):\n\n{results_text}"
+            else:
+                return f"✅ Suggested results from direct embedding search:\n\n{results_text}"
+                
+        except Exception as e:
+            print(f"❌ Error in direct embedding query: {e}")
+            import traceback
+            traceback.print_exc()
+            return self._format_embedding_error(f"Direct embedding search failed: {str(e)}")
