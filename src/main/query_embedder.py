@@ -2,9 +2,9 @@
 Query Embedder using Sentence Transformers.
 Converts natural language queries into dense embeddings.
 """
-
-import numpy as np
 from typing import Optional
+import numpy as np
+import re
 
 
 class QueryEmbedder:
@@ -34,8 +34,7 @@ class QueryEmbedder:
             print(f"   Embedding dimension: {self.model.get_sentence_embedding_dimension()}")
         except ImportError:
             raise ImportError(
-                "sentence-transformers not installed. Install with: "
-                "pip install sentence-transformers"
+                "sentence-transformers not installed. Install with: pip install sentence-transformers"
             )
         except Exception as e:
             raise RuntimeError(f"Failed to load sentence transformer model: {e}")
@@ -51,7 +50,7 @@ class QueryEmbedder:
             Query embedding as numpy array
         """
         if self.model is None:
-            raise RuntimeError("Model not initialized")
+            raise RuntimeError("Model not loaded. Call _load_model() first.")
         
         # Preprocess query
         query = self._preprocess_query(query)
@@ -60,6 +59,11 @@ class QueryEmbedder:
         embedding = self.model.encode(query, convert_to_numpy=True, show_progress_bar=False)
         
         return embedding
+    
+    # ✅ ADD: Alias for backward compatibility
+    def embed(self, query: str) -> np.ndarray:
+        """Alias for embed_query() for convenience."""
+        return self.embed_query(query)
     
     def embed_batch(self, queries: list) -> np.ndarray:
         """
@@ -72,7 +76,7 @@ class QueryEmbedder:
             Array of embeddings, shape (n_queries, embedding_dim)
         """
         if self.model is None:
-            raise RuntimeError("Model not initialized")
+            raise RuntimeError("Model not loaded. Call _load_model() first.")
         
         # Preprocess queries
         queries = [self._preprocess_query(q) for q in queries]
@@ -96,7 +100,6 @@ class QueryEmbedder:
         query = query.strip()
         
         # Remove extra whitespace
-        import re
         query = re.sub(r'\s+', ' ', query)
         
         return query
@@ -104,5 +107,5 @@ class QueryEmbedder:
     def get_embedding_dimension(self) -> int:
         """Get the embedding dimension of the model."""
         if self.model is None:
-            raise RuntimeError("Model not initialized")
+            raise RuntimeError("Model not loaded. Call _load_model() first.")
         return self.model.get_sentence_embedding_dimension()

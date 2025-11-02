@@ -26,6 +26,10 @@ class RelationManager:
         self.graph = graph
         self.relations: Dict[str, Dict] = {}  # relation_key -> {uri, label, aliases, count}
         self.uri_to_key: Dict[str, str] = {}  # URI -> relation_key
+        
+        # ✅ NEW: Cache for resolved relations
+        self.resolution_cache: Dict[str, str] = {}  # query_text -> relation_uri
+        
         self._discover_relations()
     
     def _discover_relations(self):
@@ -43,29 +47,47 @@ class RelationManager:
             
             # Try to get label for property
             if prop_uri not in property_labels:
-                prop_ref = URIRef(prop_uri)
-                for label in self.graph.objects(prop_ref, RDFS.label):
+                for label in self.graph.objects(URIRef(prop_uri), RDFS.label):
                     property_labels[prop_uri] = str(label)
                     break
         
+        # ✅ CRITICAL: Ensure key relations are included
+        critical_relations = {
+            'http://www.wikidata.org/prop/direct/P674': 'characters',
+            'http://www.wikidata.org/prop/direct/P272': 'production_company',
+            'http://www.wikidata.org/prop/direct/P495': 'country_of_origin',
+        }
+        
         # Build relations dictionary
         for prop_uri, count in property_counts.items():
-            # Extract key from URI or label
-            if prop_uri in property_labels:
-                label = property_labels[prop_uri]
+            # Extract property code
+            prop_code = self._extract_property_code(prop_uri)
+            
+            # Get label
+            label = property_labels.get(prop_uri)
+            
+            # Generate key
+            if label:
                 key = self._normalize_relation_name(label)
+            elif prop_uri in critical_relations:
+                key = critical_relations[prop_uri]
+                label = critical_relations[prop_uri].replace('_', ' ')
+            elif prop_code:
+                key = f"property_{prop_code}"
+                label = f"Property {prop_code}"
             else:
-                # Extract from URI
                 key = self._extract_key_from_uri(prop_uri)
+                label = key
             
             # Store relation info
             self.relations[key] = {
                 'uri': prop_uri,
-                'label': property_labels.get(prop_uri, key),
-                'aliases': self._generate_aliases(key, property_labels.get(prop_uri, '')),
+                'label': label,
+                'property_code': prop_code,
                 'count': count,
-                'property_code': self._extract_property_code(prop_uri)
+                'aliases': self._generate_aliases(key, label)
             }
+            
             self.uri_to_key[prop_uri] = key
         
         print(f"✅ Discovered {len(self.relations)} relations")
@@ -74,7 +96,7 @@ class RelationManager:
         top_relations = sorted(self.relations.items(), key=lambda x: x[1]['count'], reverse=True)[:10]
         print(f"📊 Top 10 relations by usage:")
         for key, info in top_relations:
-            print(f"   • {key} ({info['property_code']}): {info['count']} triples")
+            print(f"   • {key} ({info.get('property_code', 'N/A')}): {info['count']} triples")
     
     def _normalize_relation_name(self, name: str) -> str:
         """
@@ -133,16 +155,27 @@ class RelationManager:
             'country_of_origin': ['country', 'origin_country', 'from_country', 'from', 'country_of', 'made_in', 'country of origin'],
             'genre': ['type', 'category', 'genre'],
             'award_received': ['award', 'won_award', 'awards', 'award received'],
-            # ✅ ENHANCED: Language aliases
+            # ✅ ENHANCED: Comprehensive language aliases with highest priority
             'original_language_of_film_or_tv_show': [
-                'language', 'original_language', 'spoken_language', 
+                # Primary keywords
+                'language', 'original_language', 'spoken_language',
+                # Descriptive phrases
                 'language_of_work', 'dialogue_language', 'audio_language',
-                'film_language', 'movie_language', 'original language'
+                'film_language', 'movie_language', 'tv_language',
+                # Natural language variants
+                'original language', 'spoken', 'in language', 'what language',
+                'which language', 'language spoken', 'language of',
+                # Context-specific
+                'dialogue', 'spoken in', 'language is', 'language was',
+                'spoken language', 'audio', 'speech', 'verbal language'
+            ],
+            'official_language': [
+                'official language', 'formal_language', 'recognized_language'
             ],
             # ✅ Rating property aliases
-            'imda_rating': ['rating', 'user_rating', 'movie_rating', 'film_rating'],
-            'mpa_film_rating': ['rating', 'user_rating', 'movie_rating', 'mpaa_rating'],
-            'fsk_film_rating': ['rating', 'user_rating', 'movie_rating'],
+            'imda_rating': ['rating', 'user_rating', 'movie_rating', 'film_rating', 'imda'],
+            'mpa_film_rating': ['mpa_rating', 'mpaa_rating', 'content_rating'],
+            'fsk_film_rating': ['fsk_rating'],
             'bbfc_rating': ['rating', 'user_rating', 'movie_rating'],
             'eirin_film_rating': ['rating', 'user_rating', 'movie_rating'],
             'australian_classification': ['rating', 'user_rating', 'movie_rating'],
@@ -314,50 +347,32 @@ class RelationManager:
     
     def get_relation_uri(self, relation_key: str) -> Optional[str]:
         """
-        Get URI for a relation key.
+        Get URI for a relation key with caching.
         
-        ✅ ENHANCED: Multiple fallback strategies for robust lookup.
+        ✅ ENHANCED: Uses cache for faster lookups.
         """
-        if not relation_key:
-            return None
+        # Check cache first
+        if relation_key in self.resolution_cache:
+            return self.resolution_cache[relation_key]
         
-        relation_key_lower = relation_key.lower().strip()
+        # Try direct lookup
+        relation_info = self.relations.get(relation_key)
+        if relation_info:
+            uri = relation_info.get('uri')
+            if uri:
+                self.resolution_cache[relation_key] = uri  # Cache result
+                return uri
         
-        # Strategy 1: Direct key lookup
-        if relation_key in self.relations:
-            return self.relations[relation_key]['uri']
-        
-        # Strategy 2: Lowercase key lookup
+        # Try aliases
         for key, info in self.relations.items():
-            if key.lower() == relation_key_lower:
-                print(f"[RelationManager] Mapped '{relation_key}' → '{key}' via lowercase match")
-                return info['uri']
+            if relation_key in info.get('aliases', []):
+                uri = info.get('uri')
+                if uri:
+                    self.resolution_cache[relation_key] = uri  # Cache result
+                    return uri
         
-        # Strategy 3: Check all relations' aliases for a match (case-insensitive)
-        for key, info in self.relations.items():
-            if relation_key_lower in [alias.lower() for alias in info['aliases']]:
-                print(f"[RelationManager] Mapped '{relation_key}' → '{key}' via alias")
-                return info['uri']
-        
-        # Strategy 4: Fuzzy match with higher threshold
-        matches = self.find_relation(relation_key, top_k=1)
-        if matches and matches[0][2] > 0.7:  # Confidence > 70%
-            best_key, best_uri, best_conf = matches[0]
-            print(f"[RelationManager] Mapped '{relation_key}' → '{best_key}' via fuzzy match ({best_conf:.2%})")
-            return best_uri
-        
-        # Strategy 5: Try removing underscores and retrying
-        if '_' in relation_key:
-            relation_key_no_underscore = relation_key.replace('_', ' ')
-            matches = self.find_relation(relation_key_no_underscore, top_k=1)
-            if matches and matches[0][2] > 0.6:
-                best_key, best_uri, best_conf = matches[0]
-                print(f"[RelationManager] Mapped '{relation_key}' → '{best_key}' via space-normalized match ({best_conf:.2%})")
-                return best_uri
-        
-        print(f"[RelationManager] ❌ No mapping found for '{relation_key}'")
         return None
-    
+
     def get_relation_info(self, relation_key: str) -> Optional[Dict]:
         """
         Get full information about a relation.

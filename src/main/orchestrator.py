@@ -13,6 +13,7 @@ from src.main.sparql_handler import SPARQLHandler
 from src.main.nl_to_sparql import NLToSPARQL
 from src.main.workflow import QueryWorkflow
 from src.main.answer_formatter import AnswerFormatter
+from src.main.query_cache import QueryCache  # ✅ NEW
 
 from src.config import (
     GRAPH_FILE_PATH, EMBEDDINGS_DIR, USE_EMBEDDINGS,
@@ -25,6 +26,7 @@ class QuestionType(str, Enum):
     RECOMMENDATION = "recommendation"
     IMAGE = "image"
     HYBRID = "hybrid"
+    UNKNOWN = "unknown"  # ✅ NEW: For unclassified queries
 
 class QueryClassification(BaseModel):
     """Classification of a user query."""
@@ -52,6 +54,13 @@ class Orchestrator:
         global orchestrator_instance
 
         print("\n🔧 Initializing Orchestrator with rule-based classification...")
+
+        # ✅ NEW: Initialize query cache
+        print("\n📦 Initializing query cache...")
+        self.query_cache = QueryCache()
+        cache_stats = self.query_cache.get_stats()
+        print(f"   Cache entries: {cache_stats['total_entries']}")
+        print(f"   Cache file: {cache_stats['cache_file']}")
 
         # Initialize SPARQL handler
         self.sparql_handler = SPARQLHandler()
@@ -81,7 +90,8 @@ class Orchestrator:
                     query_model=EMBEDDING_QUERY_MODEL,
                     alignment_matrix_path=EMBEDDING_ALIGNMENT_MATRIX_PATH,
                     use_simple_aligner=True,
-                    sparql_handler=self.sparql_handler
+                    sparql_handler=self.sparql_handler,
+                    relation_manager=self.relation_manager  # ✅ FIX: Pass relation manager here
                 )
                 print("✅ Embedding processor initialized successfully\n")
             except FileNotFoundError as e:
@@ -113,9 +123,11 @@ class Orchestrator:
         
         Priority:
         1. Check for explicit "factual approach" or "embedding approach" keywords
-        2. Check for recommendation keywords
-        3. Check for image-related keywords (with movie-context filtering)
-        4. Default to hybrid (use both factual and embeddings)
+        2. Check for "Please answer this question:" (hybrid)
+        3. Check for recommendation keywords
+        4. Check for image-related keywords (with movie-context filtering)
+        5. Check for movie factual keywords (director, actor, etc.)
+        6. Default to unknown (polite rejection)
         
         Args:
             query: User query string
@@ -149,7 +161,18 @@ class Orchestrator:
                 confidence=1.0
             )
         
-        # PRIORITY 2: Recommendation keywords
+        # PRIORITY 2: Hybrid - must start with "Please answer this question:"
+        if query_lower.startswith('please answer this question:'):
+            print(f"[CLASSIFICATION] Type: hybrid (explicit)")
+            print(f"[CLASSIFICATION] Confidence: 100%")
+            print(f"[CLASSIFICATION] Method: Keyword matching")
+            print(f"{'='*80}\n")
+            return QueryClassification(
+                question_type=QuestionType.HYBRID,
+                confidence=1.0
+            )
+        
+        # PRIORITY 3: Recommendation keywords
         recommendation_keywords = ['recommend', 'suggest', 'what should i watch', 'similar to', 'like']
         if any(keyword in query_lower for keyword in recommendation_keywords):
             print(f"[CLASSIFICATION] Type: recommendation")
@@ -161,8 +184,7 @@ class Orchestrator:
                 confidence=0.95
             )
         
-        # PRIORITY 3: Image keywords (with movie-context filtering)
-        # ✅ FIX: More specific image patterns and exclude movie queries
+        # PRIORITY 4: Image keywords (with movie-context filtering)
         image_keywords = ['image', 'picture', 'photo', 'poster', 'screenshot', 'visual']
         image_phrases = ['show me an image', 'show me a picture', 'display the poster']
         
@@ -190,78 +212,62 @@ class Orchestrator:
                 confidence=0.95
             )
         
-        # DEFAULT: Hybrid (use both factual and embeddings)
-        print(f"[CLASSIFICATION] Type: hybrid (no explicit approach specified)")
-        print(f"[CLASSIFICATION] Confidence: 80%")
+        # PRIORITY 5: Check for movie factual keywords (queries we can handle)
+        if has_movie_context:
+            print(f"[CLASSIFICATION] Type: factual (movie context detected)")
+            print(f"[CLASSIFICATION] Confidence: 85%")
+            print(f"[CLASSIFICATION] Method: Keyword matching")
+            print(f"{'='*80}\n")
+            return QueryClassification(
+                question_type=QuestionType.FACTUAL,
+                confidence=0.85
+            )
+        
+        # DEFAULT: Unknown (polite rejection)
+        print(f"[CLASSIFICATION] Type: unknown (no recognizable query pattern)")
+        print(f"[CLASSIFICATION] Confidence: 100%")
         print(f"[CLASSIFICATION] Method: Default fallback")
         print(f"{'='*80}\n")
         return QueryClassification(
-            question_type=QuestionType.HYBRID,
-            confidence=0.8
+            question_type=QuestionType.UNKNOWN,
+            confidence=1.0
         )
 
     def process_query(self, query: str) -> str:
         """Process a query using the workflow."""
+        # ✅ NEW: Check cache first
+        cached_response = self.query_cache.get(query)
+        if cached_response is not None:
+            print("\n🎯 Returning cached response (no processing needed)\n")
+            return cached_response
+        
+        # Process query normally
         if self.use_workflow:
-            return self.workflow.run(query)
+            response = self.workflow.run(query)
         else:
             # Direct processing without workflow
             classification = self.classify_query(query)
             
             if classification.question_type == QuestionType.FACTUAL:
-                return self._process_factual(query)
+                response = self._process_factual(query)
             elif classification.question_type == QuestionType.EMBEDDINGS:
-                return self._process_embeddings(query)
+                response = self._process_embeddings(query)
             elif classification.question_type == QuestionType.HYBRID:
-                return self._process_hybrid(query)
+                response = self._process_hybrid(query)
             elif classification.question_type == QuestionType.IMAGE:
-                return self._process_image(query)
+                response = self._process_image(query)
             elif classification.question_type == QuestionType.RECOMMENDATION:
-                return self._process_recommendation(query)
+                response = self._process_recommendation(query)
+            elif classification.question_type == QuestionType.UNKNOWN:
+                response = "🤖 **I'm sorry, I don't understand the question.**\n\n" \
+                           "Please ask a factual question or request embeddings."
+        
+        # ✅ NEW: Cache successful responses (avoid caching errors)
+        if response and not response.startswith("❌") and not response.startswith("⚠️"):
+            self.query_cache.set(query, response)
+        
+        return response
     
-    def _clean_query_for_processing(self, query: str) -> str:
-        """
-        Remove classification prefixes from query before processing.
-        
-        ✅ FIXED: More precise patterns to preserve "From" at start of real questions.
-        
-        Args:
-            query: Original query with possible prefixes
-            
-        Returns:
-            Clean query without prefixes
-        """
-        import re
-        
-        clean = query
-        
-        # ✅ FIXED: Only remove when it's part of the full instruction phrase
-        # Remove "Please answer this question with a factual approach:"
-        clean = re.sub(
-            r'^please\s+answer\s+this\s+question\s+with\s+(?:a|an)\s+factual\s+approach:\s*',
-            '',
-            clean,
-            flags=re.IGNORECASE
-        )
-        
-        # Remove "Please answer this question with an embedding approach:"
-        clean = re.sub(
-            r'^please\s+answer\s+this\s+question\s+with\s+(?:a|an)\s+embedding\s+approach:\s*',
-            '',
-            clean,
-            flags=re.IGNORECASE
-        )
-        
-        # Remove "Please answer this question:"
-        clean = re.sub(
-            r'^please\s+answer\s+this\s+question:\s*',
-            '',
-            clean,
-            flags=re.IGNORECASE
-        )
-        
-        return clean.strip()
-
     def _log_pipeline_step(self, step_name: str, details: dict) -> None:
         """
         Log detailed pipeline step information.
@@ -289,18 +295,17 @@ class Orchestrator:
             return "⚠️ **Processing not available**"
         
         try:
-            # ✅ Clean query before processing
-            clean_query = self._clean_query_for_processing(query)
-            self._log_pipeline_step("Query Cleaning", {
-                "Original Query": query,
-                "Cleaned Query": clean_query
+            # Query is already cleaned by workflow
+            self._log_pipeline_step("Processing Factual Query", {
+                "Query": query,
+                "Query Length": len(query)
             })
             
             # Call the processor with detailed logging
             print("\n🔧 Calling embedding_processor.process_hybrid_factual_query()...")
             
             # Execute the full pipeline
-            response = self.embedding_processor.process_hybrid_factual_query(clean_query)
+            response = self.embedding_processor.process_hybrid_factual_query(query)
             
             self._log_pipeline_step("Final Response", {
                 "Response Length": len(response),
@@ -323,11 +328,10 @@ class Orchestrator:
             return "⚠️ **Embeddings processing not available**"
         
         try:
-            # ✅ Clean query before processing
-            clean_query = self._clean_query_for_processing(query)
-            self._log_pipeline_step("Query Cleaning", {
-                "Original Query": query,
-                "Cleaned Query": clean_query
+            # Query is already cleaned by workflow
+            self._log_pipeline_step("Processing Embeddings Query", {
+                "Query": query,
+                "Query Length": len(query)
             })
             
             print("\n🔧 Calling embedding_processor.process_embedding_query()...")
@@ -337,7 +341,7 @@ class Orchestrator:
                 print("\n🔢 Step: Query Embedding")
                 # ✅ FIXED: Use correct attribute name
                 if hasattr(self.embedding_processor, 'query_embedder'):
-                    query_embedding = self.embedding_processor.query_embedder.embed_query(clean_query)
+                    query_embedding = self.embedding_processor.query_embedder.embed_query(query)
                     self._log_pipeline_step("Query Embedding", {
                         "Embedding Dimension": len(query_embedding),
                         "Embedding Norm": float(sum(x**2 for x in query_embedding)**0.5)
@@ -349,7 +353,7 @@ class Orchestrator:
             except Exception as ie:
                 print(f"⚠️  Error in intermediate logging: {ie}")
             
-            response = self.embedding_processor.process_embedding_query(clean_query)
+            response = self.embedding_processor.process_embedding_query(query)
             
             self._log_pipeline_step("Final Response", {
                 "Response Length": len(response),
@@ -372,22 +376,22 @@ class Orchestrator:
             return "⚠️ **Hybrid processing not available**"
         
         try:
-            clean_query = self._clean_query_for_processing(query)
-            self._log_pipeline_step("Query Cleaning", {
-                "Original Query": query,
-                "Cleaned Query": clean_query
+            # Query is already cleaned by workflow
+            self._log_pipeline_step("Processing Hybrid Query", {
+                "Query": query,
+                "Query Length": len(query)
             })
             
             # Run both approaches
             print("\n" + "="*60)
             print("🔵 FACTUAL PIPELINE (Hybrid Mode)")
             print("="*60)
-            factual_result = self._process_factual_with_logging(clean_query)
+            factual_result = self._process_factual_with_logging(query)
             
             print("\n" + "="*60)
             print("🟢 EMBEDDING PIPELINE (Hybrid Mode)")
             print("="*60)
-            embeddings_result = self._process_embedding_with_logging(clean_query)
+            embeddings_result = self._process_embedding_with_logging(query)
             
             # Use AnswerFormatter to combine results
             print("\n🔗 Combining results...")
@@ -406,17 +410,17 @@ class Orchestrator:
             traceback.print_exc()
             return error_msg
     
-    def _process_factual_with_logging(self, clean_query: str) -> str:
+    def _process_factual_with_logging(self, query: str) -> str:
         """Process factual query with detailed logging (for hybrid mode)."""
         try:
-            return self.embedding_processor.process_hybrid_factual_query(clean_query)
+            return self.embedding_processor.process_hybrid_factual_query(query)
         except Exception as e:
             return f"❌ Factual processing error: {str(e)}"
     
-    def _process_embedding_with_logging(self, clean_query: str) -> str:
+    def _process_embedding_with_logging(self, query: str) -> str:
         """Process embedding query with detailed logging (for hybrid mode)."""
         try:
-            return self.embedding_processor.process_embedding_query(clean_query)
+            return self.embedding_processor.process_embedding_query(query)
         except Exception as e:
             return f"❌ Embedding processing error: {str(e)}"
 

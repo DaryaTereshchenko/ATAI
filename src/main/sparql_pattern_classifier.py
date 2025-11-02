@@ -101,9 +101,16 @@ class TransformerSPARQLClassifier:
                 parts = label.split('_', 1)
                 if len(parts) == 2:
                     pattern_type, relation = parts
-                    # ✅ NEW: Normalize language relation variants
+                    # ✅ ENHANCED: Normalize more relation variants
                     if relation in ['original_language', 'language', 'original_language_of_film_or_tv_show']:
                         relation = 'original_language_of_film_or_tv_show'
+                    # ✅ NEW: Normalize country variants
+                    elif relation in ['country', 'country_of_origin', 'origin_country']:
+                        relation = 'country_of_origin'
+                    # ✅ NEW: Normalize rating variants
+                    elif relation in ['rating', 'imda_rating', 'mpa_rating']:
+                        relation = 'imda_rating'
+                    
                     self.label_components[label] = (pattern_type, relation)
                 else:
                     self.label_components[label] = (label, 'unknown')

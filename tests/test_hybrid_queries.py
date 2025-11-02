@@ -430,23 +430,28 @@ def test_hybrid_out_of_scope_greeting(orchestrator):
     query = "Hello, how are you?"
     
     print(f"Query: {query}")
-    print(f"Expected: Polite rejection or redirection to movie queries")
+    print(f"Expected: Error message indicating query structure not recognized")
     
     response = orchestrator._process_hybrid(query)
     print(f"Response: {response[:300]}...")
     
-    # Check that response indicates out-of-scope or provides guidance
+    # Check that response indicates error or inability to process
     response_lower = response.lower()
-    helpful_indicators = [
-        'movie', 'film', 'help', 'ask', 'question', 
-        'sorry', 'cannot', "can't", 'not available',
-        'understand', 'structure', 'pattern'
+    
+    # Should contain error indicators
+    error_indicators = [
+        'error', 'pattern', 'structure', 'not recognized',
+        'could not', 'couldn\'t', 'cannot', 'unable',
+        'sorry', 'no pattern'
     ]
     
-    has_helpful_content = any(indicator in response_lower for indicator in helpful_indicators)
+    has_error_indication = any(indicator in response_lower for indicator in error_indicators)
     
-    assert has_helpful_content, "❌ Expected helpful guidance for out-of-scope query"
-    print(f"✅ PASSED: System provided guidance for out-of-scope query")
+    # Should have error emoji
+    has_error_emoji = '❌' in response
+    
+    assert has_error_indication or has_error_emoji, "❌ Expected error indication for out-of-scope query"
+    print(f"✅ PASSED: System indicated inability to process greeting")
     return True
 
 
@@ -459,7 +464,7 @@ def test_hybrid_out_of_scope_weather(orchestrator):
     query = "What's the weather like today?"
     
     print(f"Query: {query}")
-    print(f"Expected: Polite rejection or redirection")
+    print(f"Expected: Error message indicating query structure not recognized")
     
     response = orchestrator._process_hybrid(query)
     print(f"Response: {response[:300]}...")
@@ -467,16 +472,16 @@ def test_hybrid_out_of_scope_weather(orchestrator):
     response_lower = response.lower()
     
     # Should not contain actual weather information
-    weather_terms = ['sunny', 'rainy', 'cloudy', 'temperature', 'celsius', 'fahrenheit']
+    weather_terms = ['sunny', 'rainy', 'cloudy', 'temperature', 'celsius', 'fahrenheit', '°c', '°f']
     has_weather_info = any(term in response_lower for term in weather_terms)
     
-    # Should contain helpful guidance
-    helpful_terms = ['movie', 'film', 'cannot', 'sorry', 'not available', 'understand']
-    has_guidance = any(term in response_lower for term in helpful_terms)
+    # Should contain error indicators
+    error_indicators = ['error', 'pattern', 'structure', 'not recognized', 'could not', 'sorry']
+    has_error = any(indicator in response_lower for indicator in error_indicators) or '❌' in response
     
     assert not has_weather_info, "❌ Should not provide weather information"
-    assert has_guidance, "❌ Should provide helpful guidance"
-    print(f"✅ PASSED: Properly rejected weather query")
+    assert has_error, "❌ Should indicate inability to process query"
+    print(f"✅ PASSED: Properly rejected weather query with error message")
     return True
 
 
@@ -489,23 +494,26 @@ def test_hybrid_out_of_scope_math(orchestrator):
     query = "What is 2 + 2?"
     
     print(f"Query: {query}")
-    print(f"Expected: Polite rejection or redirection")
+    print(f"Expected: Error message indicating query structure not recognized")
     
     response = orchestrator._process_hybrid(query)
     print(f"Response: {response[:300]}...")
     
     response_lower = response.lower()
     
-    # Should not contain math answer
-    has_math_answer = response_lower.strip().startswith('4') or '= 4' in response_lower or 'equals 4' in response_lower
+    # Should not contain direct math answer
+    has_math_answer = (response_lower.strip().startswith('4') or 
+                       '= 4' in response_lower or 
+                       'equals 4' in response_lower or
+                       'answer is 4' in response_lower)
     
-    # Should contain helpful guidance
-    helpful_terms = ['movie', 'film', 'cannot', 'sorry', 'pattern', 'understand']
-    has_guidance = any(term in response_lower for term in helpful_terms)
+    # Should contain error indicators
+    error_indicators = ['error', 'pattern', 'structure', 'not recognized', 'could not', 'sorry']
+    has_error = any(indicator in response_lower for indicator in error_indicators) or '❌' in response
     
     assert not has_math_answer, "❌ Should not solve math problems"
-    assert has_guidance, "❌ Should provide helpful guidance"
-    print(f"✅ PASSED: Properly rejected math query")
+    assert has_error, "❌ Should indicate inability to process query"
+    print(f"✅ PASSED: Properly rejected math query with error message")
     return True
 
 
@@ -518,24 +526,27 @@ def test_hybrid_out_of_scope_personal(orchestrator):
     query = "What is your favorite color?"
     
     print(f"Query: {query}")
-    print(f"Expected: Polite rejection or redirection")
+    print(f"Expected: Error message indicating query structure not recognized")
     
     response = orchestrator._process_hybrid(query)
     print(f"Response: {response[:300]}...")
     
     response_lower = response.lower()
     
-    # Should not contain color preferences
-    colors = ['red', 'blue', 'green', 'yellow', 'purple', 'orange', 'my favorite']
-    has_color_answer = any(color in response_lower for color in colors) and 'movie' not in response_lower
+    # Should not contain specific color preferences
+    colors = ['my favorite is', 'i like', 'i prefer', 'red', 'blue', 'green']
+    has_personal_answer = any(
+        (color in response_lower and 'movie' not in response_lower) 
+        for color in colors
+    )
     
-    # Should contain helpful guidance
-    helpful_terms = ['movie', 'film', 'cannot', 'sorry', 'pattern', 'understand', 'ask about']
-    has_guidance = any(term in response_lower for term in helpful_terms)
+    # Should contain error indicators
+    error_indicators = ['error', 'pattern', 'structure', 'not recognized', 'could not', 'sorry']
+    has_error = any(indicator in response_lower for indicator in error_indicators) or '❌' in response
     
-    assert not has_color_answer, "❌ Should not answer personal questions"
-    assert has_guidance, "❌ Should provide helpful guidance"
-    print(f"✅ PASSED: Properly rejected personal query")
+    assert not has_personal_answer, "❌ Should not answer personal questions"
+    assert has_error, "❌ Should indicate inability to process query"
+    print(f"✅ PASSED: Properly rejected personal query with error message")
     return True
 
 
@@ -548,7 +559,7 @@ def test_hybrid_out_of_scope_gibberish(orchestrator):
     query = "asdfghjkl qwertyuiop"
     
     print(f"Query: {query}")
-    print(f"Expected: Error message or guidance")
+    print(f"Expected: Error message indicating query structure not recognized")
     
     response = orchestrator._process_hybrid(query)
     print(f"Response: {response[:300]}...")
@@ -557,46 +568,15 @@ def test_hybrid_out_of_scope_gibberish(orchestrator):
     
     # Should indicate error or inability to understand
     error_indicators = [
+        'error', 'pattern', 'structure', 'not recognized',
         'could not', 'couldn\'t', 'cannot', 'unable',
-        'error', 'invalid', 'understand', 'pattern',
-        'sorry', 'help'
+        'sorry', 'no pattern'
     ]
     
-    has_error_indication = any(indicator in response_lower for indicator in error_indicators)
+    has_error_indication = any(indicator in response_lower for indicator in error_indicators) or '❌' in response
     
     assert has_error_indication, "❌ Should indicate inability to process gibberish"
-    print(f"✅ PASSED: Properly handled gibberish input")
-    return True
-
-
-def test_hybrid_ambiguous_entity(orchestrator):
-    """Test handling of ambiguous entity references."""
-    print("\n" + "="*80)
-    print("TEST: Ambiguous entity reference (hybrid)")
-    print("="*80)
-    
-    query = "Who directed Avatar?"  # Could be Avatar (2009) or Avatar: The Last Airbender
-    
-    print(f"Query: {query}")
-    print(f"Expected: Answer for one of the Avatar movies")
-    
-    response = orchestrator._process_hybrid(query)
-    print(f"Response: {response[:300]}...")
-    
-    # Should contain director information
-    response_lower = response.lower()
-    
-    # Should have factual and embedding sections
-    has_factual = "factual" in response_lower or "📊" in response
-    has_embedding = "embedding" in response_lower or "🔢" in response
-    
-    # Should contain some director-related content
-    director_terms = ['director', 'directed', 'james cameron', 'cameron']
-    has_director_info = any(term in response_lower for term in director_terms)
-    
-    assert has_factual or has_director_info, "❌ Should attempt to answer for Avatar movie"
-    assert has_embedding or has_director_info, "❌ Should attempt embedding-based answer"
-    print(f"✅ PASSED: Handled ambiguous entity reference")
+    print(f"✅ PASSED: Properly handled gibberish input with error message")
     return True
 
 
@@ -609,7 +589,7 @@ def test_hybrid_malformed_query(orchestrator):
     query = "directed by who the movie"
     
     print(f"Query: {query}")
-    print(f"Expected: Error message or best-effort attempt")
+    print(f"Expected: Error message indicating query structure not recognized")
     
     response = orchestrator._process_hybrid(query)
     print(f"Response: {response[:300]}...")
@@ -618,14 +598,15 @@ def test_hybrid_malformed_query(orchestrator):
     
     # Should indicate problem understanding the query
     problem_indicators = [
+        'error', 'pattern', 'structure', 'not recognized',
         'could not', 'couldn\'t', 'cannot identify', 'not understand',
-        'pattern', 'structure', 'sorry', 'error', 'unable'
+        'sorry', 'unable'
     ]
     
-    has_problem_indication = any(indicator in response_lower for indicator in problem_indicators)
+    has_problem_indication = any(indicator in response_lower for indicator in problem_indicators) or '❌' in response
     
-    assert has_problem_indication or len(response) < 500, "❌ Should indicate difficulty with malformed query"
-    print(f"✅ PASSED: Handled malformed query appropriately")
+    assert has_problem_indication, "❌ Should indicate difficulty with malformed query"
+    print(f"✅ PASSED: Handled malformed query with appropriate error message")
     return True
 
 

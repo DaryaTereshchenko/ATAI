@@ -28,6 +28,7 @@ class ProcessingMethod(str, Enum):
     EMBEDDING = "embedding"
     HYBRID = "hybrid"
     FAILED = "failed"
+    NOT_SUPPORTED = "not_supported"  # ✅ NEW: For unsupported query types
 
 
 class WorkflowState(TypedDict):
@@ -101,8 +102,8 @@ class InputValidator:
         - Trim
         - Normalize smart quotes/dashes to ASCII
         - Collapse whitespace
-        - ✅ NEW: Remove explicit approach prefixes
-
+        
+        NOTE: Do NOT remove approach prefixes here - classifier needs them!
         NOTE: Do NOT title-case or entity-normalize here.
         NLToSPARQL handles all casing and label matching.
         """
@@ -110,27 +111,6 @@ class InputValidator:
             return ""
 
         s = query.strip()
-        
-        # ✅ FIXED: More specific patterns to avoid removing "From" at the start of actual questions
-        # These patterns now require the full phrase with "Please answer" or similar
-        s = re.sub(
-            r'^please\s+answer\s+this\s+question\s+with\s+(?:a|an)\s+factual\s+approach:\s*',
-            '',
-            s,
-            flags=re.IGNORECASE
-        )
-        s = re.sub(
-            r'^please\s+answer\s+this\s+question\s+with\s+(?:a|an)\s+embedding\s+approach:\s*',
-            '',
-            s,
-            flags=re.IGNORECASE
-        )
-        s = re.sub(
-            r'^please\s+answer\s+this\s+question:\s*',
-            '',
-            s,
-            flags=re.IGNORECASE
-        )
         
         # smart quotes/dashes → ASCII
         s = (s.replace(""", '"').replace(""", '"')
@@ -210,6 +190,46 @@ class InputValidator:
             "cleaned_query": cleaned_query,
         }
 
+    @classmethod
+    def strip_approach_prefix(cls, query: str) -> str:
+        """
+        Remove explicit approach prefixes after classification.
+        This is called AFTER the classifier has seen the original query.
+        
+        Args:
+            query: Query that may contain approach prefixes
+            
+        Returns:
+            Query with approach prefixes removed
+        """
+        s = query
+        
+        # Remove "Please answer this question with a factual approach:"
+        s = re.sub(
+            r'^please\s+answer\s+this\s+question\s+with\s+(?:a|an)\s+factual\s+approach:\s*',
+            '',
+            s,
+            flags=re.IGNORECASE
+        )
+        
+        # Remove "Please answer this question with an embedding approach:"
+        s = re.sub(
+            r'^please\s+answer\s+this\s+question\s+with\s+(?:a|an)\s+embedding\s+approach:\s*',
+            '',
+            s,
+            flags=re.IGNORECASE
+        )
+        
+        # Remove "Please answer this question:"
+        s = re.sub(
+            r'^please\s+answer\s+this\s+question:\s*',
+            '',
+            s,
+            flags=re.IGNORECASE
+        )
+        
+        return s.strip()
+
 
 class QueryWorkflow:
     """LangGraph-style workflow for processing user queries."""
@@ -277,10 +297,11 @@ class QueryWorkflow:
     def decide_processing_method(self, state: WorkflowState) -> WorkflowState:
         """
         Node 3: Decide processing method based on query type.
+        Also strips approach prefixes after classification.
         """
         print(f"\n[NODE: decide_processing_method] Routing based on query type...")
 
-        query_type = state.get("query_type", "hybrid")
+        query_type = state.get("query_type", "unknown")
         
         # Map query type to processing method
         if query_type == "factual":
@@ -291,18 +312,33 @@ class QueryWorkflow:
             state["routing_reason"] = "Explicit embeddings approach requested - using embedding space."
         elif query_type == "hybrid":
             state["processing_method"] = ProcessingMethod.HYBRID
-            state["routing_reason"] = "No explicit approach specified - using both factual and embeddings."
+            state["routing_reason"] = "Hybrid approach requested - using both factual and embeddings."
         elif query_type == "image":
-            state["processing_method"] = ProcessingMethod.FAILED
+            state["processing_method"] = ProcessingMethod.NOT_SUPPORTED
             state["routing_reason"] = "Image queries not yet supported."
             state["error"] = "Image queries are not yet implemented."
         elif query_type == "recommendation":
-            state["processing_method"] = ProcessingMethod.FAILED
+            state["processing_method"] = ProcessingMethod.NOT_SUPPORTED
             state["routing_reason"] = "Recommendation queries not yet supported."
             state["error"] = "Recommendation queries are not yet implemented."
+        elif query_type == "unknown":
+            state["processing_method"] = ProcessingMethod.NOT_SUPPORTED
+            state["routing_reason"] = "Query type not recognized."
+            state["error"] = "I'm not sure how to answer this type of question."
         else:
-            state["processing_method"] = ProcessingMethod.HYBRID
-            state["routing_reason"] = "Unknown query type - defaulting to hybrid."
+            state["processing_method"] = ProcessingMethod.NOT_SUPPORTED
+            state["routing_reason"] = f"Query type '{query_type}' is not supported."
+            state["error"] = f"This type of query is not currently supported."
+
+        # ✅ Strip approach prefixes AFTER classification (only for processable types)
+        if state["processing_method"] in [ProcessingMethod.SPARQL, ProcessingMethod.EMBEDDING, ProcessingMethod.HYBRID]:
+            original_query = state["raw_query"]
+            clean_query = self.validator.strip_approach_prefix(original_query)
+            if clean_query != original_query:
+                state["raw_query"] = clean_query
+                print(f"[NODE: decide_processing_method] 🔧 Stripped approach prefix")
+                print(f"[NODE: decide_processing_method]    Original: {original_query[:60]}...")
+                print(f"[NODE: decide_processing_method]    Clean: {clean_query[:60]}...")
 
         state["current_node"] = "decide_processing_method"
         print(f"[NODE: decide_processing_method] ✅ Method: {state['processing_method'].value}")
@@ -455,6 +491,16 @@ class QueryWorkflow:
         print(f"🔄 WORKFLOW EXECUTION STARTED")
         print(f"{'='*80}\n")
         
+        # ✅ NEW: Check cache before workflow execution
+        if hasattr(self.orchestrator, 'query_cache'):
+            cached_response = self.orchestrator.query_cache.get(query)
+            if cached_response is not None:
+                print(f"🎯 Cache hit - returning cached response")
+                print(f"\n{'='*80}")
+                print(f"✅ WORKFLOW EXECUTION COMPLETED (cached)")
+                print(f"{'='*80}\n")
+                return cached_response
+        
         # Initialize state
         state: WorkflowState = {
             'raw_query': query,
@@ -492,17 +538,23 @@ class QueryWorkflow:
             
             # Node 4: Process based on method
             if state['processing_method'] == ProcessingMethod.SPARQL:
-                state = self.process_with_factual(state)  # ✅ FIXED: Use correct method name
+                state = self.process_with_factual(state)
             elif state['processing_method'] == ProcessingMethod.EMBEDDING:
                 state = self.process_with_embeddings(state)
             elif state['processing_method'] == ProcessingMethod.HYBRID:
                 state = self.process_with_both(state)
-            elif state['processing_method'] == ProcessingMethod.FAILED:
-                # Error already set
+            elif state['processing_method'] in [ProcessingMethod.FAILED, ProcessingMethod.NOT_SUPPORTED]:
+                # ✅ FIXED: Skip processing, error already set
                 pass
             
             # Node 5: Format response
             state = self.format_response(state)
+            
+            # ✅ NEW: Cache successful responses
+            if (state['formatted_response'] and 
+                not state.get('error') and 
+                hasattr(self.orchestrator, 'query_cache')):
+                self.orchestrator.query_cache.set(query, state['formatted_response'])
             
             print(f"\n{'='*80}")
             print(f"✅ WORKFLOW EXECUTION COMPLETED")
@@ -560,10 +612,31 @@ class QueryWorkflow:
     def _format_error_response(self, state: WorkflowState) -> str:
         """Format error response."""
         error = state.get("error", "Unknown error")
+        
+        # Security threats
         if state.get("detected_threats"):
             return (
                 "⚠️ **Security Warning**\n\n"
                 "Your query contains potentially unsafe content and cannot be processed.\n\n"
                 "Please rephrase your question using natural language only."
             )
+        
+        # ✅ NEW: Handle unsupported query types with polite message
+        if state.get("processing_method") == ProcessingMethod.NOT_SUPPORTED:
+            query_type = state.get("query_type", "unknown")
+            suggestions = []
+            
+            if query_type == "image":
+                suggestions.append("Try asking about movie details like directors, actors, or release dates")
+                suggestions.append("Use factual or embedding-based questions about movie content")
+            elif query_type == "recommendation":
+                suggestions.append("Try asking about specific movies or people in the database")
+                suggestions.append("Use questions like 'Who directed [movie]?' or 'What movies did [person] star in?'")
+            else:
+                suggestions.append("Try asking about movie facts (directors, cast, release dates)")
+                suggestions.append("Try asking questions about movie content using natural language")
+            
+            return self.formatter.format_unsupported_query(query_type, suggestions)
+        
+        # General errors
         return self.formatter.format_error(error)

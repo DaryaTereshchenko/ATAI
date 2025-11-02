@@ -1,0 +1,98 @@
+{
+  "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824": {
+    "query": "Hello\n",
+    "normalized_query": "hello",
+    "response": "🙏 **Thank you for your question!**\n\nI'm designed to answer questions about movies in the knowledge graph. I can help you with:\n\n• **Factual questions** about movies (directors, cast, release dates, genres)\n• **Semantic queries** about movie content and themes\n• Questions about specific movies or people in the database\n\n**💡 Here are some things you could try:**\n• Try asking about movie facts (directors, cast, release dates)\n• Try asking questions about movie content using natural language\n\nFeel free to ask another question about movies!",
+    "timestamp": "2025-11-02T18:18:48.587795"
+  },
+  "7153494159edc3b45dfc45104bf1adefb01829ff040ed89319f1dbb5646f6fbd": {
+    "query": "Please answer this question with an embedding approach: What is the genre of ‘Shoplifters’? \n",
+    "normalized_query": "please answer this question with an embedding approach: what is the genre of ‘shoplifters’?",
+    "response": "The answer suggested by embeddings is: **supernatural fiction** (type: Q20076756)",
+    "timestamp": "2025-11-02T18:19:21.537588"
+  },
+  "c8e6cc4b90ab929b66e97f6873b73f0af43aae575fcf4c1ccf05605554bc331a": {
+    "query": "Please answer this question: Which genres does the film “Even Cowgirls Get the Blues” belong to?\n",
+    "normalized_query": "please answer this question: which genres does the film “even cowgirls get the blues” belong to?",
+    "response": "**Factual Answer:**\n✅ **'Even Cowgirls Get the Blues'** genre:\n\nfilm based on a novel, comedy drama, LGBT-related film, romantic comedy\n\n**Embeddings Answer:**\nThe answer suggested by embeddings is: **music documentary film** (type: Q201658)",
+    "timestamp": "2025-11-02T18:20:02.789823"
+  },
+  "65afe39340846c03180b6c1d2a1c596a92fa93b038ece0706880c1de9af06205": {
+    "query": "Please answer this question: Who directed the film This Is England?\n",
+    "normalized_query": "please answer this question: who directed the film this is england?",
+    "response": "**Factual Answer:**\n✅ **'This Is England'** was directed by **Shane Meadows**.\n\n**Embeddings Answer:**\nThe answer suggested by embeddings is: **Q131492006** (type: Q5)",
+    "timestamp": "2025-11-02T18:20:38.105662"
+  },
+  "a5708f95a7ce86821b3366cd2883a41e69aac5ddafb91c02515a1ea42cd742b2": {
+    "query": "Please answer this question: Who is the director of ‘Good Will Hunting’? ",
+    "normalized_query": "please answer this question: who is the director of ‘good will hunting’?",
+    "response": "**Factual Answer:**\n✅ **'Good Will Hunting'** was directed by **Gus Van Sant**.\n\n**Embeddings Answer:**\nThe answer suggested by embeddings is: **Vanessa Lengies** (type: Q5)",
+    "timestamp": "2025-11-02T18:21:16.089271"
+  },
+  "b9d12ab680f64224edb348f78dbb7eedd61c1a6a7a801c9bb810028c22747c7d": {
+    "query": "Please answer this question: Which movie has the lowest rating?\n",
+    "normalized_query": "please answer this question: which movie has the lowest rating?",
+    "response": "**Factual Answer:**\n✅ The movie with the **lowest imda_rating** is **'Showdown in Little Tokyo Reloaded'** with a rating of **1.1**.\n\n**Embeddings Answer:**\n❌ **Embedding processing error**: Superlative queries (highest/lowest/best/worst) are not supported in embedding mode. These queries require aggregation which embeddings cannot provide. Please use the factual approach or rephrase your question to ask about a specific movie.",
+    "timestamp": "2025-11-02T18:21:23.076884"
+  },
+  "356291c4b47a1cfa8e1d928e51997fd746e621d2c81cd75fc6271d03b4414f0c": {
+    "query": "Please answer this question: Which German comedy film directed by Vivian Naef?\n",
+    "normalized_query": "please answer this question: which german comedy film directed by vivian naef?",
+    "response": "**Factual Answer:**\n✅ **Vivian Naefe** directed **Four for Venice**.\n\n**Embeddings Answer:**\n✅ Movies directed by **Vivian Naefe** (Q5) according to embeddings (type: Q11424):\n\n• **The Leopard Man** (type: Q11424, similarity: 1.000)\n• **Dangerous Liaisons** (type: Q11424, similarity: 1.000)\n• **Europe '51** (type: Q11424, similarity: 1.000)\n• **Summer Wishes, Winter Dreams** (type: Q11424, similarity: 1.000)\n• **Vicky Cristina Barcelona** (type: Q11424, similarity: 1.000)",
+    "timestamp": "2025-11-02T18:21:58.837778"
+  },
+  "f7f10e180befb3903c5ab3acfc671b98759a7ff2bb631a67138f70743180e685": {
+    "query": "Please answer this question with an embedding approach: Who is the screenwriter of ‘12 Monkeys’? \n",
+    "normalized_query": "please answer this question with an embedding approach: who is the screenwriter of ‘12 monkeys’?",
+    "response": "The answer suggested by embeddings is: **John Wark** (type: Q5)",
+    "timestamp": "2025-11-02T18:22:29.726190"
+  },
+  "2775377c5bcca1cc2943452684c7c9c65a8c1663e3d4076f7a51c3f0bcd82aa9": {
+    "query": "Please answer this question with an embedding approach: Who is the director of ‘Apocalypse Now’? \n",
+    "normalized_query": "please answer this question with an embedding approach: who is the director of ‘apocalypse now’?",
+    "response": "The answer suggested by embeddings is: **Pierre Gorse** (type: Q5)",
+    "timestamp": "2025-11-02T18:22:56.232935"
+  },
+  "6abc24f2884cb457ce6b3b9d5f819d05f2bf0beb63a40f15b2c1823d853bd97c": {
+    "query": "Please answer this question with a factual approach: When did the movie 'Miracles Still Happen' come out? \n",
+    "normalized_query": "please answer this question with a factual approach: when did the movie 'miracles still happen' come out?",
+    "response": "✅ **'Miracles Still Happen'** was released in **1974**.",
+    "timestamp": "2025-11-02T18:23:24.218235"
+  },
+  "ff090416ec713f9c9171ebca37c3a5add71e7c908aae7d93676967298a76ca20": {
+    "query": "Please answer this question with a factual approach: What genre is the movie 'Bandit Queen'?\n",
+    "normalized_query": "please answer this question with a factual approach: what genre is the movie 'bandit queen'?",
+    "response": "✅ **'Bandit Queen'** genre:\n\ndrama film, biographical film, crime film",
+    "timestamp": "2025-11-02T18:23:50.983434"
+  },
+  "23042f9e28d3479d62c6388c9e365442173ce37c5da1da3b32f88674e152762b": {
+    "query": "Please answer this question with a factual approach: Who directed ‘Fargo’? \n",
+    "normalized_query": "please answer this question with a factual approach: who directed ‘fargo’?",
+    "response": "✅ **'Fargo'** was directed by:\n\nEthan Coen, and Joel Coen",
+    "timestamp": "2025-11-02T18:24:15.017039"
+  },
+  "a8a0da1e75e0149e8276fcc7fd5e66011ea5742ac27d23943c02139c30028d62": {
+    "query": "Please answer this question with a factual approach: Who is the screenwriter of 'Shortcut to Happiness'? \n",
+    "normalized_query": "please answer this question with a factual approach: who is the screenwriter of 'shortcut to happiness'?",
+    "response": "✅ **'Shortcut to Happiness'** was written by **Pete Dexter**.",
+    "timestamp": "2025-11-02T18:24:38.370179"
+  },
+  "382e1b78afe021b80864c8635ef5122d964cee7bea655e0c324bdd8dd12fbd87": {
+    "query": "Please answer this question with a factual approach: From what country is the movie 'Aro Tolbukhin. En la mente del asesino'?  \n",
+    "normalized_query": "please answer this question with a factual approach: from what country is the movie 'aro tolbukhin. en la mente del asesino'?",
+    "response": "✅ **'Aro Tolbukhin. En la mente del asesino'** country of origin: **Mexico**",
+    "timestamp": "2025-11-02T18:25:12.393458"
+  },
+  "a6a2729cbf6bcadce577a31f7f76201d5ce63c57d6c53318000d67714bb354ef": {
+    "query": "thanks",
+    "normalized_query": "thanks",
+    "response": "🙏 **Thank you for your question!**\n\nI'm designed to answer questions about movies in the knowledge graph. I can help you with:\n\n• **Factual questions** about movies (directors, cast, release dates, genres)\n• **Semantic queries** about movie content and themes\n• Questions about specific movies or people in the database\n\n**💡 Here are some things you could try:**\n• Try asking about movie facts (directors, cast, release dates)\n• Try asking questions about movie content using natural language\n\nFeel free to ask another question about movies!",
+    "timestamp": "2025-11-02T18:25:21.620852"
+  },
+  "d5430fd0a1c5ce2ad39c07f2cf8cd759787f17a41b88c4b4a42588d729d4dcde": {
+    "query": "you are  a champ",
+    "normalized_query": "you are a champ",
+    "response": "🙏 **Thank you for your question!**\n\nI'm designed to answer questions about movies in the knowledge graph. I can help you with:\n\n• **Factual questions** about movies (directors, cast, release dates, genres)\n• **Semantic queries** about movie content and themes\n• Questions about specific movies or people in the database\n\n**💡 Here are some things you could try:**\n• Try asking about movie facts (directors, cast, release dates)\n• Try asking questions about movie content using natural language\n\nFeel free to ask another question about movies!",
+    "timestamp": "2025-11-02T18:25:36.473999"
+  }
+}

@@ -240,6 +240,8 @@ class EmbeddingHandler:
         """
         Get human-readable label for an entity.
         
+        ✅ ENHANCED: Better label resolution with language preference.
+        
         Args:
             entity_uri: Entity URI
             graph: Optional RDFLib graph to query for labels
@@ -250,12 +252,44 @@ class EmbeddingHandler:
         if graph is None:
             return entity_uri
         
-        # Try to get rdfs:label
         from rdflib import URIRef, RDFS
         entity_ref = URIRef(entity_uri)
         
+        # ✅ ENHANCED: Prefer English labels, fallback to any label
+        english_labels = []
+        other_labels = []
+        
         for label in graph.objects(entity_ref, RDFS.label):
-            return str(label)
+            label_str = str(label)
+            
+            # Check if label has language tag
+            if hasattr(label, 'language'):
+                if label.language == 'en':
+                    english_labels.append(label_str)
+                else:
+                    other_labels.append(label_str)
+            else:
+                other_labels.append(label_str)
+        
+        # Return English label if available
+        if english_labels:
+            return english_labels[0]
+        
+        # Return any other label
+        if other_labels:
+            return other_labels[0]
+        
+        # ✅ NEW: Try alternative label properties for languages
+        if 'Q34770' in entity_uri or '/Q' in entity_uri:
+            # Try wdt:P1705 (native label)
+            P1705 = URIRef("http://www.wikidata.org/prop/direct/P1705")
+            for label in graph.objects(entity_ref, P1705):
+                return str(label)
+            
+            # Try wdt:P1813 (short name)
+            P1813 = URIRef("http://www.wikidata.org/prop/direct/P1813")
+            for label in graph.objects(entity_ref, P1813):
+                return str(label)
         
         # Fallback to URI
         return entity_uri

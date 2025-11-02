@@ -534,7 +534,7 @@ PREFIX wdt: <http://www.wikidata.org/prop/direct/>
 
 ASK WHERE {
   ?personUri rdfs:label ?personLabel .
-  FILTER(regex(str(?personLabel), "^Christopher Nolan$", "i")) .
+  FILTER(regex(str(?personLabel), "^{Christopher Nolan}$", "i")) .
   ?movieUri wdt:P31 wd:Q11424 .
   ?movieUri rdfs:label ?movieLabel .
   FILTER(regex(str(?movieLabel), "^Inception$", "i")) .
@@ -784,6 +784,9 @@ PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
             pattern: Optional QueryPattern from QueryAnalyzer
         """
         
+        # Store question in instance for postprocessing context
+        self._current_question = question.lower()
+        
         # Step 1: Try DeepSeek LLM FIRST if enabled
         if self.method == "direct-llm" and self.llm is not None:
             print(f"[NL2SPARQL] Trying DeepSeek LLM first...")
@@ -996,7 +999,6 @@ PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
         Handles all SPARQL query types correctly.
         """
         # ✅ CRITICAL: Replace smart quotes with regular quotes FIRST
-        # LLMs sometimes generate smart quotes which break SPARQL parsing
         query = query.replace('"', '"').replace('"', '"')  # U+201C, U+201D → "
         query = query.replace(''', "'").replace(''', "'")  # U+2018, U+2019 → '
         
@@ -1006,6 +1008,57 @@ PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
         
         # Remove any leading/trailing quotes
         query = query.strip('"\'')
+        
+        # ✅ CRITICAL: Detect language queries and fix property BEFORE other processing
+        is_language_query = False
+        if hasattr(self, '_current_question'):
+            language_keywords = [
+                'language', 'spoken', 'dialogue', 'in what language', 'which language',
+                'what language', 'original language', 'spoken in', 'language of'
+            ]
+            is_language_query = any(kw in self._current_question for kw in language_keywords)
+        
+        if is_language_query:
+            print("[Postprocess] 🌐 LANGUAGE QUERY DETECTED - Applying language-specific fixes")
+            
+            # ✅ FIX 1: Replace genre property P136 with language property P364
+            if 'wdt:P136' in query:
+                print("[Postprocess]    Replacing P136 (genre) with P364 (original language)")
+                query = query.replace('wdt:P136', 'wdt:P364')
+            
+            # ✅ FIX 2: Replace genre variables with language variables
+            query = re.sub(r'\?genreName\b', '?languageName', query, flags=re.IGNORECASE)
+            query = re.sub(r'\?genreUri\b', '?languageUri', query, flags=re.IGNORECASE)
+            query = re.sub(r'\?genreLabel\b', '?languageLabel', query, flags=re.IGNORECASE)
+            
+            # ✅ FIX 3: Replace genre in SELECT clause
+            query = re.sub(r'\bSELECT\s+\?genre(\w*)', r'SELECT ?language\1', query, flags=re.IGNORECASE)
+            
+            # ✅ FIX 4: Ensure Q34770 (language) is used instead of Q201658 (genre)
+            if 'Q201658' in query:
+                print("[Postprocess]    Replacing Q201658 (genre) with Q34770 (language)")
+                query = query.replace('Q201658', 'Q34770')
+            
+            print("[Postprocess]    ✅ Language query fixes applied")
+        
+        # ✅ NEW: Also detect and fix when genre variables are used with language property
+        if 'wdt:P364' in query and re.search(r'\?genre(Name|Uri|Label)', query, re.IGNORECASE):
+            print("[Postprocess] 🔍 Detected language property with genre variables - fixing")
+            query = re.sub(r'\?genreName\b', '?languageName', query, flags=re.IGNORECASE)
+            query = re.sub(r'\?genreUri\b', '?languageUri', query, flags=re.IGNORECASE)
+            query = re.sub(r'\?genreLabel\b', '?languageLabel', query, flags=re.IGNORECASE)
+            query = re.sub(r'\bSELECT\s+\?genre(\w*)', r'SELECT ?language\1', query, flags=re.IGNORECASE)
+        
+        # ✅ OLD FIX: Keep existing genre query fix but only if NOT a language query
+        if not is_language_query and 'wdt:P136' in query:
+            if re.search(r'FILTER\(regex\(str\(\?genre[LI]', query, re.IGNORECASE):
+                print("[Postprocess] ⚠️  Detected wrong FILTER - fixing genre query")
+                query = re.sub(
+                    r'FILTER\(regex\(str\(\?(genre[LI]\w*)\)',
+                    r'FILTER(regex(str(?movieLabel)',
+                    query,
+                    flags=re.IGNORECASE
+                )
         
         # Replace old movie ontology prefixes
         replacements = {
@@ -1054,7 +1107,6 @@ PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
         )
         
         # ✅ NEW: Convert ALL exact rdfs:label matches to case-insensitive FILTER
-        # This handles both user input variations AND database capitalization differences
         def replace_exact_label_match(match):
             """Replace exact label match with case-insensitive FILTER for ANY entity."""
             var_name = match.group(1)
@@ -1083,7 +1135,7 @@ PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
             # Generate replacement with case-insensitive FILTER
             return f'{var_name} rdfs:label {label_var} .\n  FILTER(regex(str({label_var}), "{label_escaped}", "i")) .'
         
-        # Find and replace ALL exact rdfs:label matches (movies, actors, countries, awards, etc.)
+        # Find and replace ALL exact rdfs:label matches
         query = re.sub(
             r'(\?\w+)\s+rdfs:label\s+"([^"]+)"\s*\.',
             replace_exact_label_match,
@@ -1092,8 +1144,6 @@ PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
         )
         
         # ✅ ALSO convert simple equality FILTERs to regex FILTERs
-        # Pattern: ?var rdfs:label ?varLabel . FILTER(?varLabel = "Text")
-        # Should be: ?var rdfs:label ?varLabel . FILTER(regex(str(?varLabel), "^Text$", "i"))
         def replace_equality_filter(match):
             """Replace FILTER equality with case-insensitive regex."""
             var_name = match.group(1)
@@ -1188,7 +1238,6 @@ PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
         query = '\n'.join(lines)
         
         # ✅ CRITICAL FIX: Ensure ALL FILTER(regex(...)) patterns use _normalize_proper_name
-        # AND ensure they have proper anchors
         def fix_filter_capitalization(match):
             """Fix capitalization in FILTER regex patterns using proper English title case."""
             var_name = match.group(1)

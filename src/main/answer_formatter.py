@@ -199,3 +199,52 @@ class AnswerFormatter:
             response += "\n".join([f"• {suggestion}" for suggestion in suggestions])
         
         return response
+    
+    @staticmethod
+    def format_unsupported_query(query_type: str, suggestions: Optional[List[str]] = None) -> str:
+        """
+        Format a polite response for unsupported query types.
+        
+        Args:
+            query_type: Type of query that isn't supported
+            suggestions: Optional list of helpful suggestions
+            
+        Returns:
+            Formatted polite response
+        """
+        type_messages = {
+            'image': "image-related queries",
+            'recommendation': "recommendation queries",
+            'unknown': "this type of question"
+        }
+        
+        query_description = type_messages.get(query_type, "this type of query")
+        
+        response = f"🙏 **Thank you for your question!**\n\n"
+        
+        # ✅ ENHANCED: More polite message for unknown queries
+        if query_type == "unknown":
+            response += "I'm designed to answer questions about movies in the knowledge graph. "
+            response += "I can help you with:\n\n"
+        else:
+            response += f"I apologize, but I'm currently unable to process {query_description}. "
+            response += "However, I'd be happy to help you with:\n\n"
+        
+        response += "• **Factual questions** about movies (directors, cast, release dates, genres)\n"
+        response += "• **Semantic queries** about movie content and themes\n"
+        response += "• Questions about specific movies or people in the database"
+        
+        if suggestions:
+            response += "\n\n**💡 Here are some things you could try:**\n"
+            response += "\n".join([f"• {suggestion}" for suggestion in suggestions])
+        else:
+            # Default suggestions for unknown queries
+            response += "\n\n**💡 Try questions like:**\n"
+            response += "• Who directed [movie title]?\n"
+            response += "• What movies did [actor name] star in?\n"
+            response += "• When was [movie title] released?\n"
+            response += "• Please answer this question: [your question] (for hybrid search)"
+        
+        response += "\n\nFeel free to ask another question about movies!"
+        
+        return response
