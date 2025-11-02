@@ -287,14 +287,21 @@ class QueryAnalyzer:
             
             # Rating queries
             {
-                'regex': r'\b(?:what)\s+(?:is|was)?\s*(?:the)?\s*rating\s+(?:of|for)\s+',
+                'regex': r'\b(?:what)\s+(?:is|was)?\s*(?:the)?\s*(?:user\s+)?rating\s+(?:of|for)\s+',
                 'relation': 'rating',
                 'subject': 'movie',
                 'object': 'string',
                 'confidence': 0.95
             },
             {
-                'regex': r'\brating\s+(?:of|for)\s+',
+                'regex': r'\brating\s+(?:of|for|does)\s+',
+                'relation': 'rating',
+                'subject': 'movie',
+                'object': 'string',
+                'confidence': 0.90
+            },
+            {
+                'regex': r'\b(?:what|which)\s+rating\s+(?:does|did)\s+',
                 'relation': 'rating',
                 'subject': 'movie',
                 'object': 'string',
