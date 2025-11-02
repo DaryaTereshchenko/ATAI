@@ -307,6 +307,13 @@ class QueryAnalyzer:
                 'object': 'string',
                 'confidence': 0.90
             },
+            {
+                'regex': r'\b(?:which|what)\s+(?:film|movie)\s+(?:has|have)\s+(?:the\s+)?.*?rating',
+                'relation': 'rating',
+                'subject': 'movie',
+                'object': 'string',
+                'confidence': 0.85
+            },
             
             # ✅ NEW: Country of origin queries
             {
