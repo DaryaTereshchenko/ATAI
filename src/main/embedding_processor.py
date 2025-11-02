@@ -190,6 +190,7 @@ class EmbeddingQueryProcessor:
         """
         Generate SPARQL with LLM-first, template-fallback strategy.
         NOW ENHANCED: Passes pattern to LLM for better few-shot example selection.
+        SPECIAL: Rating queries use template-first to avoid LLM complexity.
         """
         print("📝 Generating SPARQL query...")
         
@@ -204,6 +205,23 @@ class EmbeddingQueryProcessor:
                 print(f"   🔗 Relation URI: {relation_uri}")
             else:
                 print(f"   ⚠️  No URI found for relation '{pattern.relation}' in RelationManager")
+        
+        # ✅ NEW: For rating queries, use template FIRST (skip LLM)
+        if pattern.relation == 'rating':
+            print("   ℹ️  Rating query detected - using template-first strategy")
+            try:
+                print("   Attempting template-based generation (priority for rating)...")
+                sparql = self.sparql_generator.generate(pattern, subject_label, object_label)
+                print("   ✅ Template generation successful")
+                return {
+                    'query': sparql,
+                    'method': 'template',
+                    'confidence': 0.95
+                }
+            except Exception as e:
+                print(f"   ⚠️  Template generation failed for rating: {e}")
+                print("   Falling back to LLM for rating...")
+                # Continue to LLM as fallback
         
         # PRIMARY: Try LLM-based generation FIRST with pattern-specific examples
         try:

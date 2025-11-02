@@ -35,8 +35,8 @@ class SPARQLGenerator:
             'producer': 'http://www.wikidata.org/prop/direct/P162',
             'genre': 'http://www.wikidata.org/prop/direct/P136',
             'publication_date': 'http://www.wikidata.org/prop/direct/P577',
-            # ✅ REMOVED: Generic 'rating' - should be resolved dynamically via RelationManager
-            # 'rating': 'http://ddis.ch/atai/rating',
+            # ✅ RESTORED: Generic 'rating' uses custom ddis:rating property
+            'rating': 'http://ddis.ch/atai/rating',
             'country_of_origin': 'http://www.wikidata.org/prop/direct/P495',
             'award_received': 'http://www.wikidata.org/prop/direct/P166',
             # ✅ Language properties
@@ -181,7 +181,25 @@ SELECT DISTINCT ?date WHERE {{
 """
         
         else:  # string (genre, rating, etc.)
-            sparql = f"""
+            # ✅ Special handling for rating (ddis:rating is a literal, not an entity)
+            if pattern.relation == 'rating':
+                sparql = f"""
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX wd: <http://www.wikidata.org/entity/>
+PREFIX wdt: <http://www.wikidata.org/prop/direct/>
+PREFIX ddis: <http://ddis.ch/atai/>
+
+SELECT DISTINCT ?value WHERE {{
+    ?movieUri wdt:P31 wd:Q11424 .
+    ?movieUri rdfs:label ?movieLabel .
+    FILTER(LCASE(STR(?movieLabel)) = LCASE("{normalized_label}"))
+    
+    ?movieUri ddis:rating ?value .
+}}
+"""
+            else:
+                # For other string types (genre, country, etc.)
+                sparql = f"""
 PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
 PREFIX wd: <http://www.wikidata.org/entity/>
 PREFIX wdt: <http://www.wikidata.org/prop/direct/>
@@ -311,8 +329,8 @@ ASK {{
             'producer': 'http://www.wikidata.org/prop/direct/P162',
             'genre': 'http://www.wikidata.org/prop/direct/P136',
             'publication_date': 'http://www.wikidata.org/prop/direct/P577',
-            # ✅ REMOVED: Generic 'rating' - should be resolved dynamically via RelationManager
-            # 'rating': 'http://ddis.ch/atai/rating',
+            # ✅ RESTORED: Generic 'rating' uses custom ddis:rating property
+            'rating': 'http://ddis.ch/atai/rating',
             'country_of_origin': 'http://www.wikidata.org/prop/direct/P495',
             'country': 'http://www.wikidata.org/prop/direct/P495',  # ✅ Alias
             'award_received': 'http://www.wikidata.org/prop/direct/P166',

@@ -781,6 +781,13 @@ class QueryAnalyzer:
                     pattern.object_type = 'string'
                     print(f"[Analyzer]    Relation set to: {pattern.relation}")
                 
+                # ✅ NEW: GUARDRAIL - Override relation if "rating" is explicitly mentioned (non-superlative)
+                if self._is_rating_query(query_lower) and not self._is_superlative_query(query_lower):
+                    print(f"[Analyzer] 🔒 GUARDRAIL: Rating query detected, overriding relation")
+                    pattern.relation = 'rating'
+                    pattern.object_type = 'string'
+                    print(f"[Analyzer]    Relation set to: {pattern.relation}")
+                
                 # ✅ Check if this is a superlative variant of forward query
                 if pattern.pattern_type == 'forward' and self._is_superlative_query(query_lower):
                     print(f"[Analyzer] ✅ Detected superlative modifier on forward query")
@@ -805,6 +812,13 @@ class QueryAnalyzer:
                     pattern.object_type = 'string'
                     print(f"[Analyzer]    Relation set to: {pattern.relation}")
                 
+                # ✅ NEW: GUARDRAIL - Apply rating override to dynamically matched patterns
+                if self._is_rating_query(query_lower) and not self._is_superlative_query(query_lower):
+                    print(f"[Analyzer] 🔒 GUARDRAIL: Rating query detected, overriding relation")
+                    pattern.relation = 'rating'
+                    pattern.object_type = 'string'
+                    print(f"[Analyzer]    Relation set to: {pattern.relation}")
+                
                 pattern.extracted_entities['original_query'] = query_original
                 return pattern
         
@@ -816,6 +830,11 @@ class QueryAnalyzer:
             if self._is_language_query(query_lower):
                 print(f"[Analyzer] 🔒 GUARDRAIL: Language query detected, overriding relation")
                 pattern.relation = 'original_language_of_film_or_tv_show'
+                pattern.object_type = 'string'
+            # ✅ NEW: GUARDRAIL - Apply rating override
+            if self._is_rating_query(query_lower) and not self._is_superlative_query(query_lower):
+                print(f"[Analyzer] 🔒 GUARDRAIL: Rating query detected, overriding relation")
+                pattern.relation = 'rating'
                 pattern.object_type = 'string'
             pattern.extracted_entities['original_query'] = query_original
             return pattern
@@ -838,6 +857,12 @@ class QueryAnalyzer:
             if self._is_language_query(query_lower):
                 print(f"[Analyzer] 🔒 GUARDRAIL: Language query detected, overriding relation")
                 pattern.relation = 'original_language_of_film_or_tv_show'
+                pattern.object_type = 'string'
+            
+            # ✅ NEW: GUARDRAIL - Apply rating override to forward patterns
+            if self._is_rating_query(query_lower) and not self._is_superlative_query(query_lower):
+                print(f"[Analyzer] 🔒 GUARDRAIL: Rating query detected, overriding relation")
+                pattern.relation = 'rating'
                 pattern.object_type = 'string'
             
             if not pattern.extracted_entities:
@@ -1301,13 +1326,13 @@ class QueryAnalyzer:
             'original_broadcaster': 'Q1254874', # Broadcaster
             'record_label': 'Q18127',          # Record label
             
-            # ✅ FIXED: Language & Culture - Use Q1288568 (language) instead of Q1097949
-            'original_language_of_film_or_tv_show': 'Q1288568',  # Language
-            'language_of_work_or_name': 'Q1288568',  # Language
-            'languages_spoken_written_or_signed': 'Q1288568',  # Language
-            'native_language': 'Q1288568',     # Language
-            'writing_language': 'Q1288568',    # Language
-            'original_language': 'Q1288568',   # ✅ NEW: Alias for original_language_of_film_or_tv_show
+            # ✅ FIXED: Language & Culture - Use Q1097949 (natural language) as specified
+            'original_language_of_film_or_tv_show': 'Q1097949',  # Natural language
+            'language_of_work_or_name': 'Q1097949',  # Natural language
+            'languages_spoken_written_or_signed': 'Q1097949',  # Natural language
+            'native_language': 'Q1097949',     # Natural language
+            'writing_language': 'Q1097949',    # Natural language
+            'original_language': 'Q1097949',   # ✅ NEW: Alias for original_language_of_film_or_tv_show
             
             # Awards & Recognition
             'award_received': 'Q38033430',     # Award
@@ -1385,6 +1410,33 @@ class QueryAnalyzer:
         ]
         
         for pattern in language_patterns:
+            if re.search(pattern, query_lower):
+                return True
+        
+        return False
+    
+    def _is_rating_query(self, query_lower: str) -> bool:
+        """
+        Check if query is explicitly asking about rating.
+        
+        Args:
+            query_lower: Lowercase query text
+            
+        Returns:
+            True if this is a rating query
+        """
+        # Strong rating indicators (excluding superlative patterns which are handled separately)
+        rating_patterns = [
+            r'\b(?:what|which)\s+(?:is|was)?\s*(?:the)?\s*(?:user\s+)?rating\b',
+            r'\brating\s+(?:of|for|is)\b',
+            r'\b(?:what|how)\s+(?:is|was)\s+(?:the\s+)?(?:movie|film)\s+rated\b',
+            r'\brated\s+(?:at|as)\b',
+            r'\buser\s+rating\b',
+            r'\bmovie\s+rating\b',
+            r'\bfilm\s+rating\b',
+        ]
+        
+        for pattern in rating_patterns:
             if re.search(pattern, query_lower):
                 return True
         
